@@ -5,13 +5,22 @@
     poll = (Setting.plugin_redmine_hm_cratchmere || {})['poll_interval_seconds'].to_i
     poll = 30 unless poll.positive?
     snapshot = (RedmineHmCratchmere::Snapshot.new(User.current).to_h rescue nil)
+    menu_items = [
+      { url: hm_timeclock_path, label: I18n.t(:label_hm_hr_timeclock) },
+      { url: hm_vacation_path,  label: I18n.t(:label_hm_hr_vacation) },
+      { url: hm_sickness_path,  label: I18n.t(:label_hm_hr_sickness) }
+    ]
+    if User.current.admin?
+      menu_items << { url: hm_admin_path, label: I18n.t(:label_hm_hr_admin) }
+    end
   %>
   <%= javascript_tag(
         "window.HmTimeclock = window.HmTimeclock || {};\n" \
         "window.HmTimeclock.bootstrap = {\n" \
         "  statusUrl: '#{j hm_timeclock_status_path(format: :json)}',\n" \
         "  pollIntervalSeconds: #{poll},\n" \
-        "  snapshot: #{snapshot ? snapshot.to_json : 'null'}\n" \
+        "  snapshot: #{snapshot ? snapshot.to_json : 'null'},\n" \
+        "  menuItems: #{menu_items.to_json}\n" \
         "};"
       ) %>
 <% end %>

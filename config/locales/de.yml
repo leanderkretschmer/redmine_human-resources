@@ -1,4 +1,10 @@
 de:
+  label_hm_hr: "HumanResources"
+  label_hm_hr_timeclock: "Stempeluhr"
+  label_hm_hr_vacation: "Urlaubstage"
+  label_hm_hr_sickness: "Krankentage"
+  label_hm_hr_admin: "Personal-Stempeluhr (Admin)"
+  label_hm_hr_coming_soon: "Diese Funktion ist in Vorbereitung."
   label_hm_timeclock_navbar: "Stempeluhr"
   label_hm_timeclock_title: "Meine Arbeitszeit"
   label_hm_timeclock_today: "Heute"

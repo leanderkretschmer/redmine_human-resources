@@ -76,6 +76,41 @@
     return null;
   }
 
+  function setupHrDropdown() {
+    var navLink = findNavLink();
+    if (!navLink) return;
+    if (navLink.dataset.hmDropdownReady === '1') return;
+    var bootCfg = (window.HmTimeclock && window.HmTimeclock.bootstrap) || {};
+    var items = bootCfg.menuItems || [];
+    if (!items.length) return;
+
+    navLink.dataset.hmDropdownReady = '1';
+    var host = navLink.closest('li') || navLink.parentNode;
+    if (!host) return;
+    host.classList.add('hm-hr-dropdown');
+
+    var menu = document.createElement('ul');
+    menu.className = 'hm-hr-dropdown-menu';
+    items.forEach(function (item) {
+      var li = document.createElement('li');
+      var a  = document.createElement('a');
+      a.href = item.url;
+      a.textContent = item.label;
+      li.appendChild(a);
+      menu.appendChild(li);
+    });
+    host.appendChild(menu);
+
+    navLink.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') {
+        host.classList.toggle('open');
+      }
+    });
+    document.addEventListener('click', function (e) {
+      if (!host.contains(e.target)) host.classList.remove('open');
+    });
+  }
+
   function updateNavbar() {
     var navLink = findNavLink();
     if (!navLink) return;
@@ -337,6 +372,8 @@
     } else if (bootCfg.snapshot) {
       applySnapshot(bootCfg.snapshot);
     }
+
+    setupHrDropdown();
 
     if (!snapshot) {
       fetchStatus().then(tick);

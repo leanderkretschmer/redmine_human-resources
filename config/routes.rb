@@ -13,6 +13,9 @@ RedmineApp::Application.routes.draw do
     get   'export',   to: 'hm_timeclock#export',          as: 'export_hm_timeclock'
   end
 
+  get 'hm_vacation', to: 'hm_vacation#show', as: 'hm_vacation'
+  get 'hm_sickness', to: 'hm_sickness#show', as: 'hm_sickness'
+
   scope 'admin/hm_timeclock' do
     get 'users/:user_id', to: 'hm_admin#show',  as: 'hm_admin_user'
     get '',               to: 'hm_admin#index', as: 'hm_admin'

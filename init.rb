@@ -36,7 +36,7 @@ Redmine::Plugin.register :redmine_hm_cratchmere do
 
   menu :account_menu, :hm_timeclock,
        { controller: 'hm_timeclock', action: 'show' },
-       caption: :label_hm_timeclock_navbar,
+       caption: :label_hm_hr,
        before: :my_account,
        html: { id: 'hm-timeclock-menu-link', class: 'hm-timeclock-menu-link' },
        if: Proc.new { User.current.logged? }

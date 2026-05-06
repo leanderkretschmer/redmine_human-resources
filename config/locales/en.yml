@@ -1,4 +1,10 @@
 en:
+  label_hm_hr: "HumanResources"
+  label_hm_hr_timeclock: "Timeclock"
+  label_hm_hr_vacation: "Vacation days"
+  label_hm_hr_sickness: "Sick days"
+  label_hm_hr_admin: "HR Timeclock (admin)"
+  label_hm_hr_coming_soon: "This feature is coming soon."
   label_hm_timeclock_navbar: "Timeclock"
   label_hm_timeclock_title: "My working time"
   label_hm_timeclock_today: "Today"
