@@ -58,6 +58,10 @@ class HmTimeclockController < ApplicationController
 
   def start
     open = current_open_entry
+    if open && open.overdue?(as_of: Time.current)
+      flash[:error] = l(:notice_hm_timeclock_resolve_correction_first)
+      return redirect_to hm_timeclock_path
+    end
     unless open
       HmWorkEntry.create!(
         user_id:    User.current.id,
@@ -71,6 +75,7 @@ class HmTimeclockController < ApplicationController
 
   def pause
     entry = current_open_entry
+    return respond_action(nil) if entry && entry.overdue?(as_of: Time.current)
     if entry && entry.running?
       HmWorkEntry.transaction do
         HmBreakEntry.create!(hm_work_entry_id: entry.id, started_at: Time.current)
@@ -82,6 +87,7 @@ class HmTimeclockController < ApplicationController
 
   def resume
     entry = current_open_entry
+    return respond_action(nil) if entry && entry.overdue?(as_of: Time.current)
     if entry && entry.paused?
       HmWorkEntry.transaction do
         brk = entry.current_break
@@ -94,6 +100,7 @@ class HmTimeclockController < ApplicationController
 
   def stop
     entry = current_open_entry
+    return respond_action(nil) if entry && entry.overdue?(as_of: Time.current)
     if entry
       HmWorkEntry.transaction do
         brk = entry.current_break
@@ -102,6 +109,49 @@ class HmTimeclockController < ApplicationController
       end
     end
     respond_action(l(:notice_hm_timeclock_stopped))
+  end
+
+  def export
+    tz = User.current.time_zone || Time.zone
+    month = parse_month_param || Date.current.beginning_of_month
+    entries = HmWorkEntry.for_user(User.current)
+                         .in_range(month.in_time_zone(tz).beginning_of_day,
+                                   month.end_of_month.in_time_zone(tz).end_of_day)
+                         .order(:started_at).to_a
+    send_data HmWorkEntry.to_csv(User.current, entries),
+              filename: "hm_timeclock_#{User.current.login}_#{month.strftime('%Y-%m')}.csv",
+              type: 'text/csv; charset=utf-8'
+  end
+
+  def correct
+    entry = HmWorkEntry.for_user(User.current).where(id: params[:id]).first
+    unless entry && entry.open? && entry.overdue?(as_of: Time.current)
+      flash[:error] = l(:notice_hm_timeclock_correction_invalid)
+      return redirect_to hm_timeclock_path
+    end
+
+    tz = User.current.time_zone || Time.zone
+    ended_at = parse_correction_time(entry, params[:ended_at].to_s, tz)
+
+    if ended_at.nil?
+      flash[:error] = l(:notice_hm_timeclock_correction_invalid)
+      return redirect_to hm_timeclock_path
+    end
+
+    HmWorkEntry.transaction do
+      if (brk = entry.current_break)
+        brk_end = ended_at < brk.started_at ? brk.started_at : ended_at
+        brk.update!(ended_at: brk_end)
+      end
+      addition = "[Korrektur] geschlossen am #{Time.current.iso8601} durch #{User.current.login} (Original blieb offen)."
+      new_notes = [entry.notes.presence, addition].compact.join("\n")
+      entry.update!(ended_at: ended_at,
+                    state: HmWorkEntry::STATE_COMPLETED,
+                    notes: new_notes)
+    end
+
+    flash[:notice] = l(:notice_hm_timeclock_correction_saved)
+    redirect_to hm_timeclock_path
   end
 
   private
@@ -149,5 +199,24 @@ class HmTimeclockController < ApplicationController
     raw = params[:hm_user_setting] || ActionController::Parameters.new
     raw.permit(:daily_target_minutes, :weekly_target_minutes, :max_break_minutes,
                :notify_target_reached, :notify_break_over)
+  end
+
+  def parse_correction_time(entry, str, tz)
+    return nil if str.blank?
+    started_day = entry.started_at.in_time_zone(tz).to_date
+    day_end = entry.started_at.in_time_zone(tz).end_of_day
+
+    parsed =
+      if str.match?(/\A\d{1,2}:\d{2}\z/)
+        h, m = str.split(':').map(&:to_i)
+        Time.use_zone(tz) { Time.zone.local(started_day.year, started_day.month, started_day.day, h, m) }
+      else
+        Time.use_zone(tz) { Time.zone.parse(str) } rescue nil
+      end
+
+    return nil unless parsed
+    return nil if parsed <= entry.started_at
+    return nil if parsed > day_end
+    parsed
   end
 end

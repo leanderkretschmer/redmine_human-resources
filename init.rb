@@ -1,8 +1,14 @@
 require 'redmine'
 
 Rails.application.config.to_prepare do
-  require_dependency File.expand_path('lib/redmine_hm_cratchmere/snapshot', __dir__)
-  require_dependency File.expand_path('lib/redmine_hm_cratchmere/hooks',    __dir__)
+  require_dependency File.expand_path('lib/redmine_hm_cratchmere/snapshot',                   __dir__)
+  require_dependency File.expand_path('lib/redmine_hm_cratchmere/tracker',                    __dir__)
+  require_dependency File.expand_path('lib/redmine_hm_cratchmere/application_controller_patch', __dir__)
+  require_dependency File.expand_path('lib/redmine_hm_cratchmere/hooks',                      __dir__)
+
+  unless ApplicationController.include?(RedmineHmCratchmere::ApplicationControllerPatch)
+    ApplicationController.prepend(RedmineHmCratchmere::ApplicationControllerPatch)
+  end
 end
 
 Redmine::Plugin.register :redmine_hm_cratchmere do

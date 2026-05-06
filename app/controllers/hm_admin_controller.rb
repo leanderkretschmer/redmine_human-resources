@@ -24,7 +24,7 @@ class HmAdminController < ApplicationController
     respond_to do |format|
       format.html
       format.csv do
-        send_data csv_for(@user, @entries),
+        send_data HmWorkEntry.to_csv(@user, @entries),
                   filename: "hm_timeclock_#{@user.login}_#{@month.strftime('%Y-%m')}.csv",
                   type: 'text/csv; charset=utf-8'
       end
@@ -61,16 +61,4 @@ class HmAdminController < ApplicationController
     }
   end
 
-  def csv_for(user, entries)
-    require 'csv'
-    CSV.generate do |csv|
-      csv << ['user_login', 'user_name', 'started_at', 'ended_at',
-              'gross_seconds', 'break_seconds', 'net_seconds', 'state']
-      entries.each do |e|
-        csv << [user.login, user.name,
-                e.started_at&.iso8601, e.ended_at&.iso8601,
-                e.gross_seconds, e.total_break_seconds, e.net_seconds, e.state]
-      end
-    end
-  end
 end

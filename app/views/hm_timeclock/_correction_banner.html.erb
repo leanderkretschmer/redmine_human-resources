@@ -1,0 +1,40 @@
+<div class="hm-tc-correction-banner">
+  <h3><%= l(:label_hm_timeclock_needs_correction) %></h3>
+
+  <p>
+    <%= l(:label_hm_timeclock_correction_intro,
+          started_on: pc[:started_on_label],
+          started_at: pc[:started_at_label]) %>
+  </p>
+
+  <p>
+    <% if pc[:last_seen_at_label] %>
+      <strong><%= l(:label_hm_timeclock_last_seen) %>:</strong>
+      <%= pc[:last_seen_at_label] %>
+    <% else %>
+      <em><%= l(:label_hm_timeclock_no_last_seen) %></em>
+    <% end %>
+  </p>
+
+  <%= form_with url: correct_hm_timeclock_path(id: pc[:id]),
+                method: :post,
+                local: true,
+                html: { class: 'hm-tc-correction-form' } do %>
+    <div class="hm-tc-correction-row">
+      <label for="hm_correction_ended_at"><%= l(:label_hm_timeclock_correction_set_end) %></label>
+      <%= text_field_tag :ended_at,
+                         Time.at(pc[:suggested_end_unix]).in_time_zone(User.current.time_zone || Time.zone).strftime('%H:%M'),
+                         type: :time,
+                         id: 'hm_correction_ended_at',
+                         required: true,
+                         step: 60 %>
+      <span class="hm-tc-correction-hint">
+        (<%= l(:label_hm_timeclock_correction_day_label) %>: <%= pc[:started_on_label] %>,
+        <%= l(:label_hm_timeclock_correction_max_end) %> <%= Time.at(pc[:day_end_unix]).in_time_zone(User.current.time_zone || Time.zone).strftime('%H:%M') %>)
+      </span>
+    </div>
+    <p>
+      <%= submit_tag l(:button_hm_timeclock_correction_save), class: 'button-positive' %>
+    </p>
+  <% end %>
+</div>

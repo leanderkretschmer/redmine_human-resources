@@ -60,9 +60,55 @@
   font-size: 0.95em;
   letter-spacing: 0.02em;
 }
-.hm-tc-status-working  { background: #2ecc71; color: #fff; }
-.hm-tc-status-on_break { background: #f39c12; color: #fff; }
-.hm-tc-status-idle     { background: #bdc3c7; color: #2c3e50; }
+.hm-tc-status-working          { background: #2ecc71; color: #fff; }
+.hm-tc-status-on_break         { background: #f39c12; color: #fff; }
+.hm-tc-status-idle             { background: #bdc3c7; color: #2c3e50; }
+.hm-tc-status-needs_correction { background: #c0392b; color: #fff; }
+
+#hm-timeclock-menu-link.hm-tc-needs-correction .hm-tc-nav-time {
+  background: rgba(192, 57, 43, 0.6);
+  color: #ffe1dc;
+  font-weight: 700;
+}
+#hm-timeclock-menu-link.hm-tc-needs-correction { color: #ffe1dc !important; }
+
+.hm-tc-correction-banner {
+  background: #fdecea;
+  border: 1px solid #e74c3c;
+  border-left: 5px solid #c0392b;
+  padding: 1em 1.4em;
+  margin: 0 0 1.5em;
+  border-radius: 4px;
+}
+.hm-tc-correction-banner h3 {
+  margin: 0 0 0.4em;
+  color: #c0392b;
+}
+.hm-tc-correction-banner p { margin: 0.3em 0; }
+.hm-tc-correction-form { margin-top: 0.6em; }
+.hm-tc-correction-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6em;
+  margin-bottom: 0.4em;
+}
+.hm-tc-correction-row label { font-weight: 600; }
+.hm-tc-correction-row input[type="time"] {
+  padding: 0.3em 0.5em;
+  font-size: 1.05em;
+  font-variant-numeric: tabular-nums;
+}
+.hm-tc-correction-hint { color: #7c2d22; font-size: 0.9em; }
+
+.hm-tc-expected-end {
+  margin-top: 0.4em;
+  padding: 0.25em 0.6em;
+  background: #e8f4fd;
+  border-radius: 3px;
+  display: inline-block;
+}
+.hm-tc-expected-end strong { color: #1c5d99; }
 
 .hm-tc-clock {
   margin: 0.6em 0 0.4em;

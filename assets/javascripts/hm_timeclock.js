@@ -8,6 +8,7 @@
   var notifiedTarget = false;
   var notifiedBreak = false;
   var permissionAsked = false;
+  var lastForcePollAt = 0;
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function clampPos(n) { return n < 0 ? 0 : n; }
@@ -25,6 +26,10 @@
     var m = Math.floor((seconds % 3600) / 60);
     return pad(h) + ':' + pad(m);
   }
+  function fmtTimeOfDay(unix) {
+    var d = new Date(unix * 1000);
+    return pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
 
   function liveValues() {
     if (!snapshot) return null;
@@ -41,9 +46,22 @@
     return { worked: worked, currentBreak: currentBreak, totalBreak: totalBreak };
   }
 
+  function liveExpectedEnd() {
+    if (!snapshot || !snapshot.expected_end_unix) return null;
+    if (snapshot.state === 'on_break') {
+      var deltaSec = clampPos(Date.now() / 1000 - fetchedAtClient);
+      return snapshot.expected_end_unix + deltaSec;
+    }
+    return snapshot.expected_end_unix;
+  }
+
   function getStateLabel(state) {
+    if (snapshot && snapshot.labels && state === 'needs_correction' && snapshot.labels.needs_correction) {
+      return snapshot.labels.needs_correction;
+    }
     if (state === 'working') return 'Arbeitet';
     if (state === 'on_break') return 'Pause';
+    if (state === 'needs_correction') return 'Korrektur erforderlich';
     return 'Ausgestempelt';
   }
 
@@ -74,32 +92,43 @@
       navLink.insertBefore(stamp, navLink.firstChild);
     }
 
+    navLink.classList.remove('hm-tc-overtime', 'hm-tc-on-break', 'hm-tc-working', 'hm-tc-needs-correction');
+
     if (snapshot.state === 'idle') {
       stamp.textContent = '';
       stamp.style.display = 'none';
-      navLink.classList.remove('hm-tc-overtime');
-      navLink.classList.remove('hm-tc-on-break');
-      navLink.classList.remove('hm-tc-working');
+      return;
+    }
+
+    if (snapshot.state === 'needs_correction') {
+      stamp.style.display = '';
+      stamp.textContent = '⚠ ' + (snapshot.labels && snapshot.labels.needs_correction ? snapshot.labels.needs_correction : 'Korrektur') + ' ';
+      navLink.classList.add('hm-tc-needs-correction');
       return;
     }
 
     var live = liveValues();
     stamp.style.display = '';
     var prefix = (snapshot.state === 'on_break') ? '⏸ ' : '▶ ';
-    stamp.textContent = prefix + fmtHM(live.worked) + ' ';
+    var ee = liveExpectedEnd();
+    var endStr = '';
+    if (ee && snapshot.daily_target_seconds > 0) {
+      if (live.worked >= snapshot.daily_target_seconds) {
+        endStr = ' ✓';
+      } else {
+        endStr = ' → ' + fmtTimeOfDay(ee);
+      }
+    }
+    stamp.textContent = prefix + fmtHM(live.worked) + endStr + ' ';
 
     if (snapshot.state === 'on_break') {
       navLink.classList.add('hm-tc-on-break');
-      navLink.classList.remove('hm-tc-working');
     } else {
       navLink.classList.add('hm-tc-working');
-      navLink.classList.remove('hm-tc-on-break');
     }
 
     if (live.worked >= (snapshot.overtime_threshold_seconds || Infinity)) {
       navLink.classList.add('hm-tc-overtime');
-    } else {
-      navLink.classList.remove('hm-tc-overtime');
     }
   }
 
@@ -119,6 +148,15 @@
       else if (k === 'state-label') {
         el.textContent = getStateLabel(snapshot.state);
         el.className = 'hm-tc-status hm-tc-status-' + snapshot.state;
+      } else if (k === 'expected_end') {
+        var ee = liveExpectedEnd();
+        if (!ee || !snapshot.daily_target_seconds) {
+          el.textContent = '--:--';
+        } else if (live.worked >= snapshot.daily_target_seconds) {
+          el.textContent = (snapshot.labels && snapshot.labels.target_done) || '✓';
+        } else {
+          el.textContent = fmtTimeOfDay(ee);
+        }
       }
     }
 
@@ -190,7 +228,7 @@
     var live = liveValues();
     if (!live) return;
 
-    if (snapshot.state === 'idle') {
+    if (snapshot.state === 'idle' || snapshot.state === 'needs_correction') {
       notifiedTarget = false;
     }
     if (snapshot.state !== 'on_break') {
@@ -198,7 +236,7 @@
     }
 
     if (snapshot.notify_target_reached &&
-        snapshot.state !== 'idle' &&
+        (snapshot.state === 'working' || snapshot.state === 'on_break') &&
         !notifiedTarget &&
         snapshot.daily_target_seconds > 0 &&
         live.worked >= snapshot.daily_target_seconds) {
@@ -213,6 +251,24 @@
         live.currentBreak >= snapshot.max_break_seconds) {
       showNotification(snapshot.labels.break_over);
       notifiedBreak = true;
+    }
+  }
+
+  function maybeForcePoll() {
+    if (!snapshot) return;
+    var nowSec = Date.now() / 1000;
+    if (nowSec - lastForcePollAt < 5) return;
+    var live = liveValues();
+    if (!live) return;
+    var trigger = false;
+    if (snapshot.state === 'on_break' &&
+        snapshot.max_break_seconds > 0 &&
+        live.currentBreak >= snapshot.max_break_seconds) {
+      trigger = true;
+    }
+    if (trigger) {
+      lastForcePollAt = nowSec;
+      fetchStatus().then(tick);
     }
   }
 
@@ -240,6 +296,7 @@
     updateCard();
     updateNavbar();
     maybeNotify();
+    maybeForcePoll();
   }
 
   function schedulePoll() {

@@ -9,6 +9,8 @@ RedmineApp::Application.routes.draw do
     post  'pause',    to: 'hm_timeclock#pause',           as: 'pause_hm_timeclock'
     post  'resume',   to: 'hm_timeclock#resume',          as: 'resume_hm_timeclock'
     post  'stop',     to: 'hm_timeclock#stop',            as: 'stop_hm_timeclock'
+    post  'correct/:id', to: 'hm_timeclock#correct',      as: 'correct_hm_timeclock'
+    get   'export',   to: 'hm_timeclock#export',          as: 'export_hm_timeclock'
   end
 
   scope 'admin/hm_timeclock' do
