@@ -358,6 +358,14 @@ table.hm-tc-calendar-grid {
   border: 1px dashed rgba(255,255,255,0.9);
 }
 .hm-tc-abs-rejected td { color: #999; text-decoration: line-through; }
+.hm-tc-abs-audit-cell { font-size: 0.88em; min-width: 220px; }
+.hm-tc-abs-audit-entry { line-height: 1.35; }
+.hm-tc-abs-audit-entry small { color: #888; }
+.hm-tc-abs-audit-approved strong { color: #1e8449; }
+.hm-tc-abs-audit-rejected strong { color: #c0392b; }
+.hm-tc-abs-audit-created  strong { color: #2c3e50; }
+.hm-tc-abs-audit-updated  strong { color: #2980b9; }
+.hm-tc-abs-audit-reset    strong { color: #7f8c8d; }
 .hm-tc-abs-actions form { display: inline-block; margin: 0 0.2em 0 0; }
 .hm-tc-absence-form .box { max-width: 640px; }
 

@@ -8,7 +8,7 @@
         <th><%= l(:label_hm_absence_days) %></th>
         <th><%= l(:label_hm_absence_status) %></th>
         <th><%= l(:label_hm_absence_reason) %></th>
-        <th><%= l(:label_hm_absence_approved_by) %></th>
+        <th><%= l(:label_hm_absence_history) %></th>
         <% if local_assigns[:show_user] %>
           <th><%= l(:label_hm_admin_user) %></th>
         <% end %>
@@ -26,10 +26,21 @@
             </span>
           </td>
           <td><%= h a.reason %></td>
-          <td>
-            <% if a.approver %>
-              <%= h a.approver.name %><br>
-              <small><%= format_time(a.approved_at) if a.approved_at %></small>
+          <td class="hm-tc-abs-audit-cell">
+            <% audits = a.audits.includes(:actor).to_a %>
+            <% if audits.empty? && a.approver %>
+              <div class="hm-tc-abs-audit-entry">
+                <strong><%= HmAbsenceAudit.action_label(a.approved? ? 'approved' : 'rejected') %>:</strong>
+                <%= h(a.approver.name) %>
+                <small>(<%= format_time(a.approved_at) if a.approved_at %>)</small>
+              </div>
+            <% end %>
+            <% audits.each do |audit| %>
+              <div class="hm-tc-abs-audit-entry hm-tc-abs-audit-<%= audit.action %>">
+                <strong><%= HmAbsenceAudit.action_label(audit.action) %>:</strong>
+                <%= h(audit.actor&.name || '?') %>
+                <small>(<%= format_time(audit.created_at) %>)</small>
+              </div>
             <% end %>
           </td>
           <% if local_assigns[:show_user] %>

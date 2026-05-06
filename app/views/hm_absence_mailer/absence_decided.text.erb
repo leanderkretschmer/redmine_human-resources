@@ -1,0 +1,17 @@
+<%= l(:mail_body_hm_absence_decided_intro,
+       user: @user.name,
+       kind: HmAbsence.kind_label(@absence.kind),
+       status: HmAbsence.status_label(@absence.status)) %>
+
+<%= l(:label_hm_absence_period) %>: <%= I18n.l(@absence.starts_on) %> – <%= I18n.l(@absence.ends_on) %>
+<%= l(:mail_label_working_days, count: @breakdown[:working]) %>
+
+<% if @absence.approver %>
+<%= l(:label_hm_absence_approved_by) %>: <%= @absence.approver.name %>
+<% if @absence.approved_at %>
+<%= l(:field_updated_on) %>: <%= I18n.l(@absence.approved_at, format: :default) rescue @absence.approved_at %>
+<% end %>
+<% end %>
+
+---
+<%= l(:mail_link_view_in_redmine) %>: <%= url_for(controller: 'hm_vacation', action: 'show', only_path: false) %>

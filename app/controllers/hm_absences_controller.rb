@@ -15,6 +15,8 @@ class HmAbsencesController < ApplicationController
       status: HmAbsence::STATUS_REQUESTED
     ))
     if @absence.save
+      @absence.log_audit!(User.current, HmAbsenceAudit::ACTION_CREATED, to_status: @absence.status)
+      HmAbsenceMailer.deliver_absence_requested(@absence)
       flash[:notice] = l(:notice_hm_absence_requested)
     else
       flash[:error] = @absence.errors.full_messages.join(', ')
@@ -30,7 +32,13 @@ class HmAbsencesController < ApplicationController
     return unless authorize_edit!
     attrs = absence_params
     attrs[:status] = HmAbsence::STATUS_REQUESTED unless User.current.admin?
+    prior_status = @absence.status
     if @absence.update(attrs)
+      @absence.log_audit!(User.current, HmAbsenceAudit::ACTION_UPDATED,
+                          from_status: prior_status, to_status: @absence.status)
+      if User.current.admin? && @absence.user_id != User.current.id
+        HmAbsenceMailer.deliver_absence_edited(@absence, User.current)
+      end
       flash[:notice] = l(:notice_hm_absence_updated)
       redirect_to redirect_target
     else
@@ -50,18 +58,16 @@ class HmAbsencesController < ApplicationController
 
   def approve
     return forbidden! unless User.current.admin?
-    @absence.update!(status: HmAbsence::STATUS_APPROVED,
-                     approved_by_id: User.current.id,
-                     approved_at: Time.current)
+    @absence.approve_by!(User.current)
+    HmAbsenceMailer.deliver_absence_decided(@absence)
     flash[:notice] = l(:notice_hm_absence_approved)
     redirect_back(fallback_location: hm_admin_path)
   end
 
   def reject
     return forbidden! unless User.current.admin?
-    @absence.update!(status: HmAbsence::STATUS_REJECTED,
-                     approved_by_id: User.current.id,
-                     approved_at: Time.current)
+    @absence.reject_by!(User.current)
+    HmAbsenceMailer.deliver_absence_decided(@absence)
     flash[:notice] = l(:notice_hm_absence_rejected)
     redirect_back(fallback_location: hm_admin_path)
   end

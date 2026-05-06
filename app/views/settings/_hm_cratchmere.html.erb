@@ -36,4 +36,17 @@
     <%= text_field_tag 'settings[poll_interval_seconds]',
                        @settings['poll_interval_seconds'], size: 4 %>
   </p>
+  <p>
+    <label for="settings_notification_emails"><%= l(:hm_settings_notification_emails) %></label>
+    <%= text_area_tag 'settings[notification_emails]',
+                      @settings['notification_emails'],
+                      rows: 3, cols: 50,
+                      placeholder: 'hr@example.com, lead@example.com' %>
+    <em class="info"><%= l(:hm_settings_notification_emails_hint) %></em>
+  </p>
+  <p>
+    <label for="settings_conflict_padding_days"><%= l(:hm_settings_conflict_padding_days) %></label>
+    <%= text_field_tag 'settings[conflict_padding_days]',
+                       @settings['conflict_padding_days'], size: 4 %>
+  </p>
 </div>

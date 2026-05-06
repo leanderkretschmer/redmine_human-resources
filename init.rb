@@ -4,6 +4,8 @@ Rails.application.config.to_prepare do
   require_dependency File.expand_path('lib/redmine_hm_cratchmere/snapshot',                   __dir__)
   require_dependency File.expand_path('lib/redmine_hm_cratchmere/tracker',                    __dir__)
   require_dependency File.expand_path('lib/redmine_hm_cratchmere/application_controller_patch', __dir__)
+  require_dependency File.expand_path('lib/redmine_hm_cratchmere/holidays',                   __dir__)
+  require_dependency File.expand_path('lib/redmine_hm_cratchmere/notifications',              __dir__)
   require_dependency File.expand_path('lib/redmine_hm_cratchmere/hooks',                      __dir__)
 
   unless ApplicationController.include?(RedmineHmCratchmere::ApplicationControllerPatch)
@@ -29,7 +31,9 @@ Redmine::Plugin.register :redmine_hm_cratchmere do
       'overtime_threshold_minutes'      => 480,
       'enable_target_notifications'     => '1',
       'enable_break_notifications'      => '1',
-      'poll_interval_seconds'           => 30
+      'poll_interval_seconds'           => 30,
+      'notification_emails'             => '',
+      'conflict_padding_days'           => 7
     },
     partial: 'settings/hm_cratchmere'
   )

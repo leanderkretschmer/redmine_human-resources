@@ -1,0 +1,27 @@
+<p><%= l(:mail_body_hm_absence_edited_intro,
+        user: h(@user.name),
+        editor: h(@editor.name),
+        kind: h(HmAbsence.kind_label(@absence.kind))).html_safe %></p>
+
+<p>
+  <strong><%= l(:label_hm_absence_period) %>:</strong>
+  <%= I18n.l(@absence.starts_on) %> – <%= I18n.l(@absence.ends_on) %>
+</p>
+<p>
+  <strong><%= l(:label_hm_absence_status) %>:</strong>
+  <%= h HmAbsence.status_label(@absence.status) %>
+</p>
+<p>
+  <strong><%= l(:mail_label_working_days, count: @breakdown[:working]) %></strong>
+</p>
+
+<% if @absence.reason.present? %>
+  <h3><%= l(:label_hm_absence_reason) %></h3>
+  <p style="white-space: pre-wrap;"><%= h @absence.reason %></p>
+<% end %>
+
+<hr>
+<p>
+  <%= link_to l(:mail_link_view_in_redmine),
+              url_for(controller: 'hm_vacation', action: 'show', only_path: false) %>
+</p>

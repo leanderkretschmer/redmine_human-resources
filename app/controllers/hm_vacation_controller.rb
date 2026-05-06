@@ -18,6 +18,8 @@ class HmVacationController < ApplicationController
       status: HmAbsence::STATUS_REQUESTED
     ))
     if @new_absence.save
+      @new_absence.log_audit!(User.current, HmAbsenceAudit::ACTION_CREATED, to_status: @new_absence.status)
+      HmAbsenceMailer.deliver_absence_requested(@new_absence)
       flash[:notice] = l(:notice_hm_absence_requested)
       redirect_to hm_vacation_path
     else

@@ -12,6 +12,7 @@ class HmAbsence < ActiveRecord::Base
 
   belongs_to :user
   belongs_to :approver, class_name: 'User', foreign_key: 'approved_by_id', optional: true
+  has_many :audits, -> { order(:created_at) }, class_name: 'HmAbsenceAudit', dependent: :destroy
 
   validates :kind,   inclusion: { in: KINDS }
   validates :status, inclusion: { in: STATUSES }
@@ -43,6 +44,22 @@ class HmAbsence < ActiveRecord::Base
     starts_on <= date && date <= ends_on
   end
 
+  def conflicts(padding_days: 7)
+    return self.class.none if starts_on.blank? || ends_on.blank?
+    from = starts_on - padding_days
+    to   = ends_on   + padding_days
+    self.class.vacation.approved
+              .where.not(id: id)
+              .where.not(user_id: user_id)
+              .where('starts_on <= ? AND ends_on >= ?', to, from)
+              .includes(:user)
+              .order(:starts_on)
+  end
+
+  def breakdown
+    ::RedmineHmCratchmere::Holidays.breakdown(starts_on, ends_on)
+  end
+
   def self.kind_label(kind)
     case kind
     when KIND_VACATION then I18n.t(:label_hm_hr_vacation)
@@ -57,6 +74,36 @@ class HmAbsence < ActiveRecord::Base
     when STATUS_APPROVED  then I18n.t(:label_hm_absence_status_approved)
     when STATUS_REJECTED  then I18n.t(:label_hm_absence_status_rejected)
     else status.to_s.humanize
+    end
+  end
+
+  def log_audit!(actor, action, from_status: nil, to_status: nil, notes: nil)
+    HmAbsenceAudit.create!(
+      hm_absence_id: id,
+      actor_id: actor.id,
+      action: action,
+      from_status: from_status,
+      to_status:   to_status,
+      notes:       notes
+    )
+  rescue StandardError => e
+    Rails.logger.warn("[hm_cratchmere] failed to log audit: #{e.message}") if defined?(Rails)
+    nil
+  end
+
+  def approve_by!(actor, notes: nil)
+    prior = status
+    transaction do
+      update!(status: STATUS_APPROVED, approved_by_id: actor.id, approved_at: Time.current)
+      log_audit!(actor, HmAbsenceAudit::ACTION_APPROVED, from_status: prior, to_status: STATUS_APPROVED, notes: notes)
+    end
+  end
+
+  def reject_by!(actor, notes: nil)
+    prior = status
+    transaction do
+      update!(status: STATUS_REJECTED, approved_by_id: actor.id, approved_at: Time.current)
+      log_audit!(actor, HmAbsenceAudit::ACTION_REJECTED, from_status: prior, to_status: STATUS_REJECTED, notes: notes)
     end
   end
 
