@@ -1,7 +1,7 @@
 class CreateHmAbsenceAudits < ActiveRecord::Migration[7.0]
   def change
     create_table :hm_absence_audits do |t|
-      t.references :hm_absence, type: :integer, null: false, foreign_key: true, index: true
+      t.references :hm_absence, null: false, foreign_key: true, index: true
       t.integer :actor_id, null: false
       t.string  :action, null: false, limit: 24
       t.string  :from_status, limit: 16
