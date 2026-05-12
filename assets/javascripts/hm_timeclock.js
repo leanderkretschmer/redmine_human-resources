@@ -150,7 +150,8 @@
     function fetchDayDetail(date) {
       if (!detailModal) return;
       var urlBase = detailModal.getAttribute('data-url-base') || '';
-      var url = urlBase.replace('__DATE__', date) + '.json';
+      var placeholder = detailModal.getAttribute('data-url-placeholder') || '1970-01-01';
+      var url = urlBase.replace(placeholder, date) + '.json';
       detailModal.classList.add('open');
       detailModal.setAttribute('aria-hidden', 'false');
       var loading = detailModal.querySelector('.hm-tc-day-detail-loading');
