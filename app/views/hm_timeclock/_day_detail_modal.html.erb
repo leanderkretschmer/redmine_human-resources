@@ -1,0 +1,33 @@
+<div id="hm-day-detail-modal" class="hm-tc-popup" role="dialog" aria-modal="true" aria-hidden="true"
+     data-url-base="<%= day_hm_timeclock_path(date: '__DATE__') %>"
+     data-new-url="<%= hm_absences_path %>">
+  <div class="hm-tc-popup-inner hm-tc-day-detail-inner">
+    <h3 class="hm-tc-day-detail-title">—</h3>
+    <div class="hm-tc-day-detail-loading"><%= l(:label_hm_day_detail_loading) %></div>
+    <div class="hm-tc-day-detail-events" hidden>
+      <section class="hm-tc-day-detail-section hm-tc-day-detail-work">
+        <h4><%= l(:label_hm_day_detail_work) %></h4>
+        <ul class="hm-tc-day-detail-list" data-bind="work"></ul>
+        <p class="hm-tc-day-detail-empty" data-bind="work-empty" hidden><%= l(:label_hm_day_detail_no_work) %></p>
+      </section>
+      <section class="hm-tc-day-detail-section hm-tc-day-detail-absences">
+        <h4><%= l(:label_hm_day_detail_absences) %></h4>
+        <ul class="hm-tc-day-detail-list" data-bind="absences"></ul>
+        <p class="hm-tc-day-detail-empty" data-bind="absences-empty" hidden><%= l(:label_hm_day_detail_no_absences) %></p>
+      </section>
+    </div>
+    <div class="hm-tc-day-detail-actions">
+      <button type="button" class="hm-tc-day-detail-new" data-default-kind="<%= HmAbsence::KIND_VACATION %>"><%= l(:button_hm_day_detail_new_vacation) %></button>
+      <button type="button" class="hm-tc-day-detail-new" data-default-kind="<%= HmAbsence::KIND_SICKNESS %>"><%= l(:button_hm_day_detail_new_sickness) %></button>
+      <button type="button" class="hm-tc-day-detail-new" data-default-kind="<%= HmAbsence::KIND_OFFSITE %>"><%= l(:button_hm_day_detail_new_offsite) %></button>
+      <button type="button" class="hm-tc-popup-close hm-tc-day-detail-close"><%= l(:button_close) %></button>
+    </div>
+  </div>
+</div>
+
+<ul id="hm-tc-context-menu" class="hm-tc-context-menu" hidden>
+  <li data-action="new-vacation"><%= l(:button_hm_day_detail_new_vacation) %></li>
+  <li data-action="new-sickness"><%= l(:button_hm_day_detail_new_sickness) %></li>
+  <li data-action="new-offsite"><%= l(:button_hm_day_detail_new_offsite) %></li>
+  <li data-action="detail"><%= l(:button_hm_day_detail_show) %></li>
+</ul>

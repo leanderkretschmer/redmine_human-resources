@@ -116,16 +116,260 @@
       });
     }
 
+    window.HmTimeclockOpenAbsenceModal = openModal;
+  }
+
+  function setupCalendarInteractions() {
+    var detailModal = document.getElementById('hm-day-detail-modal');
+    var ctxMenu = document.getElementById('hm-tc-context-menu');
     var calendars = document.querySelectorAll('.hm-tc-calendar');
-    calendars.forEach(function (cal) {
-      var defaultKind = cal.getAttribute('data-default-absence-kind') || '';
-      var cells = cal.querySelectorAll('td.hm-tc-cal-clickable[data-date]');
-      cells.forEach(function (cell) {
-        cell.addEventListener('click', function (e) {
-          if (e.target.closest('a, button, .hm-tc-cal-day-link')) return;
-          openModal(cell.getAttribute('data-date'), defaultKind);
-        });
+    if (!calendars.length) return;
+
+    var dragState = null;
+    var clickTimer = null;
+
+    function cellDate(cell) { return cell && cell.getAttribute('data-date'); }
+    function isInteractive(target) { return !!target.closest('a, button, .hm-tc-cal-day-link, .hm-tc-cal-user-pill'); }
+
+    function highlightRange(fromDate, toDate) {
+      if (!fromDate || !toDate) return;
+      var lo = fromDate < toDate ? fromDate : toDate;
+      var hi = fromDate > toDate ? fromDate : toDate;
+      document.querySelectorAll('td.hm-tc-cal-clickable[data-date]').forEach(function (c) {
+        var d = c.getAttribute('data-date');
+        c.classList.toggle('hm-tc-cal-selected', d >= lo && d <= hi);
       });
+    }
+
+    function clearHighlight() {
+      document.querySelectorAll('td.hm-tc-cal-selected').forEach(function (c) {
+        c.classList.remove('hm-tc-cal-selected');
+      });
+    }
+
+    function fetchDayDetail(date) {
+      if (!detailModal) return;
+      var urlBase = detailModal.getAttribute('data-url-base') || '';
+      var url = urlBase.replace('__DATE__', date) + '.json';
+      detailModal.classList.add('open');
+      detailModal.setAttribute('aria-hidden', 'false');
+      var loading = detailModal.querySelector('.hm-tc-day-detail-loading');
+      var events  = detailModal.querySelector('.hm-tc-day-detail-events');
+      var title   = detailModal.querySelector('.hm-tc-day-detail-title');
+      if (loading) loading.hidden = false;
+      if (events)  events.hidden  = true;
+      if (title)   title.textContent = date;
+      detailModal.dataset.date = date;
+      fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (data) { renderDayDetail(data); })
+        .catch(function () { if (loading) loading.textContent = '⚠'; });
+    }
+
+    function renderDayDetail(data) {
+      if (!data || !detailModal) return;
+      var title   = detailModal.querySelector('.hm-tc-day-detail-title');
+      var loading = detailModal.querySelector('.hm-tc-day-detail-loading');
+      var events  = detailModal.querySelector('.hm-tc-day-detail-events');
+      if (title)   title.textContent = data.date_label || data.date;
+      if (loading) loading.hidden = true;
+      if (events)  events.hidden  = false;
+
+      var workUl = detailModal.querySelector('[data-bind="work"]');
+      var workEmpty = detailModal.querySelector('[data-bind="work-empty"]');
+      if (workUl) {
+        workUl.innerHTML = '';
+        var work = (data.events || []).filter(function (e) { return e.type === 'work'; });
+        work.forEach(function (e) {
+          var li = document.createElement('li');
+          li.className = 'hm-tc-day-event hm-tc-day-event-work';
+          var times = e.starts_label + ' – ' + e.ends_label;
+          var net = ' (' + fmtHM(e.net_seconds) + ')';
+          var html = '<strong>' + times + '</strong>' + net;
+          if (e.breaks && e.breaks.length) {
+            html += '<ul class="hm-tc-day-event-breaks">';
+            e.breaks.forEach(function (b) {
+              html += '<li>⏸ ' + b.starts_label + ' – ' + b.ends_label + ' (' + fmtHM(b.seconds) + ')</li>';
+            });
+            html += '</ul>';
+          }
+          li.innerHTML = html;
+          workUl.appendChild(li);
+        });
+        if (workEmpty) workEmpty.hidden = work.length > 0;
+      }
+
+      var absUl = detailModal.querySelector('[data-bind="absences"]');
+      var absEmpty = detailModal.querySelector('[data-bind="absences-empty"]');
+      if (absUl) {
+        absUl.innerHTML = '';
+        var absences = data.absences || [];
+        absences.forEach(function (a) {
+          var li = document.createElement('li');
+          li.className = 'hm-tc-day-event hm-tc-day-event-absence hm-tc-day-event-' + a.kind;
+          li.dataset.absenceId = a.id;
+          li.dataset.absenceKind = a.kind;
+          var html = '<strong>' + a.kind_label + '</strong> · ' + a.status_label;
+          if (a.starts_on !== a.ends_on) {
+            html += ' · ' + a.starts_on + ' → ' + a.ends_on;
+          }
+          if (a.reason) html += '<div class="hm-tc-day-event-reason">' + escapeHtml(a.reason) + '</div>';
+          if (a.edit_url) {
+            html += ' <a href="' + a.edit_url + '" class="hm-tc-day-event-edit">✎</a>';
+          }
+          li.innerHTML = html;
+          absUl.appendChild(li);
+        });
+        if (absEmpty) absEmpty.hidden = absences.length > 0;
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function closeDetail() {
+      if (!detailModal) return;
+      detailModal.classList.remove('open');
+      detailModal.setAttribute('aria-hidden', 'true');
+    }
+
+    function openAbsenceModalFor(starts, ends, kindHint) {
+      if (!window.HmTimeclockOpenAbsenceModal) return;
+      window.HmTimeclockOpenAbsenceModal(starts, kindHint);
+      var endEl = document.querySelector('#hm_absence_ends_on');
+      if (endEl && ends) endEl.value = ends;
+    }
+
+    function closeContextMenu() {
+      if (!ctxMenu) return;
+      ctxMenu.hidden = true;
+      ctxMenu.removeAttribute('data-date');
+    }
+
+    function openContextMenu(x, y, date) {
+      if (!ctxMenu) return;
+      ctxMenu.hidden = false;
+      ctxMenu.style.left = x + 'px';
+      ctxMenu.style.top  = y + 'px';
+      ctxMenu.dataset.date = date;
+    }
+
+    if (detailModal) {
+      detailModal.addEventListener('click', function (e) {
+        if (e.target === detailModal) closeDetail();
+        var newBtn = e.target.closest('.hm-tc-day-detail-new');
+        if (newBtn) {
+          var date = detailModal.dataset.date;
+          closeDetail();
+          openAbsenceModalFor(date, date, newBtn.getAttribute('data-default-kind'));
+        }
+        if (e.target.classList.contains('hm-tc-day-detail-close') ||
+            e.target.classList.contains('hm-tc-popup-close')) {
+          closeDetail();
+        }
+      });
+    }
+
+    if (ctxMenu) {
+      ctxMenu.addEventListener('click', function (e) {
+        var li = e.target.closest('li[data-action]');
+        if (!li) return;
+        var date = ctxMenu.dataset.date;
+        closeContextMenu();
+        var action = li.getAttribute('data-action');
+        if (action === 'new-vacation') openAbsenceModalFor(date, date, 'vacation');
+        else if (action === 'new-sickness') openAbsenceModalFor(date, date, 'sickness');
+        else if (action === 'new-offsite')  openAbsenceModalFor(date, date, 'offsite');
+        else if (action === 'detail') fetchDayDetail(date);
+      });
+      document.addEventListener('click', function (e) {
+        if (!ctxMenu.hidden && !ctxMenu.contains(e.target)) closeContextMenu();
+      });
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          closeContextMenu();
+          closeDetail();
+        }
+      });
+    }
+
+    calendars.forEach(function (cal) {
+      var defaultKind = cal.getAttribute('data-default-absence-kind') || 'vacation';
+
+      cal.addEventListener('mousedown', function (e) {
+        if (e.button !== 0) return;
+        var cell = e.target.closest('td.hm-tc-cal-clickable[data-date]');
+        if (!cell || isInteractive(e.target)) return;
+        dragState = {
+          startDate: cellDate(cell),
+          endDate: cellDate(cell),
+          moved: false,
+          defaultKind: defaultKind
+        };
+        highlightRange(dragState.startDate, dragState.endDate);
+      });
+
+      cal.addEventListener('mouseover', function (e) {
+        if (!dragState) return;
+        var cell = e.target.closest('td.hm-tc-cal-clickable[data-date]');
+        if (!cell) return;
+        var d = cellDate(cell);
+        if (d !== dragState.endDate) {
+          dragState.endDate = d;
+          dragState.moved = true;
+          highlightRange(dragState.startDate, dragState.endDate);
+        }
+      });
+
+      cal.addEventListener('contextmenu', function (e) {
+        var cell = e.target.closest('td.hm-tc-cal-clickable[data-date]');
+        if (!cell) return;
+        e.preventDefault();
+        openContextMenu(e.pageX, e.pageY, cellDate(cell));
+      });
+
+      cal.addEventListener('dblclick', function (e) {
+        var cell = e.target.closest('td.hm-tc-cal-clickable[data-date]');
+        if (!cell) return;
+        if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+        var ids = cell.getAttribute('data-absence-ids');
+        if (ids) {
+          var firstId = ids.split(',')[0];
+          if (firstId) window.location.href = '/hm_absences/' + firstId + '/edit';
+        } else {
+          openAbsenceModalFor(cellDate(cell), cellDate(cell), defaultKind);
+        }
+      });
+
+      cal.addEventListener('click', function (e) {
+        if (isInteractive(e.target)) return;
+        var cell = e.target.closest('td.hm-tc-cal-clickable[data-date]');
+        if (!cell) return;
+        if (clickTimer) clearTimeout(clickTimer);
+        clickTimer = setTimeout(function () {
+          fetchDayDetail(cellDate(cell));
+          clickTimer = null;
+        }, 220);
+      });
+    });
+
+    document.addEventListener('mouseup', function () {
+      if (!dragState) return;
+      var lo = dragState.startDate < dragState.endDate ? dragState.startDate : dragState.endDate;
+      var hi = dragState.startDate > dragState.endDate ? dragState.startDate : dragState.endDate;
+      var moved = dragState.moved;
+      var kind = dragState.defaultKind;
+      dragState = null;
+      if (moved && lo && hi) {
+        if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+        clearHighlight();
+        openAbsenceModalFor(lo, hi, kind);
+      } else {
+        clearHighlight();
+      }
     });
   }
 
@@ -198,12 +442,14 @@
     var live = liveValues();
     stamp.style.display = '';
     var prefix = (snapshot.state === 'on_break') ? '⏸ ' : '▶ ';
-    var ee = liveExpectedEnd();
+    var overtimePrefix = (snapshot.labels && snapshot.labels.overtime_prefix) || '+';
     var endStr = '';
-    if (ee && snapshot.daily_target_seconds > 0) {
-      if (live.worked >= snapshot.daily_target_seconds) {
-        endStr = ' ✓';
-      } else {
+    if (snapshot.daily_target_seconds > 0 && live.worked >= snapshot.daily_target_seconds) {
+      var over = live.worked - snapshot.daily_target_seconds;
+      endStr = ' ' + overtimePrefix + fmtHM(over);
+    } else {
+      var ee = liveExpectedEnd();
+      if (ee && snapshot.daily_target_seconds > 0) {
         endStr = ' → ' + fmtTimeOfDay(ee);
       }
     }
@@ -226,6 +472,10 @@
     var live = liveValues();
     if (!live) return;
 
+    var inOvertime = snapshot.daily_target_seconds > 0 &&
+                     live.worked >= snapshot.daily_target_seconds;
+    var overtimePrefix = (snapshot.labels && snapshot.labels.overtime_prefix) || '+';
+
     var bound = card.querySelectorAll('[data-bind]');
     for (var i = 0; i < bound.length; i++) {
       var el = bound[i];
@@ -240,11 +490,12 @@
         var ee = liveExpectedEnd();
         if (!ee || !snapshot.daily_target_seconds) {
           el.textContent = '--:--';
-        } else if (live.worked >= snapshot.daily_target_seconds) {
-          el.textContent = (snapshot.labels && snapshot.labels.target_done) || '✓';
         } else {
           el.textContent = fmtTimeOfDay(ee);
         }
+      } else if (k === 'overtime') {
+        var over = inOvertime ? (live.worked - snapshot.daily_target_seconds) : 0;
+        el.textContent = overtimePrefix + fmtHM(over);
       }
     }
 
@@ -252,7 +503,13 @@
     for (var j = 0; j < elements.length; j++) {
       var sel = elements[j];
       var states = (sel.getAttribute('data-show-when') || '').split(',');
-      sel.style.display = states.indexOf(snapshot.state) >= 0 ? '' : 'none';
+      var stateVisible = states.indexOf(snapshot.state) >= 0;
+      var hideWhenOvertime = sel.getAttribute('data-hide-when-overtime') === '1';
+      var showWhenOvertime = sel.getAttribute('data-show-when-overtime') === '1';
+      var visible = stateVisible;
+      if (hideWhenOvertime && inOvertime) visible = false;
+      if (showWhenOvertime && !inOvertime) visible = false;
+      sel.style.display = visible ? '' : 'none';
     }
 
     var actions = card.querySelectorAll('[data-state-visible]');
@@ -428,6 +685,7 @@
 
     setupHrDropdown();
     setupAbsenceModal();
+    setupCalendarInteractions();
 
     if (!snapshot) {
       fetchStatus().then(tick);

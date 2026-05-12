@@ -53,11 +53,20 @@
                   cell_classes << 'hm-tc-cal-sickness'
                   cell_classes << 'hm-tc-cal-pending-sickness' if day_absences.select { |a| a.kind == HmAbsence::KIND_SICKNESS }.all?(&:requested?)
                 end
+                if day_absences.any? { |a| a.kind == HmAbsence::KIND_OFFSITE }
+                  cell_classes << 'hm-tc-cal-offsite'
+                end
               end
 
               cell_attrs = +%(class="#{cell_classes.join(' ')}")
               if day && clickable && !day_link
                 cell_attrs << %( data-date="#{day.iso8601}")
+                if day_absences.any?
+                  ids = day_absences.map(&:id).join(',')
+                  kinds = day_absences.map(&:kind).uniq.join(',')
+                  cell_attrs << %( data-absence-ids="#{ids}")
+                  cell_attrs << %( data-absence-kinds="#{kinds}")
+                end
               end
             %>
             <td <%= cell_attrs.html_safe %>>
