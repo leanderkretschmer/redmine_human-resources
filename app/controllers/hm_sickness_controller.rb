@@ -79,8 +79,9 @@ class HmSicknessController < ApplicationController
 
   def error_message(code)
     case code
-    when :future_not_allowed then l(:notice_hm_sickness_no_future)
-    when :backdate_exceeded  then l(:notice_hm_sickness_backdate_limit, days: HmAbsence::USER_BACKDATE_LIMIT_DAYS)
+    when :future_not_allowed       then l(:notice_hm_sickness_no_future)
+    when :future_start_not_allowed then l(:notice_hm_sickness_no_future_start)
+    when :backdate_exceeded        then l(:notice_hm_sickness_backdate_limit, days: HmAbsence::USER_BACKDATE_LIMIT_DAYS)
     else l(:notice_hm_absence_forbidden)
     end
   end

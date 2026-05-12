@@ -177,9 +177,20 @@
       return meta ? meta.getAttribute('content') : '';
     }
 
+    function modalLabel(key, fallback) {
+      if (!detailModal) return fallback;
+      var v = detailModal.getAttribute('data-' + key);
+      return v && v.length ? v : fallback;
+    }
+
+    function refreshActiveDay() {
+      var date = detailModal && detailModal.dataset.date;
+      if (date) fetchDayDetail(date);
+    }
+
     function deleteAbsence(url, kindLabel) {
       if (!url) return;
-      if (!confirm((window.HmTimeclockI18n && window.HmTimeclockI18n.confirmDelete) || 'Wirklich löschen?')) return;
+      if (!confirm(modalLabel('confirm-delete', 'Wirklich löschen?'))) return;
       fetch(url, {
         method: 'DELETE',
         credentials: 'same-origin',
@@ -189,13 +200,105 @@
         }
       }).then(function (r) {
         if (r.ok || r.status === 302) {
-          var date = detailModal && detailModal.dataset.date;
-          if (date) fetchDayDetail(date);
+          refreshActiveDay();
         } else {
           alert('Löschen fehlgeschlagen (' + r.status + ')');
         }
       }).catch(function () {
         alert('Löschen fehlgeschlagen');
+      });
+    }
+
+    function renderInlineEdit(li, absence) {
+      var fromLabel   = modalLabel('label-from',   'Von');
+      var toLabel     = modalLabel('label-to',     'Bis');
+      var reasonLabel = modalLabel('label-reason', 'Begründung');
+      var saveLabel   = modalLabel('save-label',   'Speichern');
+      var cancelLabel = modalLabel('cancel-label', 'Abbrechen');
+
+      var formHtml =
+        '<form class="hm-tc-day-event-form">' +
+          '<div class="hm-tc-day-event-form-row">' +
+            '<label>' + escapeHtml(fromLabel) + '</label>' +
+            '<input type="date" name="starts_on" value="' + escapeHtml(absence.starts_on) + '" required>' +
+          '</div>' +
+          '<div class="hm-tc-day-event-form-row">' +
+            '<label>' + escapeHtml(toLabel) + '</label>' +
+            '<input type="date" name="ends_on" value="' + escapeHtml(absence.ends_on) + '" required>' +
+          '</div>' +
+          '<div class="hm-tc-day-event-form-row">' +
+            '<label>' + escapeHtml(reasonLabel) + '</label>' +
+            '<textarea name="reason" rows="2">' + escapeHtml(absence.reason || '') + '</textarea>' +
+          '</div>' +
+          '<div class="hm-tc-day-event-form-actions">' +
+            '<button type="submit" class="button-positive hm-tc-day-event-form-save">' + escapeHtml(saveLabel) + '</button> ' +
+            '<button type="button" class="hm-tc-day-event-form-cancel">' + escapeHtml(cancelLabel) + '</button>' +
+          '</div>' +
+        '</form>';
+
+      var snapshot = li.innerHTML;
+      li.innerHTML = formHtml;
+      li.classList.add('hm-tc-day-event-editing');
+
+      var form = li.querySelector('.hm-tc-day-event-form');
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        submitInlineEdit(absence, form, li, snapshot);
+      });
+      var cancelBtn = li.querySelector('.hm-tc-day-event-form-cancel');
+      if (cancelBtn) cancelBtn.addEventListener('click', function () {
+        li.innerHTML = snapshot;
+        li.classList.remove('hm-tc-day-event-editing');
+        rebindInlineHandlers(li, absence);
+      });
+    }
+
+    function rebindInlineHandlers(li, absence) {
+      var delBtn = li.querySelector('.hm-tc-day-event-delete');
+      if (delBtn) {
+        delBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          deleteAbsence(delBtn.getAttribute('data-url'), absence.kind_label);
+        });
+      }
+      var editBtn = li.querySelector('.hm-tc-day-event-edit');
+      if (editBtn) {
+        editBtn.addEventListener('click', function (e) {
+          e.preventDefault();
+          renderInlineEdit(li, absence);
+        });
+      }
+    }
+
+    function submitInlineEdit(absence, form, li, snapshot) {
+      var fd = new FormData(form);
+      var body = new URLSearchParams();
+      body.append('hm_absence[starts_on]', fd.get('starts_on'));
+      body.append('hm_absence[ends_on]',   fd.get('ends_on'));
+      body.append('hm_absence[reason]',    fd.get('reason'));
+      body.append('_method', 'patch');
+
+      var saveBtn = form.querySelector('.hm-tc-day-event-form-save');
+      if (saveBtn) saveBtn.disabled = true;
+
+      fetch(absence.edit_url.replace(/\/edit$/, ''), {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRF-Token': csrfToken(),
+          'Accept': 'application/json',
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: body.toString()
+      }).then(function (r) {
+        if (r.ok) { refreshActiveDay(); return; }
+        return r.json().then(function (data) {
+          var msg = (data && (data.error || (data.errors && data.errors.join(', ')))) || ('HTTP ' + r.status);
+          throw new Error(msg);
+        }, function () { throw new Error('HTTP ' + r.status); });
+      }).catch(function (err) {
+        if (saveBtn) saveBtn.disabled = false;
+        alert((err && err.message) || 'Speichern fehlgeschlagen');
       });
     }
 
@@ -252,10 +355,13 @@
           if (a.reason) html += '<div class="hm-tc-day-event-reason">' + escapeHtml(a.reason) + '</div>';
           html += '<div class="hm-tc-day-event-actions">';
           if (a.edit_url) {
-            html += '<a href="' + a.edit_url + '" class="hm-tc-day-event-edit" title="bearbeiten">✎</a>';
+            html += '<a href="#" class="icon icon-edit hm-tc-day-event-edit" title="' + escapeHtml(modalLabel('edit-label', 'Bearbeiten')) + '">' +
+                    escapeHtml(modalLabel('edit-label', 'Bearbeiten')) + '</a>';
           }
           if (a.delete_url) {
-            html += '<button type="button" class="hm-tc-day-event-delete" data-url="' + a.delete_url + '" title="löschen">🗑</button>';
+            html += '<a href="#" class="icon icon-del hm-tc-day-event-delete" data-url="' + escapeHtml(a.delete_url) +
+                    '" title="' + escapeHtml(modalLabel('delete-label', 'Löschen')) + '">' +
+                    escapeHtml(modalLabel('delete-label', 'Löschen')) + '</a>';
           }
           html += '</div>';
           li.innerHTML = html;
@@ -264,6 +370,13 @@
             delBtn.addEventListener('click', function (e) {
               e.preventDefault();
               deleteAbsence(delBtn.getAttribute('data-url'), a.kind_label);
+            });
+          }
+          var editBtn = li.querySelector('.hm-tc-day-event-edit');
+          if (editBtn) {
+            editBtn.addEventListener('click', function (e) {
+              e.preventDefault();
+              renderInlineEdit(li, a);
             });
           }
           absUl.appendChild(li);

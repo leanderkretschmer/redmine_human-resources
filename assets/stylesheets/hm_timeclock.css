@@ -315,6 +315,7 @@ table.hm-tc-calendar-grid {
 }
 .hm-tc-cal-user-pill-vacation { background: #3498db; }
 .hm-tc-cal-user-pill-sickness { background: #e74c3c; }
+.hm-tc-cal-user-pill-offsite  { background: #9b59b6; }
 .hm-tc-cal-user-pill-pending {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.45) 4px, rgba(255,255,255,0.45) 8px);
   border: 1px dashed rgba(255,255,255,0.85);
@@ -338,6 +339,7 @@ table.hm-tc-calendar-grid {
 }
 .hm-tc-cal-legend-vacation { background: #3498db; }
 .hm-tc-cal-legend-sickness { background: #e74c3c; }
+.hm-tc-cal-legend-offsite  { background: #9b59b6; }
 .hm-tc-cal-legend-pending  {
   background:
     repeating-linear-gradient(45deg, #95a5a6, #95a5a6 4px, #fff 4px, #fff 8px);
@@ -353,6 +355,7 @@ table.hm-tc-calendar-grid {
 }
 .hm-tc-abs-pill-vacation { background: #3498db; }
 .hm-tc-abs-pill-sickness { background: #e74c3c; }
+.hm-tc-abs-pill-offsite  { background: #9b59b6; }
 .hm-tc-abs-pill-pending {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.45) 4px, rgba(255,255,255,0.45) 8px);
   border: 1px dashed rgba(255,255,255,0.9);
@@ -624,36 +627,51 @@ button.hm-tc-day-detail-close {
   border-radius: 4px !important;
 }
 
-/* Inline edit/delete buttons on absence rows */
+/* Inline edit/delete actions on absence rows — Redmine icon set */
 .hm-tc-day-event-actions {
   display: inline-flex;
-  gap: 0.4em;
+  gap: 0.6em;
   margin-left: 0.6em;
   vertical-align: middle;
 }
-.hm-tc-day-event-delete {
-  background: transparent !important;
-  border: 1px solid #c0392b !important;
-  color: #c0392b !important;
-  padding: 0.05em 0.45em !important;
-  border-radius: 3px;
+.hm-tc-day-event-actions .icon {
+  font-size: 0.9em;
+  color: #2980b9 !important;
+  text-decoration: none;
   cursor: pointer;
+}
+.hm-tc-day-event-actions .icon.icon-del {
+  color: #c0392b !important;
+}
+.hm-tc-day-event-actions .icon:hover {
+  text-decoration: underline;
+}
+
+/* Inline edit form */
+.hm-tc-day-event-editing {
+  background: #fffbe7 !important;
+  border-left-color: #f1c40f !important;
+}
+.hm-tc-day-event-form-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin-bottom: 0.3em;
+}
+.hm-tc-day-event-form-row label {
+  flex: 0 0 6em;
   font-size: 0.9em;
-  line-height: 1;
+  color: #555;
 }
-.hm-tc-day-event-delete:hover {
-  background: #c0392b !important;
-  color: #ffffff !important;
-}
-.hm-tc-day-event-edit {
-  display: inline-block;
-  padding: 0.05em 0.45em;
-  border: 1px solid #2980b9;
+.hm-tc-day-event-form-row input[type="date"],
+.hm-tc-day-event-form-row textarea {
+  flex: 1;
+  padding: 0.2em 0.4em;
+  border: 1px solid #c6ccd5;
   border-radius: 3px;
-  font-size: 0.9em;
-  line-height: 1;
+  font-size: 0.95em;
 }
-.hm-tc-day-event-edit:hover {
-  background: #2980b9;
-  color: #ffffff !important;
+.hm-tc-day-event-form-actions {
+  margin-top: 0.4em;
+  text-align: right;
 }

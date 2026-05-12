@@ -97,6 +97,7 @@ en:
   notice_hm_absence_forbidden: "Action not permitted."
   notice_hm_sickness_logged: "Sick day logged."
   notice_hm_sickness_no_future: "Sick days cannot be entered for the future."
+  notice_hm_sickness_no_future_start: "Sick leave must start on or before today. A doctor's certificate may extend the end into the future, but a new entry cannot start in the future."
   notice_hm_sickness_backdate_limit: "Sick days can only be backdated up to %{days} days."
   notice_hm_offsite_logged: "Off-site work logged."
   notice_hm_offsite_no_future: "Off-site work cannot be entered for the future."

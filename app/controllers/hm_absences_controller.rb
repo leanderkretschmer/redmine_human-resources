@@ -62,7 +62,20 @@ class HmAbsencesController < ApplicationController
   def update
     return unless authorize_edit!
     attrs = absence_params
-    attrs[:status] = HmAbsence::STATUS_REQUESTED unless User.current.admin?
+
+    if @absence.sickness? || @absence.offsite?
+      starts_on = parse_date(attrs[:starts_on])
+      ends_on   = parse_date(attrs[:ends_on]) || starts_on
+      gate = HmAbsence.validate_kind_window(@absence.kind, starts_on, ends_on)
+      gate ||= HmAbsence.validate_user_window(@absence.kind, starts_on, ends_on) unless User.current.admin?
+      if gate
+        msg = window_error_message(@absence.kind, gate)
+        return respond_with_failure(msg)
+      end
+    end
+
+    attrs[:status] = HmAbsence::STATUS_REQUESTED if !User.current.admin? && @absence.vacation?
+
     prior_status = @absence.status
     if @absence.update(attrs)
       @absence.log_audit!(User.current, HmAbsenceAudit::ACTION_UPDATED,
@@ -70,10 +83,15 @@ class HmAbsencesController < ApplicationController
       if User.current.admin? && @absence.user_id != User.current.id
         HmAbsenceMailer.deliver_absence_edited(@absence, User.current)
       end
-      flash[:notice] = l(:notice_hm_absence_updated)
-      redirect_back(fallback_location: redirect_target)
+      respond_to do |format|
+        format.html do
+          flash[:notice] = l(:notice_hm_absence_updated)
+          redirect_back(fallback_location: redirect_target)
+        end
+        format.json { render json: { ok: true } }
+      end
     else
-      render :edit, status: :unprocessable_entity
+      respond_with_failure(@absence.errors.full_messages.join(', '))
     end
   end
 
@@ -147,6 +165,16 @@ class HmAbsencesController < ApplicationController
     redirect_to redirect_target
   end
 
+  def respond_with_failure(message)
+    respond_to do |format|
+      format.html do
+        flash[:error] = message
+        redirect_back(fallback_location: redirect_target)
+      end
+      format.json { render json: { error: message }, status: :unprocessable_entity }
+    end
+  end
+
   def parse_date(value)
     return value if value.is_a?(Date)
     return nil if value.blank?
@@ -159,6 +187,8 @@ class HmAbsencesController < ApplicationController
     case code
     when :future_not_allowed
       kind == HmAbsence::KIND_SICKNESS ? l(:notice_hm_sickness_no_future) : l(:notice_hm_offsite_no_future)
+    when :future_start_not_allowed
+      l(:notice_hm_sickness_no_future_start)
     when :backdate_exceeded
       l(:notice_hm_sickness_backdate_limit, days: HmAbsence::USER_BACKDATE_LIMIT_DAYS)
     else

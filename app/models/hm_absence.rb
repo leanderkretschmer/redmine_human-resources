@@ -79,9 +79,17 @@ class HmAbsence < ActiveRecord::Base
 
   # Validation gates that apply to *every* requester (admin included)
   def self.validate_kind_window(kind, starts_on, ends_on, today = Date.current)
-    return nil unless kind == KIND_SICKNESS || kind == KIND_OFFSITE
-    return :future_not_allowed if starts_on && starts_on > today
-    return :future_not_allowed if ends_on   && ends_on   > today
+    case kind
+    when KIND_SICKNESS
+      # Start must lie on or before today (no fully-future planning), but ends_on may
+      # extend into the future to cover an AU-Bescheinigung that signs forward.
+      return :future_start_not_allowed if starts_on && starts_on > today
+    when KIND_OFFSITE
+      # Off-site notes describe what *was* worked off-site; future planning is not
+      # supported for now.
+      return :future_not_allowed if starts_on && starts_on > today
+      return :future_not_allowed if ends_on   && ends_on   > today
+    end
     nil
   end
 

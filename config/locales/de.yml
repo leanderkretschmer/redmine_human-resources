@@ -97,6 +97,7 @@ de:
   notice_hm_absence_forbidden: "Aktion nicht erlaubt."
   notice_hm_sickness_logged: "Krankheitstag eingetragen."
   notice_hm_sickness_no_future: "Krankheitstage können nicht in der Zukunft eingetragen werden."
+  notice_hm_sickness_no_future_start: "Krankheit muss am Tag der Eintragung oder davor beginnen. Endet sie laut AU in der Zukunft, ist das ok — neu ab der Zukunft anfangen aber nicht."
   notice_hm_sickness_backdate_limit: "Krankheitstage können nur bis %{days} Tage rückwirkend eingetragen werden."
   notice_hm_offsite_logged: "Auswärtstätigkeit eingetragen."
   notice_hm_offsite_no_future: "Auswärtstätigkeit kann nicht in der Zukunft eingetragen werden."

@@ -1,7 +1,15 @@
 <div id="hm-day-detail-modal" class="hm-tc-popup" role="dialog" aria-modal="true" aria-hidden="true"
      data-url-base="<%= day_hm_timeclock_path(date: '1970-01-01') %>"
      data-url-placeholder="1970-01-01"
-     data-new-url="<%= hm_absences_path %>">
+     data-new-url="<%= hm_absences_path %>"
+     data-edit-label="<%= l(:button_hm_absence_edit) %>"
+     data-delete-label="<%= l(:button_hm_absence_delete) %>"
+     data-save-label="<%= l(:button_hm_absence_save) %>"
+     data-cancel-label="<%= l(:button_cancel) %>"
+     data-confirm-delete="<%= l(:text_are_you_sure) %>"
+     data-label-from="<%= l(:label_hm_absence_starts_on) %>"
+     data-label-to="<%= l(:label_hm_absence_ends_on) %>"
+     data-label-reason="<%= l(:label_hm_absence_reason) %>">
   <div class="hm-tc-popup-inner hm-tc-day-detail-inner">
     <h3 class="hm-tc-day-detail-title">—</h3>
     <div class="hm-tc-day-detail-loading"><%= l(:label_hm_day_detail_loading) %></div>
