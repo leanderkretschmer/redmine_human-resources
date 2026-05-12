@@ -2,8 +2,11 @@
   <%= stylesheet_link_tag 'hm_timeclock', plugin: 'redmine_hm_cratchmere' %>
 <% end %>
 
+<div class="contextual">
+  <%= link_to l(:label_hm_admin_employment_types), hm_admin_employment_types_path, class: 'icon icon-settings' %>
+</div>
+
 <h2><%= l(:label_hm_admin) %></h2>
-<p><%= l(:label_hm_admin_overview) %></p>
 
 <h3><%= l(:label_hm_admin_global_calendar) %></h3>
 <%= render partial: 'hm_timeclock/calendar', locals: {

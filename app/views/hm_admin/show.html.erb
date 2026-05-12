@@ -17,6 +17,123 @@
   <div><strong><%= l(:label_hm_admin_total_month) %>:</strong> <%= hm_format_seconds(@summary[:month]) %></div>
 </div>
 
+<h3><%= l(:label_hm_admin_user_setting) %></h3>
+<%= form_with url: update_hm_admin_user_setting_path(user_id: @user.id), method: :patch,
+              scope: :hm_user_setting, local: true, html: { class: 'hm-tc-settings-form' } do |f| %>
+  <div class="box tabular">
+    <p>
+      <%= f.label :hm_employment_type_id, l(:label_hm_employment_type) %>
+      <%= f.select :hm_employment_type_id,
+                   @employment_types.map { |t| [t.name, t.id] },
+                   { include_blank: true },
+                   { selected: @user_setting.hm_employment_type_id } %>
+    </p>
+    <p>
+      <%= f.label :daily_target_hours, l(:label_hm_timeclock_required_daily) %>
+      <%= number_field_tag 'hm_user_setting[daily_target_hours]',
+                           @user_setting.daily_target_minutes ? (@user_setting.daily_target_minutes / 60.0) : nil,
+                           min: 0, step: 0.5,
+                           placeholder: (@user_setting.effective_daily_target_minutes / 60.0).round(2) %>
+    </p>
+    <p>
+      <%= f.label :weekly_target_hours, l(:label_hm_timeclock_required_weekly) %>
+      <%= number_field_tag 'hm_user_setting[weekly_target_hours]',
+                           @user_setting.weekly_target_minutes ? (@user_setting.weekly_target_minutes / 60.0) : nil,
+                           min: 0, step: 0.5,
+                           placeholder: (@user_setting.effective_weekly_target_minutes / 60.0).round(2) %>
+    </p>
+    <p>
+      <%= f.label :max_break_hours, l(:label_hm_timeclock_max_break) %>
+      <%= number_field_tag 'hm_user_setting[max_break_hours]',
+                           @user_setting.max_break_minutes ? (@user_setting.max_break_minutes / 60.0) : nil,
+                           min: 0, step: 0.5,
+                           placeholder: (@user_setting.effective_max_break_minutes / 60.0).round(2) %>
+    </p>
+    <p>
+      <%= f.label :yearly_vacation_days_override, l(:label_hm_employment_type_vacation) %>
+      <%= f.number_field :yearly_vacation_days_override,
+                         min: 0, step: 1,
+                         placeholder: @user_setting.effective_yearly_vacation_days %>
+    </p>
+    <p>
+      <%= f.label :weekly_school_days_override, l(:label_hm_employment_type_school_days) %>
+      <%= f.number_field :weekly_school_days_override,
+                         min: 0, max: 5, step: 1,
+                         placeholder: @user_setting.effective_weekly_school_days %>
+    </p>
+    <p>
+      <%= f.label :allows_monthly_plan_override, l(:label_hm_employment_type_monthly_plan) %>
+      <%= f.select :allows_monthly_plan_override,
+                   [[l(:label_hm_inherit), nil], [l(:general_text_Yes), true], [l(:general_text_No), false]],
+                   {},
+                   { selected: @user_setting.allows_monthly_plan_override } %>
+    </p>
+    <p>
+      <%= submit_tag l(:button_save), class: 'button-positive' %>
+    </p>
+  </div>
+<% end %>
+
+<% if @user_setting.allows_monthly_plan? %>
+  <h3><%= l(:label_hm_admin_monthly_plans) %></h3>
+  <% if @monthly_plans.any? %>
+    <table class="list">
+      <thead>
+        <tr>
+          <th><%= l(:label_hm_admin_monthly_plan_year) %></th>
+          <th><%= l(:label_hm_admin_monthly_plan_month) %></th>
+          <th><%= l(:label_hm_admin_monthly_plan_target) %></th>
+          <th><%= l(:label_hm_admin_monthly_plan_notes) %></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @monthly_plans.each do |p| %>
+          <tr class="<%= cycle('odd', 'even') %>">
+            <%= form_with url: hm_admin_user_monthly_plan_path(user_id: @user.id, id: p.id),
+                          method: :patch, scope: :hm_monthly_plan, local: true do |f| %>
+              <td><%= p.year %></td>
+              <td><%= p.month %></td>
+              <td>
+                <%= number_field_tag 'hm_monthly_plan[target_hours]', (p.target_minutes / 60.0), min: 0, step: 0.5, size: 6 %>
+              </td>
+              <td><%= text_field_tag 'hm_monthly_plan[notes]', p.notes, size: 40 %></td>
+              <td>
+                <%= submit_tag l(:button_save), class: 'icon icon-save' %>
+                <%= link_to l(:button_hm_absence_delete),
+                            hm_admin_user_monthly_plan_path(user_id: @user.id, id: p.id),
+                            method: :delete,
+                            data: { confirm: l(:text_are_you_sure) },
+                            class: 'icon icon-del' %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="nodata"><%= l(:label_hm_admin_monthly_plan_none) %></p>
+  <% end %>
+
+  <%= form_with url: hm_admin_user_monthly_plans_path(user_id: @user.id),
+                method: :post, scope: :hm_monthly_plan, local: true,
+                html: { class: 'hm-tc-settings-form' } do |f| %>
+    <div class="box tabular">
+      <p>
+        <%= f.label :year, l(:label_hm_admin_monthly_plan_year) %>
+        <%= f.number_field :year, value: Date.current.year, min: 2020, max: 2099 %>
+        <%= f.label :month, l(:label_hm_admin_monthly_plan_month) %>
+        <%= f.number_field :month, value: Date.current.month, min: 1, max: 12 %>
+        <%= f.label :target_hours, l(:label_hm_admin_monthly_plan_target) %>
+        <%= number_field_tag 'hm_monthly_plan[target_hours]', '', min: 0, step: 0.5, size: 6 %>
+        <%= f.label :notes, l(:label_hm_admin_monthly_plan_notes) %>
+        <%= f.text_field :notes, size: 30 %>
+        <%= submit_tag l(:button_save), class: 'button-positive' %>
+      </p>
+    </div>
+  <% end %>
+<% end %>
+
 <%= render partial: 'hm_timeclock/calendar', locals: {
       month: @month, entries: @entries, user: @user,
       base_path: ->(m) { hm_admin_user_path(user_id: @user.id, month: m.strftime('%Y-%m')) },

@@ -1,0 +1,74 @@
+<%= form_with model: @type,
+              url: @type.persisted? ? hm_admin_employment_type_path(@type) : hm_admin_employment_types_path,
+              scope: :hm_employment_type,
+              method: @type.persisted? ? :patch : :post,
+              local: true,
+              html: { class: 'hm-tc-settings-form' } do |f| %>
+  <% if @type.errors.any? %>
+    <div id="errorExplanation">
+      <ul>
+        <% @type.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+  <div class="box tabular">
+    <p>
+      <%= f.label :name, l(:field_name) %>
+      <%= f.text_field :name, required: true, size: 40 %>
+    </p>
+    <p>
+      <%= f.label :slug, l(:label_hm_employment_type_slug) %>
+      <%= f.text_field :slug, required: true, size: 32,
+                       pattern: '[a-z0-9_\-]+' %>
+      <em class="info"><%= l(:hint_hm_employment_type_slug) %></em>
+    </p>
+    <p>
+      <%= f.label :description, l(:field_description) %>
+      <%= f.text_area :description, rows: 3, cols: 60 %>
+    </p>
+    <p>
+      <%= f.label :daily_target_hours, l(:label_hm_employment_type_daily) %>
+      <%= number_field_tag 'hm_employment_type[daily_target_hours]',
+                           @type.daily_target_minutes ? (@type.daily_target_minutes / 60.0) : nil,
+                           min: 0, step: 0.5 %>
+    </p>
+    <p>
+      <%= f.label :weekly_target_hours, l(:label_hm_employment_type_weekly) %>
+      <%= number_field_tag 'hm_employment_type[weekly_target_hours]',
+                           @type.weekly_target_minutes ? (@type.weekly_target_minutes / 60.0) : nil,
+                           min: 0, step: 0.5 %>
+    </p>
+    <p>
+      <%= f.label :max_break_hours, l(:label_hm_employment_type_break) %>
+      <%= number_field_tag 'hm_employment_type[max_break_hours]',
+                           (@type.max_break_minutes / 60.0),
+                           min: 0, step: 0.5 %>
+    </p>
+    <p>
+      <%= f.label :yearly_vacation_days, l(:label_hm_employment_type_vacation) %>
+      <%= f.number_field :yearly_vacation_days, min: 0, step: 1 %>
+    </p>
+    <p>
+      <%= f.label :weekly_school_days, l(:label_hm_employment_type_school_days) %>
+      <%= f.number_field :weekly_school_days, min: 0, max: 5, step: 1 %>
+    </p>
+    <p>
+      <%= f.label :allows_monthly_plan, l(:label_hm_employment_type_monthly_plan) %>
+      <%= f.check_box :allows_monthly_plan %>
+    </p>
+    <p>
+      <%= f.label :position_order, l(:label_hm_employment_type_position_order) %>
+      <%= f.number_field :position_order, min: 0, step: 1 %>
+    </p>
+    <p>
+      <%= f.label :archived, l(:label_hm_employment_type_archived) %>
+      <%= f.check_box :archived %>
+    </p>
+  </div>
+  <p>
+    <%= submit_tag l(:button_save), class: 'button-positive' %>
+    <%= link_to l(:button_cancel), hm_admin_employment_types_path %>
+  </p>
+<% end %>

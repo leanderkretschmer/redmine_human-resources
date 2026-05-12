@@ -44,6 +44,10 @@ class HmAdminController < ApplicationController
     @absences_by_day = HmAbsence.build_by_day(overlay, range_from, range_to)
     @absences = HmAbsence.for_user(@user).order(starts_on: :desc).limit(50).to_a
     @summary = compute_summary(@user)
+    HmEmploymentType.seed_legal_defaults! if HmEmploymentType.count.zero?
+    @user_setting = HmUserSetting.for(@user)
+    @employment_types = HmEmploymentType.active.ordered.to_a
+    @monthly_plans = HmMonthlyPlan.for_user(@user).order(year: :desc, month: :desc).limit(36).to_a
     respond_to do |format|
       format.html
       format.csv do
@@ -60,6 +64,7 @@ class HmAdminController < ApplicationController
     range_to   = @date.end_of_day
     @entries  = HmWorkEntry.in_range(range_from, range_to).includes(:user).order(:started_at).to_a
     @absences = HmAbsence.where('starts_on <= ? AND ends_on >= ?', @date, @date).includes(:user, :approver).to_a
+    @ticket_coverage = build_ticket_coverage(@date, @entries)
   rescue ArgumentError
     redirect_to hm_admin_path
   end
@@ -71,6 +76,44 @@ class HmAdminController < ApplicationController
     Date.parse("#{params[:month]}-01")
   rescue ArgumentError
     nil
+  end
+
+  def build_ticket_coverage(date, work_entries)
+    by_user = work_entries.group_by(&:user_id)
+    user_ids = by_user.keys
+    return {} if user_ids.empty?
+
+    time_entries = TimeEntry.where(user_id: user_ids, spent_on: date)
+                            .includes(:issue, :project).to_a
+
+    user_ids.each_with_object({}) do |uid, h|
+      entries = by_user[uid] || []
+      worked_seconds = entries.sum { |e| e.net_seconds }
+      logged = time_entries.select { |t| t.user_id == uid }
+      logged_seconds = (logged.sum(&:hours).to_f * 3600).round
+      per_issue = logged.group_by { |t| [t.issue_id, t.project_id] }.map do |(issue_id, project_id), ts|
+        seconds = (ts.sum(&:hours).to_f * 3600).round
+        issue   = ts.first.issue
+        project = ts.first.project
+        {
+          issue_id:  issue_id,
+          issue_subject: issue ? "##{issue.id} #{issue.subject}" : "(#{l(:label_hm_admin_issue_unset)})",
+          project_name: project&.name,
+          seconds: seconds,
+          comments: ts.map(&:comments).compact.reject(&:blank?).uniq.first(3).join(' · ')
+        }
+      end
+      h[uid] = {
+        user: entries.first&.user,
+        worked_seconds: worked_seconds,
+        logged_seconds: logged_seconds,
+        coverage: worked_seconds.positive? ? (logged_seconds.to_f / worked_seconds * 100).round(1) : nil,
+        per_issue: per_issue.sort_by { |row| -row[:seconds] }
+      }
+    end
+  rescue StandardError => e
+    Rails.logger.warn("[hm_cratchmere] ticket coverage failed: #{e.message}")
+    {}
   end
 
   def compute_summary(user)

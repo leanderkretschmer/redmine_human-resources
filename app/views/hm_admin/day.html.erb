@@ -38,6 +38,62 @@
   </table>
 <% end %>
 
+<% if @ticket_coverage && @ticket_coverage.any? %>
+  <h3><%= l(:label_hm_admin_ticket_coverage) %></h3>
+  <p class="hm-tc-coverage-hint"><%= l(:hint_hm_admin_ticket_coverage) %></p>
+  <table class="list hm-tc-coverage-table">
+    <thead>
+      <tr>
+        <th><%= l(:label_hm_admin_user) %></th>
+        <th><%= l(:label_hm_admin_worked) %></th>
+        <th><%= l(:label_hm_admin_logged_on_tickets) %></th>
+        <th><%= l(:label_hm_admin_coverage) %></th>
+        <th><%= l(:label_hm_admin_tickets_breakdown) %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @ticket_coverage.each do |uid, row| %>
+        <% next unless row[:user] %>
+        <tr>
+          <td><%= link_to h(row[:user].name), hm_admin_user_path(user_id: uid) %></td>
+          <td><%= hm_format_seconds(row[:worked_seconds]) %></td>
+          <td><%= hm_format_seconds(row[:logged_seconds]) %></td>
+          <td>
+            <% if row[:coverage].nil? %>
+              —
+            <% else %>
+              <div class="hm-tc-coverage-bar">
+                <div class="hm-tc-coverage-bar-fill" style="width: <%= [row[:coverage], 100].min %>%"></div>
+                <span class="hm-tc-coverage-bar-label"><%= row[:coverage] %> %</span>
+              </div>
+            <% end %>
+          </td>
+          <td>
+            <% if row[:per_issue].empty? %>
+              <em><%= l(:label_hm_admin_no_ticket_log) %></em>
+            <% else %>
+              <ul class="hm-tc-coverage-tickets">
+                <% row[:per_issue].each do |ti| %>
+                  <li>
+                    <strong><%= h ti[:issue_subject] %></strong>
+                    <% if ti[:project_name] %>
+                      <span class="hm-tc-coverage-project">(<%= h ti[:project_name] %>)</span>
+                    <% end %>
+                    — <%= hm_format_seconds(ti[:seconds]) %>
+                    <% if ti[:comments].present? %>
+                      <em class="hm-tc-coverage-comments">— <%= h ti[:comments] %></em>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
 <h3><%= l(:label_hm_admin_day_absences) %></h3>
 <% if @absences.empty? %>
   <p class="nodata"><%= l(:label_hm_admin_day_no_absences) %></p>
