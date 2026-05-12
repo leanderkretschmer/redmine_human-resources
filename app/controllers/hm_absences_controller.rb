@@ -109,11 +109,13 @@ class HmAbsencesController < ApplicationController
   end
 
   def can_edit?
-    User.current.admin? || (owner? && @absence.requested?)
+    return true if User.current.admin?
+    return false unless owner?
+    @absence.vacation? ? @absence.requested? : true
   end
 
   def can_delete?
-    User.current.admin? || (owner? && @absence.requested?)
+    can_edit?
   end
 
   def authorize_edit!

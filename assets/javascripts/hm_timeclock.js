@@ -151,20 +151,52 @@
       if (!detailModal) return;
       var urlBase = detailModal.getAttribute('data-url-base') || '';
       var placeholder = detailModal.getAttribute('data-url-placeholder') || '1970-01-01';
-      var url = urlBase.replace(placeholder, date) + '.json';
+      var url = urlBase.replace(placeholder, date);
       detailModal.classList.add('open');
       detailModal.setAttribute('aria-hidden', 'false');
       var loading = detailModal.querySelector('.hm-tc-day-detail-loading');
       var events  = detailModal.querySelector('.hm-tc-day-detail-events');
       var title   = detailModal.querySelector('.hm-tc-day-detail-title');
-      if (loading) loading.hidden = false;
+      if (loading) { loading.hidden = false; loading.textContent = loading.dataset.defaultText || loading.textContent; }
       if (events)  events.hidden  = true;
       if (title)   title.textContent = date;
       detailModal.dataset.date = date;
       fetch(url, { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
-        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        })
         .then(function (data) { renderDayDetail(data); })
-        .catch(function () { if (loading) loading.textContent = '⚠'; });
+        .catch(function (err) {
+          if (loading) loading.textContent = '⚠ ' + (err && err.message ? err.message : 'Fehler beim Laden');
+        });
+    }
+
+    function csrfToken() {
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      return meta ? meta.getAttribute('content') : '';
+    }
+
+    function deleteAbsence(url, kindLabel) {
+      if (!url) return;
+      if (!confirm((window.HmTimeclockI18n && window.HmTimeclockI18n.confirmDelete) || 'Wirklich löschen?')) return;
+      fetch(url, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRF-Token': csrfToken(),
+          'Accept': 'application/json'
+        }
+      }).then(function (r) {
+        if (r.ok || r.status === 302) {
+          var date = detailModal && detailModal.dataset.date;
+          if (date) fetchDayDetail(date);
+        } else {
+          alert('Löschen fehlgeschlagen (' + r.status + ')');
+        }
+      }).catch(function () {
+        alert('Löschen fehlgeschlagen');
+      });
     }
 
     function renderDayDetail(data) {
@@ -210,15 +242,27 @@
           li.className = 'hm-tc-day-event hm-tc-day-event-absence hm-tc-day-event-' + a.kind;
           li.dataset.absenceId = a.id;
           li.dataset.absenceKind = a.kind;
-          var html = '<strong>' + a.kind_label + '</strong> · ' + a.status_label;
+          var html = '<strong>' + escapeHtml(a.kind_label) + '</strong> · ' + escapeHtml(a.status_label);
           if (a.starts_on !== a.ends_on) {
             html += ' · ' + a.starts_on + ' → ' + a.ends_on;
           }
           if (a.reason) html += '<div class="hm-tc-day-event-reason">' + escapeHtml(a.reason) + '</div>';
+          html += '<div class="hm-tc-day-event-actions">';
           if (a.edit_url) {
-            html += ' <a href="' + a.edit_url + '" class="hm-tc-day-event-edit">✎</a>';
+            html += '<a href="' + a.edit_url + '" class="hm-tc-day-event-edit" title="bearbeiten">✎</a>';
           }
+          if (a.delete_url) {
+            html += '<button type="button" class="hm-tc-day-event-delete" data-url="' + a.delete_url + '" title="löschen">🗑</button>';
+          }
+          html += '</div>';
           li.innerHTML = html;
+          var delBtn = li.querySelector('.hm-tc-day-event-delete');
+          if (delBtn) {
+            delBtn.addEventListener('click', function (e) {
+              e.preventDefault();
+              deleteAbsence(delBtn.getAttribute('data-url'), a.kind_label);
+            });
+          }
           absUl.appendChild(li);
         });
         if (absEmpty) absEmpty.hidden = absences.length > 0;

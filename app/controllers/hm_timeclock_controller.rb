@@ -134,10 +134,7 @@ class HmTimeclockController < ApplicationController
     absences = HmAbsence.for_user(User.current)
                         .where('starts_on <= ? AND ends_on >= ?', date, date)
                         .order(:starts_on).to_a
-    payload = build_day_payload(date, entries, absences, tz)
-    respond_to do |format|
-      format.json { render json: payload }
-    end
+    render json: build_day_payload(date, entries, absences, tz)
   rescue ArgumentError
     render json: { error: 'invalid_date' }, status: :bad_request
   end
@@ -256,6 +253,7 @@ class HmTimeclockController < ApplicationController
       }
     end
     absence_events = absences.map do |a|
+      can_manage = User.current.admin? || (a.user_id == User.current.id && (a.requested? || a.sickness? || a.offsite?))
       {
         type: 'absence',
         id: a.id,
@@ -266,8 +264,9 @@ class HmTimeclockController < ApplicationController
         reason: a.reason,
         starts_on: a.starts_on.iso8601,
         ends_on:   a.ends_on.iso8601,
-        edit_url: a.requested? || User.current.admin? ? edit_hm_absence_path(a) : nil,
-        delete_url: (a.requested? || User.current.admin?) ? hm_absence_path(a) : nil
+        can_manage: can_manage,
+        edit_url:   can_manage ? edit_hm_absence_path(a) : nil,
+        delete_url: can_manage ? hm_absence_path(a)      : nil
       }
     end
     {

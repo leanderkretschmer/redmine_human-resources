@@ -580,3 +580,80 @@ table.hm-tc-calendar-grid {
   font-size: 0.92em;
   margin-top: 0.8em;
 }
+
+/* ======= Day detail readability overrides ======= */
+#hm-day-detail-modal .hm-tc-popup-inner,
+#hm-day-detail-modal .hm-tc-day-detail-inner {
+  color: #1d2433 !important;
+}
+.hm-tc-day-event {
+  color: #1d2433 !important;
+  background: #f7f9fb !important;
+}
+.hm-tc-day-event strong { color: #1d2433 !important; }
+.hm-tc-day-event-reason { color: #4a4f59 !important; }
+.hm-tc-day-event a.hm-tc-day-event-edit {
+  color: #2980b9 !important;
+  text-decoration: none;
+}
+
+/* Action buttons in day-detail modal — high-contrast */
+.hm-tc-day-detail-new,
+button.hm-tc-day-detail-new {
+  padding: 0.45em 0.95em !important;
+  border: 1px solid #2980b9 !important;
+  background: #ffffff !important;
+  color: #2980b9 !important;
+  cursor: pointer !important;
+  border-radius: 4px !important;
+  font-weight: 600 !important;
+  background-image: none !important;
+  text-shadow: none !important;
+}
+.hm-tc-day-detail-new:hover,
+button.hm-tc-day-detail-new:hover {
+  background: #2980b9 !important;
+  color: #ffffff !important;
+}
+.hm-tc-day-detail-close,
+button.hm-tc-day-detail-close {
+  padding: 0.45em 0.95em !important;
+  background: #4a4f59 !important;
+  color: #ffffff !important;
+  border: 1px solid #34373d !important;
+  border-radius: 4px !important;
+}
+
+/* Inline edit/delete buttons on absence rows */
+.hm-tc-day-event-actions {
+  display: inline-flex;
+  gap: 0.4em;
+  margin-left: 0.6em;
+  vertical-align: middle;
+}
+.hm-tc-day-event-delete {
+  background: transparent !important;
+  border: 1px solid #c0392b !important;
+  color: #c0392b !important;
+  padding: 0.05em 0.45em !important;
+  border-radius: 3px;
+  cursor: pointer;
+  font-size: 0.9em;
+  line-height: 1;
+}
+.hm-tc-day-event-delete:hover {
+  background: #c0392b !important;
+  color: #ffffff !important;
+}
+.hm-tc-day-event-edit {
+  display: inline-block;
+  padding: 0.05em 0.45em;
+  border: 1px solid #2980b9;
+  border-radius: 3px;
+  font-size: 0.9em;
+  line-height: 1;
+}
+.hm-tc-day-event-edit:hover {
+  background: #2980b9;
+  color: #ffffff !important;
+}
