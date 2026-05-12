@@ -29,6 +29,11 @@ class HmSicknessController < ApplicationController
       end
     end
 
+    if HmAbsence.overlapping_for(User.current.id, HmAbsence::KIND_SICKNESS, starts_on, ends_on).exists?
+      flash[:error] = l(:notice_hm_absence_overlap, kind: HmAbsence.kind_label(HmAbsence::KIND_SICKNESS))
+      return redirect_to hm_sickness_path
+    end
+
     @new_absence = HmAbsence.new(attrs.merge(
       kind: HmAbsence::KIND_SICKNESS,
       user_id: User.current.id,

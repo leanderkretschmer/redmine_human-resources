@@ -45,19 +45,7 @@
               cell_classes << 'hm-tc-cal-clickable' if day && clickable && !day_link
 
               day_absences = (day && absences_by_day) ? (absences_by_day[day] || []) : []
-              if day_absences.any? && !show_users
-                if day_absences.any? { |a| a.kind == HmAbsence::KIND_VACATION }
-                  cell_classes << 'hm-tc-cal-vacation'
-                  cell_classes << 'hm-tc-cal-pending-vacation' if day_absences.select { |a| a.kind == HmAbsence::KIND_VACATION }.all?(&:requested?)
-                end
-                if day_absences.any? { |a| a.kind == HmAbsence::KIND_SICKNESS }
-                  cell_classes << 'hm-tc-cal-sickness'
-                  cell_classes << 'hm-tc-cal-pending-sickness' if day_absences.select { |a| a.kind == HmAbsence::KIND_SICKNESS }.all?(&:requested?)
-                end
-                if day_absences.any? { |a| a.kind == HmAbsence::KIND_OFFSITE }
-                  cell_classes << 'hm-tc-cal-offsite'
-                end
-              end
+              cell_classes << 'hm-tc-cal-has-absence' if day_absences.any? && !show_users
 
               cell_attrs = +%(class="#{cell_classes.join(' ')}")
               if day && clickable && !day_link
@@ -72,6 +60,21 @@
             %>
             <td <%= cell_attrs.html_safe %>>
               <% if day %>
+                <% if day_absences.any? && !show_users %>
+                  <%
+                    kinds_present = day_absences.group_by(&:kind)
+                    marker_order  = [HmAbsence::KIND_VACATION, HmAbsence::KIND_SICKNESS, HmAbsence::KIND_OFFSITE]
+                  %>
+                  <div class="hm-tc-cal-markers">
+                    <% marker_order.each do |k| %>
+                      <% group = kinds_present[k] %>
+                      <% next unless group %>
+                      <% pending = group.all?(&:requested?) %>
+                      <span class="hm-tc-cal-marker hm-tc-cal-marker-<%= k %><%= ' hm-tc-cal-marker-pending' if pending %>"
+                            title="<%= h(HmAbsence.kind_label(k)) %><%= ' (' + HmAbsence.status_label(HmAbsence::STATUS_REQUESTED) + ')' if pending %>"></span>
+                    <% end %>
+                  </div>
+                <% end %>
                 <% if day_link %>
                   <%= link_to day_link.call(day), class: 'hm-tc-cal-day-link' do %>
                     <div class="hm-tc-cal-date"><%= day.day %></div>
@@ -86,8 +89,12 @@
                 <% if show_users && day_absences.any? %>
                   <div class="hm-tc-cal-users">
                     <% day_absences.each do |a| %>
+                      <%
+                        title_parts = [a.user.name, HmAbsence.kind_label(a.kind)]
+                        title_parts << HmAbsence.status_label(a.status) unless a.approved?
+                      %>
                       <span class="hm-tc-cal-user-pill hm-tc-cal-user-pill-<%= a.kind %><%= ' hm-tc-cal-user-pill-pending' if a.requested? %>"
-                            title="<%= h(a.user.name) %> — <%= h(HmAbsence.kind_label(a.kind)) %> (<%= h(HmAbsence.status_label(a.status)) %>)">
+                            title="<%= h(title_parts.join(' — ')) %>">
                         <%= h(a.user.login) %>
                       </span>
                     <% end %>

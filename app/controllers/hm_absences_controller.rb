@@ -28,6 +28,12 @@ class HmAbsencesController < ApplicationController
       end
     end
 
+    if HmAbsence::EXCLUSIVE_KINDS.include?(permitted[:kind]) &&
+       HmAbsence.overlapping_for(User.current.id, permitted[:kind], starts_on, ends_on).exists?
+      flash[:error] = l(:notice_hm_absence_overlap, kind: HmAbsence.kind_label(permitted[:kind]))
+      return redirect_back(fallback_location: hm_timeclock_path)
+    end
+
     recurrence_kind  = permitted[:recurrence].to_s.presence
     recurrence_until = parse_date(permitted[:recurrence_until])
     if permitted[:kind] == HmAbsence::KIND_OFFSITE &&
@@ -96,15 +102,20 @@ class HmAbsencesController < ApplicationController
     return unless authorize_edit!
     attrs = absence_params
 
+    new_starts_on = parse_date(attrs[:starts_on]) || @absence.starts_on
+    new_ends_on   = parse_date(attrs[:ends_on])   || @absence.ends_on
+
     if @absence.sickness? || @absence.offsite?
-      starts_on = parse_date(attrs[:starts_on])
-      ends_on   = parse_date(attrs[:ends_on]) || starts_on
-      gate = HmAbsence.validate_kind_window(@absence.kind, starts_on, ends_on)
-      gate ||= HmAbsence.validate_user_window(@absence.kind, starts_on, ends_on) unless User.current.admin?
+      gate = HmAbsence.validate_kind_window(@absence.kind, new_starts_on, new_ends_on)
+      gate ||= HmAbsence.validate_user_window(@absence.kind, new_starts_on, new_ends_on) unless User.current.admin?
       if gate
-        msg = window_error_message(@absence.kind, gate)
-        return respond_with_failure(msg)
+        return respond_with_failure(window_error_message(@absence.kind, gate))
       end
+    end
+
+    if HmAbsence::EXCLUSIVE_KINDS.include?(@absence.kind) &&
+       HmAbsence.overlapping_for(@absence.user_id, @absence.kind, new_starts_on, new_ends_on, exclude_id: @absence.id).exists?
+      return respond_with_failure(l(:notice_hm_absence_overlap, kind: HmAbsence.kind_label(@absence.kind)))
     end
 
     attrs[:status] = HmAbsence::STATUS_REQUESTED if !User.current.admin? && @absence.vacation?

@@ -77,6 +77,19 @@ class HmAbsence < ActiveRecord::Base
     end
   end
 
+  # Kinds whose ranges must not overlap with any other entry of the same kind
+  # for the same user (excluding rejected entries).
+  EXCLUSIVE_KINDS = [KIND_VACATION, KIND_SICKNESS].freeze
+
+  def self.overlapping_for(user_id, kind, starts_on, ends_on, exclude_id: nil)
+    return self.none unless EXCLUSIVE_KINDS.include?(kind)
+    return self.none if starts_on.blank? || ends_on.blank?
+    scope = for_user(user_id).where(kind: kind).active
+                             .where('starts_on <= ? AND ends_on >= ?', ends_on, starts_on)
+    scope = scope.where.not(id: exclude_id) if exclude_id
+    scope
+  end
+
   # Validation gates that apply to *every* requester (admin included)
   def self.validate_kind_window(kind, starts_on, ends_on, today = Date.current)
     case kind
