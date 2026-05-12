@@ -23,6 +23,23 @@
         <%= f.label :reason, l(:label_hm_absence_reason) %>
         <%= f.text_area :reason, rows: 3, id: 'hm_absence_reason' %>
       </div>
+      <div class="hm-tc-absence-modal-row hm-tc-offsite-only" id="hm_absence_recurrence_row" hidden>
+        <%= f.label :recurrence, l(:label_hm_recurrence) %>
+        <%= f.select :recurrence,
+                     [[l(:label_hm_recurrence_none),        HmAbsence::RECURRENCE_NONE],
+                      [l(:label_hm_recurrence_weekly),      HmAbsence::RECURRENCE_WEEKLY],
+                      [l(:label_hm_recurrence_biweekly),    HmAbsence::RECURRENCE_BIWEEKLY],
+                      [l(:label_hm_recurrence_four_weekly), HmAbsence::RECURRENCE_4_WEEKLY],
+                      [l(:label_hm_recurrence_monthly),     HmAbsence::RECURRENCE_MONTHLY],
+                      [l(:label_hm_recurrence_quarterly),   HmAbsence::RECURRENCE_QUARTERLY],
+                      [l(:label_hm_recurrence_half_yearly), HmAbsence::RECURRENCE_HALFYEARLY],
+                      [l(:label_hm_recurrence_yearly),      HmAbsence::RECURRENCE_YEARLY]],
+                     {}, { id: 'hm_absence_recurrence' } %>
+      </div>
+      <div class="hm-tc-absence-modal-row hm-tc-offsite-only" id="hm_absence_recurrence_until_row" hidden>
+        <%= f.label :recurrence_until, l(:label_hm_recurrence_until) %>
+        <%= f.date_field :recurrence_until, id: 'hm_absence_recurrence_until' %>
+      </div>
       <div class="hm-tc-absence-modal-actions">
         <%= submit_tag l(:button_hm_absence_request), class: 'button-positive' %>
         <button type="button" class="hm-tc-absence-modal-cancel"><%= l(:button_cancel) %></button>

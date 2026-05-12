@@ -5,7 +5,8 @@ class HmAbsencesController < ApplicationController
   helper :hm_timeclock
 
   def create
-    permitted = params.require(:hm_absence).permit(:kind, :starts_on, :ends_on, :reason)
+    permitted = params.require(:hm_absence).permit(:kind, :starts_on, :ends_on, :reason,
+                                                   :recurrence, :recurrence_until)
     unless HmAbsence::KINDS.include?(permitted[:kind])
       flash[:error] = l(:notice_hm_absence_forbidden)
       return redirect_back(fallback_location: hm_timeclock_path)
@@ -27,31 +28,63 @@ class HmAbsencesController < ApplicationController
       end
     end
 
+    recurrence_kind  = permitted[:recurrence].to_s.presence
+    recurrence_until = parse_date(permitted[:recurrence_until])
+    if permitted[:kind] == HmAbsence::KIND_OFFSITE &&
+       recurrence_kind &&
+       recurrence_kind != HmAbsence::RECURRENCE_NONE &&
+       recurrence_until.blank?
+      flash[:error] = l(:notice_hm_recurrence_until_required)
+      return redirect_back(fallback_location: hm_timeclock_path)
+    end
+
+    pairs = if permitted[:kind] == HmAbsence::KIND_OFFSITE
+              HmAbsence.expand_recurrence(starts_on, ends_on, recurrence_kind, recurrence_until)
+            else
+              [[starts_on, ends_on]]
+            end
+
     status = if HmAbsence::AUTO_APPROVED_KINDS.include?(permitted[:kind])
                HmAbsence::STATUS_APPROVED
              else
                HmAbsence::STATUS_REQUESTED
              end
 
-    @absence = HmAbsence.new(permitted.merge(
-      user_id: User.current.id,
-      status: status,
-      approved_by_id: status == HmAbsence::STATUS_APPROVED ? User.current.id : nil,
-      approved_at:    status == HmAbsence::STATUS_APPROVED ? Time.current      : nil
-    ))
-    if @absence.save
-      @absence.log_audit!(User.current, HmAbsenceAudit::ACTION_CREATED, to_status: @absence.status)
+    created = []
+    HmAbsence.transaction do
+      pairs.each do |s, e|
+        absence = HmAbsence.new(
+          kind: permitted[:kind],
+          reason: permitted[:reason],
+          starts_on: s,
+          ends_on:   e,
+          user_id: User.current.id,
+          status: status,
+          approved_by_id: status == HmAbsence::STATUS_APPROVED ? User.current.id : nil,
+          approved_at:    status == HmAbsence::STATUS_APPROVED ? Time.current      : nil
+        )
+        absence.save!
+        absence.log_audit!(User.current, HmAbsenceAudit::ACTION_CREATED, to_status: absence.status)
+        created << absence
+      end
+    end
+
+    @absence = created.first
+    if @absence
       HmAbsenceMailer.deliver_absence_requested(@absence) if @absence.vacation?
-      flash[:notice] = if @absence.vacation?
+      flash[:notice] = if created.size > 1
+                         l(:notice_hm_recurrence_created, count: created.size)
+                       elsif @absence.vacation?
                          l(:notice_hm_absence_requested)
                        elsif @absence.sickness?
                          l(:notice_hm_sickness_logged)
                        else
                          l(:notice_hm_offsite_logged)
                        end
-    else
-      flash[:error] = @absence.errors.full_messages.join(', ')
     end
+    redirect_back(fallback_location: hm_timeclock_path)
+  rescue ActiveRecord::RecordInvalid => e
+    flash[:error] = e.record&.errors&.full_messages&.join(', ') || e.message
     redirect_back(fallback_location: hm_timeclock_path)
   end
 

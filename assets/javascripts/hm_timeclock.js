@@ -89,6 +89,9 @@
       if (date && startEl) startEl.value = date;
       if (date && endEl)   endEl.value   = date;
       if (kindHint && kindEl) kindEl.value = kindHint;
+      var rows = modal.querySelectorAll('.hm-tc-offsite-only');
+      var showOffsite = kindEl && kindEl.value === 'offsite';
+      rows.forEach(function (r) { r.hidden = !showOffsite; });
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
       var first = modal.querySelector('#hm_absence_kind, #hm_absence_starts_on');
@@ -114,6 +117,17 @@
       startEl.addEventListener('change', function () {
         if (!endEl.value || endEl.value < startEl.value) endEl.value = startEl.value;
       });
+    }
+
+    var kindEl = modal.querySelector('#hm_absence_kind');
+    var offsiteRows = modal.querySelectorAll('.hm-tc-offsite-only');
+    function toggleOffsiteRows() {
+      var show = kindEl && kindEl.value === 'offsite';
+      offsiteRows.forEach(function (r) { r.hidden = !show; });
+    }
+    if (kindEl) {
+      kindEl.addEventListener('change', toggleOffsiteRows);
+      toggleOffsiteRows();
     }
 
     window.HmTimeclockOpenAbsenceModal = openModal;

@@ -85,12 +85,67 @@ class HmAbsence < ActiveRecord::Base
       # extend into the future to cover an AU-Bescheinigung that signs forward.
       return :future_start_not_allowed if starts_on && starts_on > today
     when KIND_OFFSITE
-      # Off-site notes describe what *was* worked off-site; future planning is not
-      # supported for now.
-      return :future_not_allowed if starts_on && starts_on > today
-      return :future_not_allowed if ends_on   && ends_on   > today
+      # Off-site is planning-friendly — trips can be scheduled months ahead.
+      nil
     end
     nil
+  end
+
+  RECURRENCE_NONE       = 'none'.freeze
+  RECURRENCE_WEEKLY     = 'weekly'.freeze
+  RECURRENCE_BIWEEKLY   = 'biweekly'.freeze
+  RECURRENCE_4_WEEKLY   = 'four_weekly'.freeze
+  RECURRENCE_MONTHLY    = 'monthly'.freeze
+  RECURRENCE_QUARTERLY  = 'quarterly'.freeze
+  RECURRENCE_HALFYEARLY = 'half_yearly'.freeze
+  RECURRENCE_YEARLY     = 'yearly'.freeze
+  RECURRENCES = [RECURRENCE_NONE, RECURRENCE_WEEKLY, RECURRENCE_BIWEEKLY,
+                 RECURRENCE_4_WEEKLY, RECURRENCE_MONTHLY, RECURRENCE_QUARTERLY,
+                 RECURRENCE_HALFYEARLY, RECURRENCE_YEARLY].freeze
+
+  RECURRENCE_LIMIT = 200 # safety cap so a year of weekly recurrence stays bounded
+
+  def self.recurrence_label(kind)
+    case kind
+    when RECURRENCE_WEEKLY     then I18n.t(:label_hm_recurrence_weekly)
+    when RECURRENCE_BIWEEKLY   then I18n.t(:label_hm_recurrence_biweekly)
+    when RECURRENCE_4_WEEKLY   then I18n.t(:label_hm_recurrence_four_weekly)
+    when RECURRENCE_MONTHLY    then I18n.t(:label_hm_recurrence_monthly)
+    when RECURRENCE_QUARTERLY  then I18n.t(:label_hm_recurrence_quarterly)
+    when RECURRENCE_HALFYEARLY then I18n.t(:label_hm_recurrence_half_yearly)
+    when RECURRENCE_YEARLY     then I18n.t(:label_hm_recurrence_yearly)
+    else I18n.t(:label_hm_recurrence_none)
+    end
+  end
+
+  # Advance a (start, end) range by one step of `kind`. Returns nil if kind is :none.
+  def self.recurrence_step(kind, starts_on, ends_on)
+    return nil unless kind && kind != RECURRENCE_NONE
+    case kind
+    when RECURRENCE_WEEKLY     then [starts_on +  7,            ends_on +  7]
+    when RECURRENCE_BIWEEKLY   then [starts_on + 14,            ends_on + 14]
+    when RECURRENCE_4_WEEKLY   then [starts_on + 28,            ends_on + 28]
+    when RECURRENCE_MONTHLY    then [starts_on >> 1,            ends_on >> 1]
+    when RECURRENCE_QUARTERLY  then [starts_on >> 3,            ends_on >> 3]
+    when RECURRENCE_HALFYEARLY then [starts_on >> 6,            ends_on >> 6]
+    when RECURRENCE_YEARLY     then [starts_on >> 12,           ends_on >> 12]
+    end
+  end
+
+  # Returns an array of [starts_on, ends_on] pairs including the base occurrence.
+  def self.expand_recurrence(starts_on, ends_on, kind, until_on)
+    pairs = [[starts_on, ends_on]]
+    return pairs if kind.blank? || kind == RECURRENCE_NONE || until_on.blank?
+    return pairs unless RECURRENCES.include?(kind)
+    cur_s, cur_e = starts_on, ends_on
+    RECURRENCE_LIMIT.times do
+      step = recurrence_step(kind, cur_s, cur_e)
+      break unless step
+      cur_s, cur_e = step
+      break if cur_s > until_on
+      pairs << [cur_s, cur_e]
+    end
+    pairs
   end
 
   # Additional gates that only apply to non-admin users
