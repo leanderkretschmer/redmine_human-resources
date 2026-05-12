@@ -3,7 +3,11 @@ class HmAbsence < ActiveRecord::Base
 
   KIND_VACATION = 'vacation'.freeze
   KIND_SICKNESS = 'sickness'.freeze
-  KINDS         = [KIND_VACATION, KIND_SICKNESS].freeze
+  KIND_OFFSITE  = 'offsite'.freeze
+  KINDS         = [KIND_VACATION, KIND_SICKNESS, KIND_OFFSITE].freeze
+  USER_BACKDATE_LIMIT_DAYS = 3
+
+  AUTO_APPROVED_KINDS = [KIND_SICKNESS, KIND_OFFSITE].freeze
 
   STATUS_REQUESTED = 'requested'.freeze
   STATUS_APPROVED  = 'approved'.freeze
@@ -22,6 +26,8 @@ class HmAbsence < ActiveRecord::Base
   scope :for_user,  ->(u) { where(user_id: u.is_a?(User) ? u.id : u.to_i) }
   scope :vacation,  -> { where(kind: KIND_VACATION) }
   scope :sickness,  -> { where(kind: KIND_SICKNESS) }
+  scope :offsite,   -> { where(kind: KIND_OFFSITE) }
+  scope :counted,   -> { where(kind: [KIND_VACATION, KIND_SICKNESS]) }
   scope :pending,   -> { where(status: STATUS_REQUESTED) }
   scope :approved,  -> { where(status: STATUS_APPROVED) }
   scope :rejected,  -> { where(status: STATUS_REJECTED) }
@@ -30,6 +36,8 @@ class HmAbsence < ActiveRecord::Base
 
   def vacation?;  kind == KIND_VACATION; end
   def sickness?;  kind == KIND_SICKNESS; end
+  def offsite?;   kind == KIND_OFFSITE;  end
+  def auto_approved?; AUTO_APPROVED_KINDS.include?(kind); end
   def requested?; status == STATUS_REQUESTED; end
   def approved?;  status == STATUS_APPROVED; end
   def rejected?;  status == STATUS_REJECTED; end
@@ -64,8 +72,19 @@ class HmAbsence < ActiveRecord::Base
     case kind
     when KIND_VACATION then I18n.t(:label_hm_hr_vacation)
     when KIND_SICKNESS then I18n.t(:label_hm_hr_sickness)
+    when KIND_OFFSITE  then I18n.t(:label_hm_hr_offsite)
     else kind.to_s.humanize
     end
+  end
+
+  def self.validate_user_window(kind, starts_on, ends_on, today = Date.current)
+    return nil unless kind == KIND_SICKNESS || kind == KIND_OFFSITE
+    return :future_not_allowed if starts_on && starts_on > today
+    return :future_not_allowed if ends_on   && ends_on   > today
+    if kind == KIND_SICKNESS && starts_on && (today - starts_on).to_i > USER_BACKDATE_LIMIT_DAYS
+      return :backdate_exceeded
+    end
+    nil
   end
 
   def self.status_label(status)

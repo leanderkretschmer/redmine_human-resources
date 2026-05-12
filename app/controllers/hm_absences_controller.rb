@@ -10,14 +10,40 @@ class HmAbsencesController < ApplicationController
       flash[:error] = l(:notice_hm_absence_forbidden)
       return redirect_back(fallback_location: hm_timeclock_path)
     end
+
+    starts_on = parse_date(permitted[:starts_on])
+    ends_on   = parse_date(permitted[:ends_on]) || starts_on
+
+    unless User.current.admin?
+      error_code = HmAbsence.validate_user_window(permitted[:kind], starts_on, ends_on)
+      if error_code
+        flash[:error] = window_error_message(permitted[:kind], error_code)
+        return redirect_back(fallback_location: hm_timeclock_path)
+      end
+    end
+
+    status = if HmAbsence::AUTO_APPROVED_KINDS.include?(permitted[:kind])
+               HmAbsence::STATUS_APPROVED
+             else
+               HmAbsence::STATUS_REQUESTED
+             end
+
     @absence = HmAbsence.new(permitted.merge(
       user_id: User.current.id,
-      status: HmAbsence::STATUS_REQUESTED
+      status: status,
+      approved_by_id: status == HmAbsence::STATUS_APPROVED ? User.current.id : nil,
+      approved_at:    status == HmAbsence::STATUS_APPROVED ? Time.current      : nil
     ))
     if @absence.save
       @absence.log_audit!(User.current, HmAbsenceAudit::ACTION_CREATED, to_status: @absence.status)
-      HmAbsenceMailer.deliver_absence_requested(@absence)
-      flash[:notice] = l(:notice_hm_absence_requested)
+      HmAbsenceMailer.deliver_absence_requested(@absence) if @absence.vacation?
+      flash[:notice] = if @absence.vacation?
+                         l(:notice_hm_absence_requested)
+                       elsif @absence.sickness?
+                         l(:notice_hm_sickness_logged)
+                       else
+                         l(:notice_hm_offsite_logged)
+                       end
     else
       flash[:error] = @absence.errors.full_messages.join(', ')
     end
@@ -112,5 +138,24 @@ class HmAbsencesController < ApplicationController
   def forbidden!
     flash[:error] = l(:notice_hm_absence_forbidden)
     redirect_to redirect_target
+  end
+
+  def parse_date(value)
+    return value if value.is_a?(Date)
+    return nil if value.blank?
+    Date.parse(value.to_s)
+  rescue ArgumentError
+    nil
+  end
+
+  def window_error_message(kind, code)
+    case code
+    when :future_not_allowed
+      kind == HmAbsence::KIND_SICKNESS ? l(:notice_hm_sickness_no_future) : l(:notice_hm_offsite_no_future)
+    when :backdate_exceeded
+      l(:notice_hm_sickness_backdate_limit, days: HmAbsence::USER_BACKDATE_LIMIT_DAYS)
+    else
+      l(:notice_hm_absence_forbidden)
+    end
   end
 end

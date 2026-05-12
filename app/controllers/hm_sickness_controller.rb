@@ -12,14 +12,28 @@ class HmSicknessController < ApplicationController
   end
 
   def create
-    @new_absence = HmAbsence.new(absence_params.merge(
+    attrs = absence_params
+    starts_on = parse_date(attrs[:starts_on])
+    ends_on   = parse_date(attrs[:ends_on]) || starts_on
+
+    unless User.current.admin?
+      error_code = HmAbsence.validate_user_window(HmAbsence::KIND_SICKNESS, starts_on, ends_on)
+      if error_code
+        flash[:error] = error_message(error_code)
+        return redirect_to hm_sickness_path
+      end
+    end
+
+    @new_absence = HmAbsence.new(attrs.merge(
       kind: HmAbsence::KIND_SICKNESS,
       user_id: User.current.id,
-      status: HmAbsence::STATUS_REQUESTED
+      status: HmAbsence::STATUS_APPROVED,
+      approved_by_id: User.current.id,
+      approved_at: Time.current
     ))
     if @new_absence.save
       @new_absence.log_audit!(User.current, HmAbsenceAudit::ACTION_CREATED, to_status: @new_absence.status)
-      flash[:notice] = l(:notice_hm_absence_requested)
+      flash[:notice] = l(:notice_hm_sickness_logged)
       redirect_to hm_sickness_path
     else
       load_state
@@ -48,5 +62,21 @@ class HmSicknessController < ApplicationController
     Date.parse("#{params[:month]}-01")
   rescue ArgumentError
     nil
+  end
+
+  def parse_date(value)
+    return value if value.is_a?(Date)
+    return nil if value.blank?
+    Date.parse(value.to_s)
+  rescue ArgumentError
+    nil
+  end
+
+  def error_message(code)
+    case code
+    when :future_not_allowed then l(:notice_hm_sickness_no_future)
+    when :backdate_exceeded  then l(:notice_hm_sickness_backdate_limit, days: HmAbsence::USER_BACKDATE_LIMIT_DAYS)
+    else l(:notice_hm_absence_forbidden)
+    end
   end
 end

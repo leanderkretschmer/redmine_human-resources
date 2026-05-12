@@ -7,7 +7,8 @@
         <%= f.label :kind, l(:label_hm_absence_kind) %>
         <%= f.select :kind,
                      [[l(:label_hm_hr_vacation), HmAbsence::KIND_VACATION],
-                      [l(:label_hm_hr_sickness), HmAbsence::KIND_SICKNESS]],
+                      [l(:label_hm_hr_sickness), HmAbsence::KIND_SICKNESS],
+                      [l(:label_hm_hr_offsite),  HmAbsence::KIND_OFFSITE]],
                      {}, { id: 'hm_absence_kind' } %>
       </div>
       <div class="hm-tc-absence-modal-row">
