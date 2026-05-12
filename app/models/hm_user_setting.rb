@@ -24,9 +24,26 @@ class HmUserSetting < ActiveRecord::Base
       plan_daily = HmMonthlyPlan.for_user(user).for_period(on_date.year, on_date.month).first
       return plan_daily.daily_target_minutes if plan_daily && plan_daily.daily_target_minutes.positive?
     end
-    positive_or_nil(daily_target_minutes) ||
-      positive_or_nil(template_value(:daily_target_minutes)) ||
-      plugin_default(:default_daily_target_minutes, 480)
+
+    base = positive_or_nil(daily_target_minutes) ||
+           positive_or_nil(template_value(:daily_target_minutes)) ||
+           plugin_default(:default_daily_target_minutes, 480)
+
+    return base unless on_date
+    weekdays = effective_school_weekdays
+    return base unless weekdays.any?
+
+    return 0 if on_date.cwday > 5
+    return base unless weekdays.include?(on_date.cwday)
+
+    weekly = positive_or_nil(weekly_target_minutes) ||
+             positive_or_nil(template_value(:weekly_target_minutes)) ||
+             plugin_default(:default_weekly_target_minutes, 2400)
+    work_days_per_week = [5 - weekdays.size, 0].max
+    partial = weekly - (work_days_per_week * base)
+    return 0 if partial <= 0
+    partial_day = weekdays.min
+    on_date.cwday == partial_day ? [partial, base].min : 0
   end
 
   def effective_weekly_target_minutes(on_date: nil)
@@ -66,19 +83,25 @@ class HmUserSetting < ActiveRecord::Base
   end
 
   # Distribution helper. Given total weekly company minutes and full-day minutes,
-  # returns a breakdown: { full_days:, partial_minutes:, partial_present:, free_minutes:, total_workdays: }
+  # returns a breakdown: { full_days:, partial_minutes:, partial_present:, free_minutes:, total_workdays:, school_days: }
   def hour_distribution(weekly_minutes = nil, daily_minutes = nil)
     w = (weekly_minutes || effective_weekly_target_minutes).to_i
     d = (daily_minutes  || effective_daily_target_minutes).to_i
     return nil if w <= 0 || d <= 0
-    full = w / d
-    partial = w - (full * d)
+    s = effective_weekly_school_days.to_i
+    work_days_max = [5 - s, 0].max
+    full   = [w / d, work_days_max].min
+    filled = full * d
+    partial = w - filled
+    partial = 0 if partial.negative?
+    partial = d if partial > d
     {
       full_days:       full,
       partial_minutes: partial,
       partial_present: partial.positive?,
       free_minutes:    partial.positive? ? (d - partial) : 0,
-      total_workdays:  full + (partial.positive? ? 1 : 0)
+      total_workdays:  full + (partial.positive? ? 1 : 0),
+      school_days:     s
     }
   end
 

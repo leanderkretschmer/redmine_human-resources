@@ -50,6 +50,8 @@
   </fieldset>
 <% end %>
 
+<%= render partial: 'hm_timeclock/absence_edit_modal' %>
+
 <% if @users.empty? %>
   <p class="nodata"><%= l(:label_hm_admin_no_users) %></p>
 <% else %>

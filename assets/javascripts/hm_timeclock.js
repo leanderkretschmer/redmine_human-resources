@@ -133,6 +133,93 @@
     window.HmTimeclockOpenAbsenceModal = openModal;
   }
 
+  function setupAbsenceEditModal() {
+    var modal = document.getElementById('hm-absence-edit-modal');
+    if (!modal) return;
+
+    function close() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function open(btn) {
+      modal.dataset.updateUrl = btn.getAttribute('data-update-url') || '';
+      var kindLabel = btn.getAttribute('data-kind-label') || '';
+      var title = modal.querySelector('.hm-tc-absence-modal-title');
+      if (title) title.textContent = (kindLabel ? kindLabel + ' — ' : '') + 'bearbeiten';
+      modal.querySelector('#hm_absence_edit_starts_on').value = btn.getAttribute('data-starts-on') || '';
+      modal.querySelector('#hm_absence_edit_ends_on').value   = btn.getAttribute('data-ends-on')   || '';
+      modal.querySelector('#hm_absence_edit_reason').value    = btn.getAttribute('data-reason')    || '';
+      var statusEl = modal.querySelector('#hm_absence_edit_status');
+      if (statusEl) statusEl.value = btn.getAttribute('data-status') || 'requested';
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+
+    function csrf() {
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      return meta ? meta.getAttribute('content') : (modal.getAttribute('data-csrf') || '');
+    }
+
+    document.body.addEventListener('click', function (e) {
+      var btn = e.target.closest('.hm-tc-edit-absence-btn');
+      if (!btn) return;
+      e.preventDefault();
+      open(btn);
+    });
+
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) close();
+      if (e.target.classList.contains('hm-tc-absence-modal-cancel')) close();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.classList.contains('open')) close();
+    });
+
+    var form = modal.querySelector('#hm-absence-edit-form');
+    if (form) {
+      form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        var url = modal.dataset.updateUrl;
+        if (!url) return;
+        var body = new URLSearchParams();
+        body.append('hm_absence[starts_on]', modal.querySelector('#hm_absence_edit_starts_on').value);
+        body.append('hm_absence[ends_on]',   modal.querySelector('#hm_absence_edit_ends_on').value);
+        body.append('hm_absence[reason]',    modal.querySelector('#hm_absence_edit_reason').value);
+        var statusEl = modal.querySelector('#hm_absence_edit_status');
+        if (statusEl) body.append('hm_absence[status]', statusEl.value);
+        body.append('_method', 'patch');
+
+        var submitBtn = form.querySelector('button[type="submit"]');
+        if (submitBtn) submitBtn.disabled = true;
+
+        fetch(url, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-CSRF-Token': csrf(),
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: body.toString()
+        }).then(function (r) {
+          if (r.ok) {
+            close();
+            window.location.reload();
+            return;
+          }
+          return r.json().then(function (data) {
+            var msg = (data && (data.error || (data.errors && data.errors.join(', ')))) || ('HTTP ' + r.status);
+            throw new Error(msg);
+          }, function () { throw new Error('HTTP ' + r.status); });
+        }).catch(function (err) {
+          if (submitBtn) submitBtn.disabled = false;
+          alert((err && err.message) || 'Speichern fehlgeschlagen');
+        });
+      });
+    }
+  }
+
   function setupCalendarInteractions() {
     var detailModal = document.getElementById('hm-day-detail-modal');
     var ctxMenu = document.getElementById('hm-tc-context-menu');
@@ -869,6 +956,7 @@
     setupHrDropdown();
     setupAbsenceModal();
     setupCalendarInteractions();
+    setupAbsenceEditModal();
 
     if (!snapshot) {
       fetchStatus().then(tick);

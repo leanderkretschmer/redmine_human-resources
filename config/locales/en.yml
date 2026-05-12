@@ -163,6 +163,8 @@ en:
     other: "%{count} full days at %{hours} h"
   hm_distribution_partial: "+ 1 day with %{hours} h of work"
   hm_distribution_free: "+ %{hours} h to organise / self-directed"
+  label_hm_vacation_remaining_short: "%{remaining} / %{allowed} left"
+  label_hm_vacation_remaining_full: "%{used} of %{allowed} vacation days for %{year} already planned"
   label_hm_inherit: "(inherit from employment type)"
   label_hm_day_detail_loading: "Loading day details ..."
   label_hm_day_detail_work: "Working time"

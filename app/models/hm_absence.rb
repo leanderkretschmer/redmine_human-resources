@@ -210,6 +210,26 @@ class HmAbsence < ActiveRecord::Base
     end
   end
 
+  # Counts working days of approved vacation entries that overlap with the given year.
+  def self.vacation_working_days_used(user_id, year = Date.current.year)
+    year_start = Date.new(year, 1, 1)
+    year_end   = Date.new(year, 12, 31)
+    for_user(user_id).vacation.approved
+                     .where('starts_on <= ? AND ends_on >= ?', year_end, year_start)
+                     .sum do |a|
+      from = [a.starts_on, year_start].max
+      to   = [a.ends_on,   year_end].min
+      ::RedmineHmCratchmere::Holidays.breakdown(from, to)[:working].to_i
+    end
+  end
+
+  def self.vacation_remaining(user, year = Date.current.year)
+    setting = HmUserSetting.for(user)
+    allowed = setting.effective_yearly_vacation_days.to_i
+    used = vacation_working_days_used(user.is_a?(User) ? user.id : user.to_i, year)
+    { allowed: allowed, used: used, remaining: allowed - used }
+  end
+
   def self.build_by_day(absences, range_from, range_to)
     result = Hash.new { |h, k| h[k] = [] }
     absences.each do |a|

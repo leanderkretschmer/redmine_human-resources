@@ -19,7 +19,15 @@
       <% absences.each do |a| %>
         <tr class="hm-tc-abs-row hm-tc-abs-<%= a.status %>">
           <td><%= I18n.l(a.starts_on) %> — <%= I18n.l(a.ends_on) %></td>
-          <td><%= a.days %></td>
+          <td>
+            <%= a.days %>
+            <% if a.vacation? %>
+              <% rem = HmAbsence.vacation_remaining(a.user, a.starts_on.year) %>
+              <span class="hm-tc-vacation-remaining" title="<%= l(:label_hm_vacation_remaining_full, used: rem[:used], allowed: rem[:allowed], year: a.starts_on.year) %>">
+                · <%= l(:label_hm_vacation_remaining_short, remaining: rem[:remaining], allowed: rem[:allowed]) %>
+              </span>
+            <% end %>
+          </td>
           <td>
             <span class="hm-tc-abs-pill hm-tc-abs-pill-<%= a.kind %><%= ' hm-tc-abs-pill-pending' if a.requested? %>">
               <%= HmAbsence.kind_label(a.kind) %><% unless a.approved? %> · <%= HmAbsence.status_label(a.status) %><% end %>
@@ -51,8 +59,16 @@
               <%= button_to l(:button_hm_absence_approve), approve_hm_absence_path(id: a.id), method: :post, class: 'button-positive' %>
               <%= button_to l(:button_hm_absence_reject),  reject_hm_absence_path(id: a.id),  method: :post, class: 'button-negative' %>
             <% end %>
-            <% if (a.user_id == User.current.id && a.requested?) || User.current.admin? %>
-              <%= link_to l(:button_hm_absence_edit), edit_hm_absence_path(id: a.id), class: 'icon icon-edit' %>
+            <% if (a.user_id == User.current.id && (a.requested? || a.sickness? || a.offsite?)) || User.current.admin? %>
+              <a href="#" class="icon icon-edit hm-tc-edit-absence-btn"
+                 data-absence-id="<%= a.id %>"
+                 data-update-url="<%= hm_absence_path(id: a.id) %>"
+                 data-starts-on="<%= a.starts_on.iso8601 %>"
+                 data-ends-on="<%= a.ends_on.iso8601 %>"
+                 data-reason="<%= h a.reason %>"
+                 data-status="<%= a.status %>"
+                 data-kind="<%= a.kind %>"
+                 data-kind-label="<%= h HmAbsence.kind_label(a.kind) %>"><%= l(:button_hm_absence_edit) %></a>
               <%= button_to l(:button_hm_absence_delete), hm_absence_path(id: a.id), method: :delete, class: 'icon icon-del',
                             data: { confirm: l(:text_are_you_sure) } %>
             <% end %>

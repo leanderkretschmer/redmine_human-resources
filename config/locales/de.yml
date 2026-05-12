@@ -163,6 +163,8 @@ de:
     other: "%{count} volle Tage à %{hours} h"
   hm_distribution_partial: "+ 1 Tag mit %{hours} h Arbeit"
   hm_distribution_free: "+ %{hours} h frei zu organisieren / selbständig"
+  label_hm_vacation_remaining_short: "%{remaining} / %{allowed} verbleibend"
+  label_hm_vacation_remaining_full: "%{used} von %{allowed} Urlaubstagen in %{year} bereits verplant"
   label_hm_inherit: "(Vorgabe der Stellenart)"
   label_hm_day_detail_loading: "Lade Tagesdetails ..."
   label_hm_day_detail_work: "Arbeitszeiten"
