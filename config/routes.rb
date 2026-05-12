@@ -13,6 +13,8 @@ RedmineApp::Application.routes.draw do
     get   'export',   to: 'hm_timeclock#export',          as: 'export_hm_timeclock'
     get   'day/:date', to: 'hm_timeclock#day_detail',     as: 'day_hm_timeclock',
           constraints: { date: /\d{4}-\d{2}-\d{2}/ }
+    get   'quick/:do', to: 'hm_quick#perform',            as: 'hm_quick',
+          constraints: { do: /start|stop|toggle/ }
   end
 
   get  'hm_vacation', to: 'hm_vacation#show',   as: 'hm_vacation'
