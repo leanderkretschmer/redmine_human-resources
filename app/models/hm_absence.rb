@@ -77,10 +77,18 @@ class HmAbsence < ActiveRecord::Base
     end
   end
 
-  def self.validate_user_window(kind, starts_on, ends_on, today = Date.current)
+  # Validation gates that apply to *every* requester (admin included)
+  def self.validate_kind_window(kind, starts_on, ends_on, today = Date.current)
     return nil unless kind == KIND_SICKNESS || kind == KIND_OFFSITE
     return :future_not_allowed if starts_on && starts_on > today
     return :future_not_allowed if ends_on   && ends_on   > today
+    nil
+  end
+
+  # Additional gates that only apply to non-admin users
+  def self.validate_user_window(kind, starts_on, ends_on, today = Date.current)
+    hard = validate_kind_window(kind, starts_on, ends_on, today)
+    return hard if hard
     if kind == KIND_SICKNESS && starts_on && (today - starts_on).to_i > USER_BACKDATE_LIMIT_DAYS
       return :backdate_exceeded
     end

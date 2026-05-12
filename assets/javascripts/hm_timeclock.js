@@ -242,7 +242,10 @@
           li.className = 'hm-tc-day-event hm-tc-day-event-absence hm-tc-day-event-' + a.kind;
           li.dataset.absenceId = a.id;
           li.dataset.absenceKind = a.kind;
-          var html = '<strong>' + escapeHtml(a.kind_label) + '</strong> · ' + escapeHtml(a.status_label);
+          var html = '<strong>' + escapeHtml(a.kind_label) + '</strong>';
+          if (a.status && a.status !== 'approved') {
+            html += ' · ' + escapeHtml(a.status_label);
+          }
           if (a.starts_on !== a.ends_on) {
             html += ' · ' + a.starts_on + ' → ' + a.ends_on;
           }

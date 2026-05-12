@@ -14,10 +14,15 @@ class HmAbsencesController < ApplicationController
     starts_on = parse_date(permitted[:starts_on])
     ends_on   = parse_date(permitted[:ends_on]) || starts_on
 
+    hard_gate = HmAbsence.validate_kind_window(permitted[:kind], starts_on, ends_on)
+    if hard_gate
+      flash[:error] = window_error_message(permitted[:kind], hard_gate)
+      return redirect_back(fallback_location: hm_timeclock_path)
+    end
     unless User.current.admin?
-      error_code = HmAbsence.validate_user_window(permitted[:kind], starts_on, ends_on)
-      if error_code
-        flash[:error] = window_error_message(permitted[:kind], error_code)
+      user_gate = HmAbsence.validate_user_window(permitted[:kind], starts_on, ends_on)
+      if user_gate
+        flash[:error] = window_error_message(permitted[:kind], user_gate)
         return redirect_back(fallback_location: hm_timeclock_path)
       end
     end
@@ -66,7 +71,7 @@ class HmAbsencesController < ApplicationController
         HmAbsenceMailer.deliver_absence_edited(@absence, User.current)
       end
       flash[:notice] = l(:notice_hm_absence_updated)
-      redirect_to redirect_target
+      redirect_back(fallback_location: redirect_target)
     else
       render :edit, status: :unprocessable_entity
     end
@@ -79,7 +84,7 @@ class HmAbsencesController < ApplicationController
     else
       flash[:error] = l(:notice_hm_absence_forbidden)
     end
-    redirect_to redirect_target
+    redirect_back(fallback_location: redirect_target)
   end
 
   def approve

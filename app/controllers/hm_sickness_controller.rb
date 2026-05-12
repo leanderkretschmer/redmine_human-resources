@@ -16,10 +16,15 @@ class HmSicknessController < ApplicationController
     starts_on = parse_date(attrs[:starts_on])
     ends_on   = parse_date(attrs[:ends_on]) || starts_on
 
+    hard_gate = HmAbsence.validate_kind_window(HmAbsence::KIND_SICKNESS, starts_on, ends_on)
+    if hard_gate
+      flash[:error] = error_message(hard_gate)
+      return redirect_to hm_sickness_path
+    end
     unless User.current.admin?
-      error_code = HmAbsence.validate_user_window(HmAbsence::KIND_SICKNESS, starts_on, ends_on)
-      if error_code
-        flash[:error] = error_message(error_code)
+      user_gate = HmAbsence.validate_user_window(HmAbsence::KIND_SICKNESS, starts_on, ends_on)
+      if user_gate
+        flash[:error] = error_message(user_gate)
         return redirect_to hm_sickness_path
       end
     end

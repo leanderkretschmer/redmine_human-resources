@@ -22,7 +22,7 @@
           <td><%= a.days %></td>
           <td>
             <span class="hm-tc-abs-pill hm-tc-abs-pill-<%= a.kind %><%= ' hm-tc-abs-pill-pending' if a.requested? %>">
-              <%= HmAbsence.kind_label(a.kind) %> · <%= HmAbsence.status_label(a.status) %>
+              <%= HmAbsence.kind_label(a.kind) %><% unless a.approved? %> · <%= HmAbsence.status_label(a.status) %><% end %>
             </span>
           </td>
           <td><%= h a.reason %></td>
