@@ -1,7 +1,13 @@
 class HmAbsenceMailer < Mailer
   helper :hm_timeclock
 
-  def absence_requested(recipients, absence_id)
+  # Redmine's Mailer#process requires a User as the first argument so it can
+  # switch User.current and the I18n locale for the duration of the mail
+  # rendering. We honour that by always passing a User first; for the
+  # "requested" mail the recipient is whatever was configured in the plugin
+  # settings (admin addresses), while the *context* user is the requester.
+
+  def absence_requested(user, recipients, absence_id)
     @absence   = HmAbsence.find(absence_id)
     @user      = @absence.user
     @breakdown = @absence.breakdown
@@ -12,7 +18,7 @@ class HmAbsenceMailer < Mailer
                          kind: HmAbsence.kind_label(@absence.kind))
   end
 
-  def absence_decided(absence_id)
+  def absence_decided(user, absence_id)
     @absence   = HmAbsence.find(absence_id)
     @user      = @absence.user
     @breakdown = @absence.breakdown
@@ -23,7 +29,7 @@ class HmAbsenceMailer < Mailer
                          kind:   HmAbsence.kind_label(@absence.kind))
   end
 
-  def absence_edited(absence_id, editor_id)
+  def absence_edited(user, absence_id, editor_id)
     @absence   = HmAbsence.find(absence_id)
     @editor    = User.find(editor_id)
     @user      = @absence.user
@@ -39,23 +45,29 @@ class HmAbsenceMailer < Mailer
     return unless absence&.vacation?
     recipients = ::RedmineHmCratchmere::Notifications.recipients
     return if recipients.empty?
+    user = absence.user
+    return unless user
     ::RedmineHmCratchmere::Notifications.deliver_message(
-      absence_requested(recipients, absence.id)
+      absence_requested(user, recipients, absence.id)
     )
   end
 
   def self.deliver_absence_decided(absence)
     return unless absence&.vacation?
+    user = absence.user
+    return unless user
     ::RedmineHmCratchmere::Notifications.deliver_message(
-      absence_decided(absence.id)
+      absence_decided(user, absence.id)
     )
   end
 
   def self.deliver_absence_edited(absence, editor)
     return unless absence&.vacation? && editor
     return if absence.user_id == editor.id
+    user = absence.user
+    return unless user
     ::RedmineHmCratchmere::Notifications.deliver_message(
-      absence_edited(absence.id, editor.id)
+      absence_edited(user, absence.id, editor.id)
     )
   end
 end
