@@ -52,8 +52,34 @@ class HmUserSetting < ActiveRecord::Base
   end
 
   def effective_weekly_school_days
+    wd = effective_school_weekdays
+    return wd.size if wd.any?
     return weekly_school_days_override unless weekly_school_days_override.nil?
     template_value(:weekly_school_days) || 0
+  end
+
+  # Returns array of cwday integers (1=Mon ... 5=Fri) representing school days.
+  def effective_school_weekdays
+    own = parse_weekdays(school_weekdays_override)
+    return own if own.any? || !school_weekdays_override.nil?
+    parse_weekdays(template_value(:school_weekdays_pattern))
+  end
+
+  # Distribution helper. Given total weekly company minutes and full-day minutes,
+  # returns a breakdown: { full_days:, partial_minutes:, partial_present:, free_minutes:, total_workdays: }
+  def hour_distribution(weekly_minutes = nil, daily_minutes = nil)
+    w = (weekly_minutes || effective_weekly_target_minutes).to_i
+    d = (daily_minutes  || effective_daily_target_minutes).to_i
+    return nil if w <= 0 || d <= 0
+    full = w / d
+    partial = w - (full * d)
+    {
+      full_days:       full,
+      partial_minutes: partial,
+      partial_present: partial.positive?,
+      free_minutes:    partial.positive? ? (d - partial) : 0,
+      total_workdays:  full + (partial.positive? ? 1 : 0)
+    }
   end
 
   def allows_monthly_plan?
@@ -66,6 +92,11 @@ class HmUserSetting < ActiveRecord::Base
   end
 
   private
+
+  def parse_weekdays(value)
+    return [] if value.blank?
+    value.to_s.split(/[,;\s]+/).map { |s| s.to_i }.select { |i| i.between?(1, 5) }.uniq.sort
+  end
 
   def template_value(attr)
     hm_employment_type&.read_attribute(attr)

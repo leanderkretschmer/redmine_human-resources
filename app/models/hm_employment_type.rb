@@ -26,16 +26,18 @@ class HmEmploymentType < ActiveRecord::Base
       name: 'Vollzeit 40h + 1 Berufsschultag',
       weekly_target_minutes: 2400, daily_target_minutes: 480,
       max_break_minutes: 30, yearly_vacation_days: 20, weekly_school_days: 1,
+      school_weekdays_pattern: '',
       allows_monthly_plan: false, position_order: 11,
-      description: '40h-Stelle mit einem wöchentlichen Berufsschultag.'
+      description: '40h-Stelle mit einem wöchentlichen Berufsschultag (Wochentag wählbar).'
     },
     {
       slug: 'fulltime_40_school_2',
       name: 'Vollzeit 40h + 2 Berufsschultage',
       weekly_target_minutes: 2400, daily_target_minutes: 480,
       max_break_minutes: 30, yearly_vacation_days: 20, weekly_school_days: 2,
+      school_weekdays_pattern: '',
       allows_monthly_plan: false, position_order: 12,
-      description: '40h-Stelle mit zwei wöchentlichen Berufsschultagen.'
+      description: '40h-Stelle mit zwei wöchentlichen Berufsschultagen (Wochentage wählbar).'
     },
     {
       slug: 'parttime_30',

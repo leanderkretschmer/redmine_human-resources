@@ -156,6 +156,13 @@ en:
   label_hm_admin_monthly_plan_target: "Target hours for month"
   label_hm_admin_monthly_plan_notes: "Notes"
   label_hm_admin_monthly_plan_none: "No monthly plans yet."
+  label_hm_school_weekdays: "School weekdays"
+  label_hm_distribution: "Weekly hours distribution"
+  hm_distribution_full_days:
+    one: "1 full day at %{hours} h"
+    other: "%{count} full days at %{hours} h"
+  hm_distribution_partial: "+ 1 day with %{hours} h of work"
+  hm_distribution_free: "+ %{hours} h to organise / self-directed"
   label_hm_inherit: "(inherit from employment type)"
   label_hm_day_detail_loading: "Loading day details ..."
   label_hm_day_detail_work: "Working time"

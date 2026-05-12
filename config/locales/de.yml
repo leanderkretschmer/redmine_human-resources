@@ -156,6 +156,13 @@ de:
   label_hm_admin_monthly_plan_target: "Sollstunden im Monat"
   label_hm_admin_monthly_plan_notes: "Notiz"
   label_hm_admin_monthly_plan_none: "Noch keine Monatspläne hinterlegt."
+  label_hm_school_weekdays: "Berufsschultage (Wochentage)"
+  label_hm_distribution: "Verteilung der Wochenstunden"
+  hm_distribution_full_days:
+    one: "1 voller Tag à %{hours} h"
+    other: "%{count} volle Tage à %{hours} h"
+  hm_distribution_partial: "+ 1 Tag mit %{hours} h Arbeit"
+  hm_distribution_free: "+ %{hours} h frei zu organisieren / selbständig"
   label_hm_inherit: "(Vorgabe der Stellenart)"
   label_hm_day_detail_loading: "Lade Tagesdetails ..."
   label_hm_day_detail_work: "Arbeitszeiten"

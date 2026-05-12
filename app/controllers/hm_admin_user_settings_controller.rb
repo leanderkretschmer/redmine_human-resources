@@ -11,7 +11,8 @@ class HmAdminUserSettingsController < ApplicationController
       :hm_employment_type_id,
       :daily_target_hours, :weekly_target_hours, :max_break_hours,
       :yearly_vacation_days_override, :weekly_school_days_override,
-      :allows_monthly_plan_override, :notify_target_reached, :notify_break_over
+      :allows_monthly_plan_override, :notify_target_reached, :notify_break_over,
+      school_weekdays_override: []
     ).to_h
 
     { daily_target_hours: :daily_target_minutes,
@@ -23,6 +24,13 @@ class HmAdminUserSettingsController < ApplicationController
     end
 
     raw['hm_employment_type_id'] = nil if raw['hm_employment_type_id'].to_s.empty?
+
+    if raw.key?('school_weekdays_override')
+      values = Array(raw['school_weekdays_override']).map(&:to_s).reject(&:blank?).uniq
+      raw['school_weekdays_override'] = values.any? ? values.sort_by(&:to_i).join(',') : nil
+      # Keep weekly_school_days_override consistent with the explicit list
+      raw['weekly_school_days_override'] = values.any? ? values.size : nil
+    end
 
     if setting.update(raw)
       flash[:notice] = l(:notice_hm_timeclock_settings_saved)

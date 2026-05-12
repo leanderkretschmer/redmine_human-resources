@@ -683,3 +683,33 @@ button.hm-tc-day-detail-close {
   margin-top: 0.4em;
   text-align: right;
 }
+
+/* ======= Admin user setting form ======= */
+.hm-tc-weekday-group {
+  display: inline-flex;
+  gap: 0.6em;
+  flex-wrap: wrap;
+}
+.hm-tc-weekday-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25em;
+  padding: 0.15em 0.45em;
+  border: 1px solid #c6ccd5;
+  border-radius: 3px;
+  font-size: 0.95em;
+  background: #fff;
+  cursor: pointer;
+}
+.hm-tc-weekday-check:has(input:checked) {
+  background: #d6eaf8;
+  border-color: #3498db;
+}
+.hm-tc-distribution-hint {
+  color: #2c3e50;
+  font-size: 0.95em;
+  background: #f8fafc;
+  padding: 0.5em 0.8em;
+  border-left: 3px solid #2980b9;
+  border-radius: 0 3px 3px 0;
+}

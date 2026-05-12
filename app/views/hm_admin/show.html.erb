@@ -18,7 +18,11 @@
 </div>
 
 <h3><%= l(:label_hm_admin_user_setting) %></h3>
-<%= form_with url: update_hm_admin_user_setting_path(user_id: @user.id), method: :patch,
+<% selected_weekdays = @user_setting.effective_school_weekdays %>
+<% breakdown = @user_setting.hour_distribution %>
+<% day_abbrs = I18n.t('date.day_names') %>
+<%= form_with model: @user_setting,
+              url: update_hm_admin_user_setting_path(user_id: @user.id), method: :patch,
               scope: :hm_user_setting, local: true, html: { class: 'hm-tc-settings-form' } do |f| %>
   <div class="box tabular">
     <p>
@@ -56,11 +60,33 @@
                          placeholder: @user_setting.effective_yearly_vacation_days %>
     </p>
     <p>
-      <%= f.label :weekly_school_days_override, l(:label_hm_employment_type_school_days) %>
-      <%= f.number_field :weekly_school_days_override,
-                         min: 0, max: 5, step: 1,
-                         placeholder: @user_setting.effective_weekly_school_days %>
+      <%= label_tag :school_weekdays, l(:label_hm_school_weekdays) %>
+      <span class="hm-tc-weekday-group">
+        <% (1..5).each do |i| %>
+          <label class="hm-tc-weekday-check">
+            <%= check_box_tag 'hm_user_setting[school_weekdays_override][]',
+                              i.to_s,
+                              selected_weekdays.include?(i),
+                              id: "hm_user_setting_school_weekdays_override_#{i}" %>
+            <%= day_abbrs[i % 7] %>
+          </label>
+        <% end %>
+        <%= hidden_field_tag 'hm_user_setting[school_weekdays_override][]', '' %>
+      </span>
     </p>
+    <% if breakdown %>
+      <p class="hm-tc-distribution-hint">
+        <strong><%= l(:label_hm_distribution) %>:</strong>
+        <%= l(:hm_distribution_full_days, count: breakdown[:full_days],
+                                          hours: (@user_setting.effective_daily_target_minutes / 60.0).round(2)) %>
+        <% if breakdown[:partial_present] %>
+          · <%= l(:hm_distribution_partial,
+                  hours: (breakdown[:partial_minutes] / 60.0).round(2)) %>
+          · <%= l(:hm_distribution_free,
+                  hours: (breakdown[:free_minutes] / 60.0).round(2)) %>
+        <% end %>
+      </p>
+    <% end %>
     <p>
       <%= f.label :allows_monthly_plan_override, l(:label_hm_employment_type_monthly_plan) %>
       <%= f.select :allows_monthly_plan_override,
