@@ -125,6 +125,23 @@ class HmTimeclockController < ApplicationController
               type: 'text/csv; charset=utf-8'
   end
 
+  def day_detail
+    tz = User.current.time_zone || Time.zone
+    date = Date.parse(params[:date])
+    range_from = date.in_time_zone(tz).beginning_of_day
+    range_to   = date.in_time_zone(tz).end_of_day
+    entries = HmWorkEntry.for_user(User.current).in_range(range_from, range_to).order(:started_at).to_a
+    absences = HmAbsence.for_user(User.current)
+                        .where('starts_on <= ? AND ends_on >= ?', date, date)
+                        .order(:starts_on).to_a
+    payload = build_day_payload(date, entries, absences, tz)
+    respond_to do |format|
+      format.json { render json: payload }
+    end
+  rescue ArgumentError
+    render json: { error: 'invalid_date' }, status: :bad_request
+  end
+
   def correct
     entry = HmWorkEntry.for_user(User.current).where(id: params[:id]).first
     unless entry && entry.open? && entry.overdue?(as_of: Time.current)
@@ -199,8 +216,66 @@ class HmTimeclockController < ApplicationController
 
   def setting_params
     raw = params[:hm_user_setting] || ActionController::Parameters.new
-    raw.permit(:daily_target_minutes, :weekly_target_minutes, :max_break_minutes,
-               :notify_target_reached, :notify_break_over)
+    attrs = raw.permit(:daily_target_minutes, :weekly_target_minutes, :max_break_minutes,
+                       :daily_target_hours, :weekly_target_hours, :max_break_hours,
+                       :notify_target_reached, :notify_break_over).to_h
+
+    { daily_target_hours: :daily_target_minutes,
+      weekly_target_hours: :weekly_target_minutes,
+      max_break_hours: :max_break_minutes }.each do |hour_key, min_key|
+      hour_val = attrs.delete(hour_key.to_s) || attrs.delete(hour_key)
+      next if hour_val.nil?
+      attrs[min_key.to_s] = hour_val.to_s.strip.empty? ? nil : (hour_val.to_f * 60).round
+    end
+
+    attrs
+  end
+
+  def build_day_payload(date, entries, absences, tz)
+    events = []
+    entries.each do |e|
+      effective_end = e.effective_end_at(as_of: Time.current) || Time.current
+      events << {
+        type: 'work',
+        id: e.id,
+        starts_at_unix: e.started_at.to_i,
+        ends_at_unix: effective_end.to_i,
+        starts_label: e.started_at.in_time_zone(tz).strftime('%H:%M'),
+        ends_label:   e.ended_at ? e.ended_at.in_time_zone(tz).strftime('%H:%M') : '—',
+        net_seconds:  e.net_seconds(as_of: Time.current),
+        state: e.state,
+        breaks: e.hm_break_entries.order(:started_at).map do |b|
+          {
+            starts_at_unix: b.started_at.to_i,
+            ends_at_unix:   b.ended_at&.to_i,
+            starts_label:   b.started_at.in_time_zone(tz).strftime('%H:%M'),
+            ends_label:     b.ended_at ? b.ended_at.in_time_zone(tz).strftime('%H:%M') : '—',
+            seconds:        (b.ended_at || Time.current).to_i - b.started_at.to_i
+          }
+        end
+      }
+    end
+    absence_events = absences.map do |a|
+      {
+        type: 'absence',
+        id: a.id,
+        kind: a.kind,
+        kind_label: HmAbsence.kind_label(a.kind),
+        status: a.status,
+        status_label: HmAbsence.status_label(a.status),
+        reason: a.reason,
+        starts_on: a.starts_on.iso8601,
+        ends_on:   a.ends_on.iso8601,
+        edit_url: a.requested? || User.current.admin? ? edit_hm_absence_path(a) : nil,
+        delete_url: (a.requested? || User.current.admin?) ? hm_absence_path(a) : nil
+      }
+    end
+    {
+      date: date.iso8601,
+      date_label: I18n.l(date, format: :long),
+      events: events,
+      absences: absence_events
+    }
   end
 
   def parse_correction_time(entry, str, tz)

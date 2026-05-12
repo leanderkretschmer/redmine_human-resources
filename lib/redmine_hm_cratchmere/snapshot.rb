@@ -9,7 +9,8 @@ module RedmineHmCratchmere
 
     def to_h
       settings = Setting.plugin_redmine_hm_cratchmere || {}
-      daily_target_seconds = @setting.effective_daily_target_minutes.to_i * 60
+      today                = today_date
+      daily_target_seconds = @setting.effective_daily_target_minutes(on_date: today).to_i * 60
       max_break_seconds    = @setting.effective_max_break_minutes.to_i * 60
       overtime_threshold   = (positive_int(settings['overtime_threshold_minutes']) || 480) * 60
       poll_interval        = positive_int(settings['poll_interval_seconds']) || 30
@@ -22,7 +23,7 @@ module RedmineHmCratchmere
       end
 
       overdue          = open_entry && open_entry.overdue?(as_of: @now)
-      todays_completed = HmWorkEntry.for_user(@user).completed.on_day(@tz, today_date).to_a
+      todays_completed = HmWorkEntry.for_user(@user).completed.on_day(@tz, today).to_a
       worked_completed  = todays_completed.sum { |e| e.net_seconds(as_of: @now) }
       break_total_today = todays_completed.sum { |e| e.total_break_seconds(as_of: @now) }
 
@@ -46,7 +47,10 @@ module RedmineHmCratchmere
       first_today =
         ([open_entry, *todays_completed].compact - (overdue ? [open_entry] : [])).min_by(&:started_at)
       expected_end_unix = nil
-      if first_today && (state == 'working' || state == 'on_break') && daily_target_seconds.positive?
+      overtime_seconds  = 0
+      if daily_target_seconds.positive? && worked_total > daily_target_seconds
+        overtime_seconds = worked_total - daily_target_seconds
+      elsif first_today && (state == 'working' || state == 'on_break') && daily_target_seconds.positive?
         expected_end_unix = (first_today.started_at + (daily_target_seconds + break_total_today).seconds).to_i
       end
 
@@ -63,22 +67,40 @@ module RedmineHmCratchmere
         daily_target_seconds: daily_target_seconds,
         max_break_seconds: max_break_seconds,
         overtime_threshold_seconds: overtime_threshold,
+        target_reached: daily_target_seconds.positive? && worked_total >= daily_target_seconds,
+        overtime_seconds: overtime_seconds,
         expected_end_unix: expected_end_unix,
         first_today_started_at_unix: first_today&.started_at&.to_i,
         pending_correction: pending_correction,
         notify_target_reached: !!@setting.notify_target_reached && truthy?(settings['enable_target_notifications']),
         notify_break_over:     !!@setting.notify_break_over     && truthy?(settings['enable_break_notifications']),
         poll_interval_seconds: poll_interval,
+        monthly_plan: monthly_plan_payload(today),
         labels: {
           target_reached:   I18n.t(:hm_timeclock_notify_target_reached),
           break_over:       I18n.t(:hm_timeclock_notify_break_over),
           needs_correction: I18n.t(:label_hm_timeclock_needs_correction),
-          target_done:      I18n.t(:label_hm_timeclock_target_done)
+          target_done:      I18n.t(:label_hm_timeclock_target_done),
+          overtime_prefix:  I18n.t(:label_hm_timeclock_overtime_prefix)
         }
       }
     end
 
     private
+
+    def monthly_plan_payload(date)
+      return nil unless @setting.allows_monthly_plan?
+      plan = @setting.monthly_plan_for(date)
+      target = plan&.target_minutes.to_i
+      {
+        active: true,
+        year:   date.year,
+        month:  date.month,
+        target_minutes: target,
+        working_days:   plan&.working_days || 0,
+        daily_target_minutes: plan ? plan.daily_target_minutes : 0
+      }
+    end
 
     def build_correction_payload(entry)
       started_day_end = entry.started_at.in_time_zone(@tz).end_of_day
