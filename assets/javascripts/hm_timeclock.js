@@ -201,6 +201,9 @@
       }).then(function (r) {
         if (r.ok || r.status === 302) {
           refreshActiveDay();
+        } else if (r.status === 404) {
+          // bereits gelöscht — Modal frisch laden, dann ist es weg
+          refreshActiveDay();
         } else {
           alert('Löschen fehlgeschlagen (' + r.status + ')');
         }
@@ -292,6 +295,11 @@
         body: body.toString()
       }).then(function (r) {
         if (r.ok) { refreshActiveDay(); return; }
+        if (r.status === 404) {
+          alert(modalLabel('label-not-found', 'Eintrag existiert nicht mehr.'));
+          refreshActiveDay();
+          return;
+        }
         return r.json().then(function (data) {
           var msg = (data && (data.error || (data.errors && data.errors.join(', ')))) || ('HTTP ' + r.status);
           throw new Error(msg);

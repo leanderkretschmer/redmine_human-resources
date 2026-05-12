@@ -265,8 +265,8 @@ class HmTimeclockController < ApplicationController
         starts_on: a.starts_on.iso8601,
         ends_on:   a.ends_on.iso8601,
         can_manage: can_manage,
-        edit_url:   can_manage ? edit_hm_absence_path(a) : nil,
-        delete_url: can_manage ? hm_absence_path(a)      : nil
+        edit_url:   can_manage ? edit_hm_absence_path(a, format: nil) : nil,
+        delete_url: can_manage ? hm_absence_path(a, format: nil)      : nil
       }
     end
     {

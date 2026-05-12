@@ -125,6 +125,11 @@ class HmAbsencesController < ApplicationController
 
   def find_absence
     @absence = HmAbsence.find(params[:id])
+  rescue ActiveRecord::RecordNotFound
+    respond_to do |format|
+      format.json { render json: { error: l(:notice_hm_absence_not_found) }, status: :not_found and return }
+      format.html { redirect_back(fallback_location: hm_timeclock_path, alert: l(:notice_hm_absence_not_found)) and return }
+    end
   end
 
   def owner?

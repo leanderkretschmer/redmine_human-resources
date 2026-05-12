@@ -95,6 +95,7 @@ de:
   notice_hm_absence_approved: "Antrag bestätigt."
   notice_hm_absence_rejected: "Antrag abgelehnt."
   notice_hm_absence_forbidden: "Aktion nicht erlaubt."
+  notice_hm_absence_not_found: "Eintrag existiert nicht mehr."
   notice_hm_sickness_logged: "Krankheitstag eingetragen."
   notice_hm_sickness_no_future: "Krankheitstage können nicht in der Zukunft eingetragen werden."
   notice_hm_sickness_no_future_start: "Krankheit muss am Tag der Eintragung oder davor beginnen. Endet sie laut AU in der Zukunft, ist das ok — neu ab der Zukunft anfangen aber nicht."

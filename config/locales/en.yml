@@ -95,6 +95,7 @@ en:
   notice_hm_absence_approved: "Request approved."
   notice_hm_absence_rejected: "Request rejected."
   notice_hm_absence_forbidden: "Action not permitted."
+  notice_hm_absence_not_found: "Entry no longer exists."
   notice_hm_sickness_logged: "Sick day logged."
   notice_hm_sickness_no_future: "Sick days cannot be entered for the future."
   notice_hm_sickness_no_future_start: "Sick leave must start on or before today. A doctor's certificate may extend the end into the future, but a new entry cannot start in the future."
