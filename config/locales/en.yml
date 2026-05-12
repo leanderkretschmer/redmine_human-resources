@@ -35,6 +35,7 @@ en:
   label_hm_timeclock_expected_end: "Expected end of work"
   label_hm_timeclock_target_done: "Target met"
   label_hm_timeclock_overtime_prefix: "+"
+  label_hm_toggle_nav_end: "Show expected end / overtime in the navbar"
   label_hm_timeclock_needs_correction: "Open work entry — correction required"
   label_hm_timeclock_correction_intro: "On %{started_on} you clocked in at %{started_at} but did not clock out. Please enter the actual clock-out time."
   label_hm_timeclock_last_seen: "Last activity in Redmine"

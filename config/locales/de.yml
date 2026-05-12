@@ -35,6 +35,7 @@ de:
   label_hm_timeclock_expected_end: "Voraussichtliches Arbeitsende"
   label_hm_timeclock_target_done: "Soll erfüllt"
   label_hm_timeclock_overtime_prefix: "+"
+  label_hm_toggle_nav_end: "Endzeit/Überstunden in der Navbar anzeigen"
   label_hm_timeclock_needs_correction: "Offener Arbeitszeit-Eintrag — Korrektur erforderlich"
   label_hm_timeclock_correction_intro: "Sie haben sich am %{started_on} um %{started_at} eingestempelt, sich aber nicht ausgestempelt. Bitte tragen Sie die tatsächliche Ausstempelzeit nach."
   label_hm_timeclock_last_seen: "Letzte Aktivität in Redmine"

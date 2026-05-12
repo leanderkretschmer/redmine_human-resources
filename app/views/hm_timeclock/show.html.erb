@@ -65,6 +65,13 @@
     </div>
   </div>
 
+  <div class="hm-tc-prefs">
+    <label class="hm-tc-toggle">
+      <input type="checkbox" id="hm-tc-toggle-nav-end" checked>
+      <span><%= l(:label_hm_toggle_nav_end) %></span>
+    </label>
+  </div>
+
   <div class="hm-tc-actions">
     <%= button_to l(:button_hm_timeclock_start),  start_hm_timeclock_path,
                   data: { state_visible: 'idle' },

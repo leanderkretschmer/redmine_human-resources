@@ -9,6 +9,17 @@
   var notifiedBreak = false;
   var permissionAsked = false;
   var lastForcePollAt = 0;
+  var NAV_END_KEY = 'hm_show_navbar_end';
+
+  function navEndEnabled() {
+    try {
+      var v = localStorage.getItem(NAV_END_KEY);
+      return v === null || v === '1';
+    } catch (e) { return true; }
+  }
+  function setNavEnd(enabled) {
+    try { localStorage.setItem(NAV_END_KEY, enabled ? '1' : '0'); } catch (e) {}
+  }
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
   function clampPos(n) { return n < 0 ? 0 : n; }
@@ -131,6 +142,16 @@
     }
 
     window.HmTimeclockOpenAbsenceModal = openModal;
+  }
+
+  function setupNavEndToggle() {
+    var box = document.getElementById('hm-tc-toggle-nav-end');
+    if (!box) return;
+    box.checked = navEndEnabled();
+    box.addEventListener('change', function () {
+      setNavEnd(box.checked);
+      updateNavbar();
+    });
   }
 
   function setupAbsenceEditModal() {
@@ -714,13 +735,15 @@
     var prefix = (snapshot.state === 'on_break') ? '⏸ ' : '▶ ';
     var overtimePrefix = (snapshot.labels && snapshot.labels.overtime_prefix) || '+';
     var endStr = '';
-    if (snapshot.daily_target_seconds > 0 && live.worked >= snapshot.daily_target_seconds) {
-      var over = live.worked - snapshot.daily_target_seconds;
-      endStr = ' ' + overtimePrefix + fmtHM(over);
-    } else {
-      var ee = liveExpectedEnd();
-      if (ee && snapshot.daily_target_seconds > 0) {
-        endStr = ' → ' + fmtTimeOfDay(ee);
+    if (navEndEnabled()) {
+      if (snapshot.daily_target_seconds > 0 && live.worked >= snapshot.daily_target_seconds) {
+        var over = live.worked - snapshot.daily_target_seconds;
+        endStr = ' ' + overtimePrefix + fmtHM(over);
+      } else {
+        var ee = liveExpectedEnd();
+        if (ee && snapshot.daily_target_seconds > 0) {
+          endStr = ' → ' + fmtTimeOfDay(ee);
+        }
       }
     }
     stamp.textContent = prefix + fmtHM(live.worked) + endStr + ' ';
@@ -957,6 +980,7 @@
     setupAbsenceModal();
     setupCalendarInteractions();
     setupAbsenceEditModal();
+    setupNavEndToggle();
 
     if (!snapshot) {
       fetchStatus().then(tick);

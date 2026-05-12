@@ -726,3 +726,28 @@ button.hm-tc-day-detail-close {
   border-left: 3px solid #2980b9;
   border-radius: 0 3px 3px 0;
 }
+
+/* ======= Personal prefs row on timeclock card ======= */
+.hm-tc-prefs {
+  margin: 0.4em 0 0.6em;
+  font-size: 0.9em;
+  color: #555;
+}
+.hm-tc-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.25em 0.6em;
+  border: 1px solid #cdd3d8;
+  border-radius: 14px;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+.hm-tc-toggle:hover { border-color: #95a5a6; }
+.hm-tc-toggle input[type="checkbox"] { margin: 0; vertical-align: middle; }
+.hm-tc-toggle:has(input:checked) {
+  background: #d6eaf8;
+  border-color: #3498db;
+  color: #1c5d99;
+}
