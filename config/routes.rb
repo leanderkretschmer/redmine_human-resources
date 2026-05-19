@@ -43,11 +43,14 @@ RedmineApp::Application.routes.draw do
     patch 'employment_types/:id',     to: 'hm_admin_employment_types#update',  as: 'hm_admin_employment_type'
     put  'employment_types/:id',      to: 'hm_admin_employment_types#update'
     delete 'employment_types/:id',    to: 'hm_admin_employment_types#destroy'
-    post 'employment_types/seed',     to: 'hm_admin_employment_types#seed',    as: 'seed_hm_admin_employment_types'
 
     patch 'users/:user_id/setting',   to: 'hm_admin_user_settings#update',     as: 'update_hm_admin_user_setting'
     post  'users/:user_id/plans',     to: 'hm_admin_monthly_plans#create',     as: 'hm_admin_user_monthly_plans'
     patch 'users/:user_id/plans/:id', to: 'hm_admin_monthly_plans#update',     as: 'hm_admin_user_monthly_plan'
     delete 'users/:user_id/plans/:id', to: 'hm_admin_monthly_plans#destroy'
+
+    post   'users/:user_id/lecture_periods',     to: 'hm_admin_lecture_periods#create',  as: 'hm_admin_user_lecture_periods'
+    patch  'users/:user_id/lecture_periods/:id', to: 'hm_admin_lecture_periods#update',  as: 'hm_admin_user_lecture_period'
+    delete 'users/:user_id/lecture_periods/:id', to: 'hm_admin_lecture_periods#destroy'
   end
 end

@@ -41,12 +41,6 @@ class HmAdminEmploymentTypesController < ApplicationController
     redirect_to hm_admin_employment_types_path
   end
 
-  def seed
-    HmEmploymentType.seed_legal_defaults!
-    flash[:notice] = l(:notice_hm_employment_type_seeded)
-    redirect_to hm_admin_employment_types_path
-  end
-
   private
 
   def load_type
