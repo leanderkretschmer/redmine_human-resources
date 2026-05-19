@@ -160,6 +160,83 @@
   <% end %>
 <% end %>
 
+<% if @user_setting.allows_monthly_plan? %>
+  <h3><%= l(:label_hm_admin_lecture_periods) %></h3>
+  <p class="hm-tc-section-hint"><%= l(:label_hm_admin_lecture_periods_hint) %></p>
+  <% if @lecture_periods.any? %>
+    <table class="list">
+      <thead>
+        <tr>
+          <th><%= l(:label_hm_lecture_period_kind) %></th>
+          <th><%= l(:label_hm_lecture_period_starts_on) %></th>
+          <th><%= l(:label_hm_lecture_period_ends_on) %></th>
+          <th><%= l(:label_hm_lecture_period_weekly_target) %></th>
+          <th><%= l(:label_hm_lecture_period_daily_target) %></th>
+          <th><%= l(:label_hm_lecture_period_label) %></th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% @lecture_periods.each do |p| %>
+          <tr class="<%= cycle('odd', 'even') %>">
+            <%= form_with url: hm_admin_user_lecture_period_path(user_id: @user.id, id: p.id),
+                          method: :patch, scope: :hm_lecture_period, local: true do |f| %>
+              <td>
+                <%= f.select :kind,
+                             HmLecturePeriod::KINDS.map { |k| [HmLecturePeriod.label_for(k), k] },
+                             {}, { selected: p.kind } %>
+              </td>
+              <td><%= f.date_field :starts_on, value: p.starts_on %></td>
+              <td><%= f.date_field :ends_on,   value: p.ends_on %></td>
+              <td><%= number_field_tag 'hm_lecture_period[weekly_target_hours]',
+                                      p.weekly_target_minutes ? (p.weekly_target_minutes / 60.0) : nil,
+                                      min: 0, step: 0.5, size: 6 %></td>
+              <td><%= number_field_tag 'hm_lecture_period[daily_target_hours]',
+                                      p.daily_target_minutes ? (p.daily_target_minutes / 60.0) : nil,
+                                      min: 0, step: 0.5, size: 6 %></td>
+              <td><%= f.text_field :label, value: p.label, size: 20 %></td>
+              <td>
+                <%= submit_tag l(:button_save), class: 'icon icon-save' %>
+                <%= link_to l(:button_hm_absence_delete),
+                            hm_admin_user_lecture_period_path(user_id: @user.id, id: p.id),
+                            method: :delete,
+                            data: { confirm: l(:text_are_you_sure) },
+                            class: 'icon icon-del' %>
+              </td>
+            <% end %>
+          </tr>
+        <% end %>
+      </tbody>
+    </table>
+  <% else %>
+    <p class="nodata"><%= l(:label_hm_admin_lecture_periods_none) %></p>
+  <% end %>
+
+  <%= form_with url: hm_admin_user_lecture_periods_path(user_id: @user.id),
+                method: :post, scope: :hm_lecture_period, local: true,
+                html: { class: 'hm-tc-settings-form' } do |f| %>
+    <div class="box tabular">
+      <p>
+        <%= f.label :kind, l(:label_hm_lecture_period_kind) %>
+        <%= f.select :kind,
+                     HmLecturePeriod::KINDS.map { |k| [HmLecturePeriod.label_for(k), k] },
+                     {}, { selected: HmLecturePeriod::KIND_LECTURE } %>
+        <%= f.label :starts_on, l(:label_hm_lecture_period_starts_on) %>
+        <%= f.date_field :starts_on, value: Date.current %>
+        <%= f.label :ends_on, l(:label_hm_lecture_period_ends_on) %>
+        <%= f.date_field :ends_on, value: Date.current.end_of_month %>
+        <%= f.label :weekly_target_hours, l(:label_hm_lecture_period_weekly_target) %>
+        <%= number_field_tag 'hm_lecture_period[weekly_target_hours]', '', min: 0, step: 0.5, size: 6 %>
+        <%= f.label :daily_target_hours, l(:label_hm_lecture_period_daily_target) %>
+        <%= number_field_tag 'hm_lecture_period[daily_target_hours]', '', min: 0, step: 0.5, size: 6 %>
+        <%= f.label :label, l(:label_hm_lecture_period_label) %>
+        <%= f.text_field :label, size: 20 %>
+        <%= submit_tag l(:button_save), class: 'button-positive' %>
+      </p>
+    </div>
+  <% end %>
+<% end %>
+
 <%= render partial: 'hm_timeclock/calendar', locals: {
       month: @month, entries: @entries, user: @user,
       base_path: ->(m) { hm_admin_user_path(user_id: @user.id, month: m.strftime('%Y-%m')) },

@@ -48,6 +48,7 @@ class HmAdminController < ApplicationController
     @user_setting = HmUserSetting.for(@user)
     @employment_types = HmEmploymentType.active.ordered.to_a
     @monthly_plans = HmMonthlyPlan.for_user(@user).order(year: :desc, month: :desc).limit(36).to_a
+    @lecture_periods = HmLecturePeriod.for_user(@user).ordered.to_a
     respond_to do |format|
       format.html
       format.csv do

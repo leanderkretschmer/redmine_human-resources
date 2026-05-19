@@ -20,6 +20,13 @@ class HmUserSetting < ActiveRecord::Base
   # ── Effective values: own override → template → plugin default → hardcoded fallback ──
 
   def effective_daily_target_minutes(on_date: nil)
+    if on_date
+      period = active_lecture_period(on_date)
+      if period
+        return period.daily_minutes_for(on_date)
+      end
+    end
+
     if on_date && allows_monthly_plan?
       plan_daily = HmMonthlyPlan.for_user(user).for_period(on_date.year, on_date.month).first
       return plan_daily.daily_target_minutes if plan_daily && plan_daily.daily_target_minutes.positive?
@@ -47,6 +54,14 @@ class HmUserSetting < ActiveRecord::Base
   end
 
   def effective_weekly_target_minutes(on_date: nil)
+    if on_date
+      period = active_lecture_period(on_date)
+      if period
+        return period.weekly_target_minutes.to_i if period.weekly_target_minutes.to_i.positive?
+        return period.daily_target_minutes.to_i * 5 if period.daily_target_minutes.to_i.positive?
+        return 0
+      end
+    end
     if on_date && allows_monthly_plan?
       plan = HmMonthlyPlan.for_user(user).for_period(on_date.year, on_date.month).first
       return (plan.target_minutes / 4.345).round if plan && plan.target_minutes.positive?
@@ -54,6 +69,13 @@ class HmUserSetting < ActiveRecord::Base
     positive_or_nil(weekly_target_minutes) ||
       positive_or_nil(template_value(:weekly_target_minutes)) ||
       plugin_default(:default_weekly_target_minutes, 2400)
+  end
+
+  def active_lecture_period(date)
+    return nil unless date
+    HmLecturePeriod.for_user(user).covering(date).first
+  rescue ActiveRecord::StatementInvalid, NameError
+    nil
   end
 
   def effective_max_break_minutes
