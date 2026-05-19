@@ -1,0 +1,16 @@
+<%
+  hm_user_setting = user&.id ? HmUserSetting.for(user) : nil
+  hm_types = HmEmploymentType.active.ordered.to_a
+%>
+<% if hm_types.any? %>
+  <p>
+    <label for="hm_user_setting_hm_employment_type_id"><%= l(:label_hm_employment_type) %></label>
+    <%= select_tag 'hm_user_setting[hm_employment_type_id]',
+                   options_for_select(
+                     [[l(:label_hm_inherit_default), '']] +
+                       hm_types.map { |t| [t.name, t.id] },
+                     hm_user_setting&.hm_employment_type_id),
+                   id: 'hm_user_setting_hm_employment_type_id' %>
+    <em class="info"><%= l(:label_hm_employment_type_user_form_hint) %></em>
+  </p>
+<% end %>
