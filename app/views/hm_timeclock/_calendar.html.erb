@@ -63,7 +63,7 @@
                 <% if day_absences.any? && !show_users %>
                   <%
                     kinds_present = day_absences.group_by(&:kind)
-                    marker_order  = [HmAbsence::KIND_VACATION, HmAbsence::KIND_SICKNESS, HmAbsence::KIND_OFFSITE]
+                    marker_order  = [HmAbsence::KIND_VACATION, HmAbsence::KIND_SICKNESS, HmAbsence::KIND_OFFSITE, HmAbsence::KIND_SCHOOL, HmAbsence::KIND_BLOCK]
                   %>
                   <div class="hm-tc-cal-markers">
                     <% marker_order.each do |k| %>

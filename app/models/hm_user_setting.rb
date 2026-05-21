@@ -20,6 +20,9 @@ class HmUserSetting < ActiveRecord::Base
   # ── Effective values: own override → template → plugin default → hardcoded fallback ──
 
   def effective_daily_target_minutes(on_date: nil)
+    # A self-service blocked day (Berufsschule, Vorlesung, …) frees the day.
+    return 0 if on_date && blocked_day?(on_date)
+
     if on_date
       period = active_lecture_period(on_date)
       if period
@@ -76,6 +79,29 @@ class HmUserSetting < ActiveRecord::Base
     HmLecturePeriod.for_user(user).covering(date).first
   rescue ActiveRecord::StatementInvalid, NameError
     nil
+  end
+
+  def blocked_day?(date)
+    return false unless date && user
+    HmAbsence.for_user(user).active.blocking
+             .where('starts_on <= :d AND ends_on >= :d', d: date).exists?
+  rescue ActiveRecord::StatementInvalid, NameError
+    false
+  end
+
+  # Eligible for the self-service planning calendar:
+  # variable employment (Werkstudent/Praktikum) or a vocational-school setup.
+  def planning_eligible?
+    allows_monthly_plan? || effective_weekly_school_days.to_i.positive? ||
+      effective_school_weekdays.any?
+  end
+
+  def planning_kinds
+    kinds = []
+    kinds << HmAbsence::KIND_SCHOOL if effective_weekly_school_days.to_i.positive? || effective_school_weekdays.any?
+    kinds << HmAbsence::KIND_BLOCK  if allows_monthly_plan?
+    kinds = [HmAbsence::KIND_BLOCK, HmAbsence::KIND_SCHOOL] if kinds.empty? && planning_eligible?
+    kinds
   end
 
   def effective_max_break_minutes

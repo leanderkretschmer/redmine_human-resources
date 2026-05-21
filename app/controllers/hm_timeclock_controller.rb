@@ -253,7 +253,7 @@ class HmTimeclockController < ApplicationController
       }
     end
     absence_events = absences.map do |a|
-      can_manage = User.current.admin? || (a.user_id == User.current.id && (a.requested? || a.sickness? || a.offsite?))
+      can_manage = User.current.admin? || (a.user_id == User.current.id && (a.requested? || a.sickness? || a.offsite? || a.school? || a.blocked?))
       {
         type: 'absence',
         id: a.id,

@@ -4,10 +4,16 @@ class HmAbsence < ActiveRecord::Base
   KIND_VACATION = 'vacation'.freeze
   KIND_SICKNESS = 'sickness'.freeze
   KIND_OFFSITE  = 'offsite'.freeze
-  KINDS         = [KIND_VACATION, KIND_SICKNESS, KIND_OFFSITE].freeze
+  KIND_SCHOOL   = 'school'.freeze    # Berufsschule / Prüfung (self-service, recurring)
+  KIND_BLOCK    = 'blocked'.freeze   # geblockter Tag mit Grund, z.B. Vorlesung (variable Stellen)
+  KINDS         = [KIND_VACATION, KIND_SICKNESS, KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK].freeze
   USER_BACKDATE_LIMIT_DAYS = 3
 
-  AUTO_APPROVED_KINDS = [KIND_SICKNESS, KIND_OFFSITE].freeze
+  AUTO_APPROVED_KINDS = [KIND_SICKNESS, KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK].freeze
+  # Kinds that the user may freely plan into the future with a recurrence interval.
+  RECURRENCE_CAPABLE_KINDS = [KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK].freeze
+  # Kinds that mark a day as non-working (daily target becomes 0).
+  BLOCKING_KINDS = [KIND_SCHOOL, KIND_BLOCK].freeze
 
   STATUS_REQUESTED = 'requested'.freeze
   STATUS_APPROVED  = 'approved'.freeze
@@ -27,6 +33,9 @@ class HmAbsence < ActiveRecord::Base
   scope :vacation,  -> { where(kind: KIND_VACATION) }
   scope :sickness,  -> { where(kind: KIND_SICKNESS) }
   scope :offsite,   -> { where(kind: KIND_OFFSITE) }
+  scope :school,    -> { where(kind: KIND_SCHOOL) }
+  scope :blocked,   -> { where(kind: KIND_BLOCK) }
+  scope :blocking,  -> { where(kind: BLOCKING_KINDS) }
   scope :counted,   -> { where(kind: [KIND_VACATION, KIND_SICKNESS]) }
   scope :pending,   -> { where(status: STATUS_REQUESTED) }
   scope :approved,  -> { where(status: STATUS_APPROVED) }
@@ -37,6 +46,8 @@ class HmAbsence < ActiveRecord::Base
   def vacation?;  kind == KIND_VACATION; end
   def sickness?;  kind == KIND_SICKNESS; end
   def offsite?;   kind == KIND_OFFSITE;  end
+  def school?;    kind == KIND_SCHOOL;   end
+  def blocked?;   kind == KIND_BLOCK;    end
   def auto_approved?; AUTO_APPROVED_KINDS.include?(kind); end
   def requested?; status == STATUS_REQUESTED; end
   def approved?;  status == STATUS_APPROVED; end
@@ -97,6 +108,8 @@ class HmAbsence < ActiveRecord::Base
     when KIND_VACATION then I18n.t(:label_hm_hr_vacation)
     when KIND_SICKNESS then I18n.t(:label_hm_hr_sickness)
     when KIND_OFFSITE  then I18n.t(:label_hm_hr_offsite)
+    when KIND_SCHOOL   then I18n.t(:label_hm_hr_school)
+    when KIND_BLOCK    then I18n.t(:label_hm_hr_block)
     else kind.to_s.humanize
     end
   end

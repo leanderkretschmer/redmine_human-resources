@@ -35,9 +35,10 @@ class HmAbsencesController < ApplicationController
       return redirect_back(fallback_location: hm_timeclock_path)
     end
 
+    recurrence_capable = HmAbsence::RECURRENCE_CAPABLE_KINDS.include?(permitted[:kind])
     recurrence_kind  = permitted[:recurrence].to_s.presence
     recurrence_until = parse_date(permitted[:recurrence_until])
-    if permitted[:kind] == HmAbsence::KIND_OFFSITE &&
+    if recurrence_capable &&
        recurrence_kind &&
        recurrence_kind != HmAbsence::RECURRENCE_NONE &&
        recurrence_until.blank?
@@ -45,7 +46,7 @@ class HmAbsencesController < ApplicationController
       return redirect_back(fallback_location: hm_timeclock_path)
     end
 
-    pairs = if permitted[:kind] == HmAbsence::KIND_OFFSITE
+    pairs = if recurrence_capable
               HmAbsence.expand_recurrence(starts_on, ends_on, recurrence_kind, recurrence_until)
             else
               [[starts_on, ends_on]]
@@ -191,6 +192,8 @@ class HmAbsencesController < ApplicationController
   def can_edit?
     return true if User.current.admin?
     return false unless owner?
+    # Vacation needs to still be pending; everything else (sickness, offsite,
+    # school, blocked) the owner may always edit/remove.
     @absence.vacation? ? @absence.requested? : true
   end
 
@@ -224,6 +227,7 @@ class HmAbsencesController < ApplicationController
     case @absence.kind
     when HmAbsence::KIND_VACATION then hm_vacation_path
     when HmAbsence::KIND_SICKNESS then hm_sickness_path
+    when HmAbsence::KIND_SCHOOL, HmAbsence::KIND_BLOCK then hm_planning_path
     else hm_timeclock_path
     end
   end

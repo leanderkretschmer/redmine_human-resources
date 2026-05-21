@@ -10,6 +10,9 @@
       { url: hm_vacation_path,  label: I18n.t(:label_hm_hr_vacation) },
       { url: hm_sickness_path,  label: I18n.t(:label_hm_hr_sickness) }
     ]
+    if (HmUserSetting.for(User.current).planning_eligible? rescue false)
+      menu_items << { url: hm_planning_path, label: I18n.t(:label_hm_hr_planning) }
+    end
     if User.current.admin?
       menu_items << { url: hm_admin_path, label: I18n.t(:label_hm_hr_admin) }
     end

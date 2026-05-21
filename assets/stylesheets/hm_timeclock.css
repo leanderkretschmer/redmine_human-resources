@@ -262,6 +262,8 @@ table.hm-tc-calendar-grid {
 .hm-tc-cal-marker-vacation { background: #3498db; }
 .hm-tc-cal-marker-sickness { background: #e74c3c; }
 .hm-tc-cal-marker-offsite  { background: #9b59b6; }
+.hm-tc-cal-marker-school   { background: #16a085; }
+.hm-tc-cal-marker-blocked  { background: #e67e22; }
 .hm-tc-cal-marker-pending {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.65) 3px, rgba(255,255,255,0.65) 6px);
 }
@@ -328,6 +330,8 @@ table.hm-tc-calendar-grid {
 .hm-tc-cal-user-pill-vacation { background: #3498db; }
 .hm-tc-cal-user-pill-sickness { background: #e74c3c; }
 .hm-tc-cal-user-pill-offsite  { background: #9b59b6; }
+.hm-tc-cal-user-pill-school   { background: #16a085; }
+.hm-tc-cal-user-pill-blocked  { background: #e67e22; }
 .hm-tc-cal-user-pill-pending {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.45) 4px, rgba(255,255,255,0.45) 8px);
   border: 1px dashed rgba(255,255,255,0.85);
@@ -368,6 +372,8 @@ table.hm-tc-calendar-grid {
 .hm-tc-abs-pill-vacation { background: #3498db; }
 .hm-tc-abs-pill-sickness { background: #e74c3c; }
 .hm-tc-abs-pill-offsite  { background: #9b59b6; }
+.hm-tc-abs-pill-school   { background: #16a085; }
+.hm-tc-abs-pill-blocked  { background: #e67e22; }
 .hm-tc-abs-pill-pending {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.45) 4px, rgba(255,255,255,0.45) 8px);
   border: 1px dashed rgba(255,255,255,0.9);
@@ -460,6 +466,8 @@ table.hm-tc-calendar-grid {
 .hm-tc-day-event-absence.hm-tc-day-event-vacation { border-left-color: #3498db; }
 .hm-tc-day-event-absence.hm-tc-day-event-sickness { border-left-color: #e74c3c; }
 .hm-tc-day-event-absence.hm-tc-day-event-offsite  { border-left-color: #9b59b6; }
+.hm-tc-day-event-absence.hm-tc-day-event-school   { border-left-color: #16a085; }
+.hm-tc-day-event-absence.hm-tc-day-event-blocked  { border-left-color: #e67e22; }
 .hm-tc-day-event-breaks {
   margin: 0.2em 0 0 1em;
   padding: 0;

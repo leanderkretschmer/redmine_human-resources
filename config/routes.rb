@@ -21,6 +21,7 @@ RedmineApp::Application.routes.draw do
   post 'hm_vacation', to: 'hm_vacation#create'
   get  'hm_sickness', to: 'hm_sickness#show',   as: 'hm_sickness'
   post 'hm_sickness', to: 'hm_sickness#create'
+  get  'hm_planning', to: 'hm_planning#show',   as: 'hm_planning'
 
   post   'hm_absences',              to: 'hm_absences#create',  as: 'hm_absences'
   get    'hm_absences/:id/edit',     to: 'hm_absences#edit',    as: 'edit_hm_absence'
