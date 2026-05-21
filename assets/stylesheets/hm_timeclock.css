@@ -686,31 +686,49 @@ button.hm-tc-day-detail-close {
 
 /* ======= Admin user setting form ======= */
 .hm-tc-weekday-group {
-  display: inline-flex;
-  gap: 0.8em;
+  display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  line-height: 1.6;
-  vertical-align: middle;
+  column-gap: 0.6em;
+  row-gap: 0.5em;
+  align-items: stretch;
+  padding: 0;
+  margin: 0;
+  line-height: normal;
 }
+/* Inside Redmine's floated-label tabular layout, sit the group in the field
+   column instead of overlapping the label. */
+.box.tabular p .hm-tc-weekday-group { width: auto; }
+.box.tabular p label.hm-tc-weekday-check,
 .hm-tc-weekday-check {
   display: inline-flex;
+  float: none;
+  width: auto;
   align-items: center;
-  gap: 0.5em;
-  padding: 0.35em 0.8em;
-  margin: 0.15em 0;
+  gap: 0.45em;
+  padding: 0.35em 0.7em;
+  margin: 0;
   border: 1px solid #c6ccd5;
   border-radius: 4px;
   font-size: 0.95em;
+  font-weight: normal;
+  line-height: 1.2;
   background: #fff;
   cursor: pointer;
   white-space: nowrap;
   user-select: none;
   text-align: left;
+  box-sizing: border-box;
 }
+.box.tabular p .hm-tc-weekday-check input[type="checkbox"],
 .hm-tc-weekday-check input[type="checkbox"] {
-  margin: 0 0.15em 0 0;
+  position: static;
+  float: none;
+  width: auto;
+  min-width: 0;
+  height: auto;
+  margin: 0;
   vertical-align: middle;
+  flex: 0 0 auto;
 }
 .hm-tc-weekday-check:hover { border-color: #95a5a6; }
 .hm-tc-weekday-check:has(input:checked) {

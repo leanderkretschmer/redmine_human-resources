@@ -70,7 +70,41 @@
     <%= text_field_tag 'settings[conflict_padding_days]',
                        @settings['conflict_padding_days'], size: 4 %>
   </p>
+  <p>
+    <label for="settings_long_shift_threshold_hours"><%= l(:hm_settings_long_shift_threshold) %></label>
+    <%= number_field_tag 'settings[long_shift_threshold_hours]',
+                         (@settings['long_shift_threshold_hours'].presence || 12),
+                         min: 1, max: 24, step: 1, size: 4 %>
+    <em class="info"><%= l(:hm_settings_long_shift_threshold_hint) %></em>
+  </p>
 </div>
+
+<fieldset class="box">
+  <legend><%= l(:label_hm_quick_links) %></legend>
+  <% api_key = User.current.api_key %>
+  <% base    = request.base_url %>
+  <p><%= l(:hint_hm_quick_links) %></p>
+  <p class="hm-tc-quick-warning"><%= l(:warning_hm_quick_links) %></p>
+  <p><strong><%= l(:label_hm_quick_links_pattern) %>:</strong></p>
+  <dl class="hm-tc-quick-links">
+    <dt><%= l(:label_hm_quick_link_start) %></dt>
+    <dd><code><%= base %>/hm_timeclock/quick/start?key=&lt;API_KEY&gt;</code></dd>
+    <dt><%= l(:label_hm_quick_link_stop) %></dt>
+    <dd><code><%= base %>/hm_timeclock/quick/stop?key=&lt;API_KEY&gt;</code></dd>
+    <dt><%= l(:label_hm_quick_link_toggle) %></dt>
+    <dd><code><%= base %>/hm_timeclock/quick/toggle?key=&lt;API_KEY&gt;</code></dd>
+  </dl>
+  <p><strong><%= l(:label_hm_quick_links_own_example) %>:</strong></p>
+  <dl class="hm-tc-quick-links">
+    <dt><%= l(:label_hm_quick_link_start) %></dt>
+    <dd><code><%= base %><%= hm_quick_path(do: 'start',  key: api_key) %></code></dd>
+    <dt><%= l(:label_hm_quick_link_stop) %></dt>
+    <dd><code><%= base %><%= hm_quick_path(do: 'stop',   key: api_key) %></code></dd>
+    <dt><%= l(:label_hm_quick_link_toggle) %></dt>
+    <dd><code><%= base %><%= hm_quick_path(do: 'toggle', key: api_key) %></code></dd>
+  </dl>
+  <p><%= link_to l(:label_hm_quick_rotate_key), '/my/account', class: 'icon icon-key' %></p>
+</fieldset>
 
 <script>
   (function () {

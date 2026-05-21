@@ -1,10 +1,11 @@
+<% tz = User.current.time_zone || Time.zone %>
 <div class="hm-tc-correction-banner">
-  <h3><%= l(:label_hm_timeclock_needs_correction) %></h3>
+  <h3><%= l(:label_hm_timeclock_long_shift_title) %></h3>
 
   <p>
-    <%= l(:label_hm_timeclock_correction_intro,
-          started_on: pc[:started_on_label],
-          started_at: pc[:started_at_label]) %>
+    <%= l(:label_hm_timeclock_long_shift_intro,
+          started_at: pc[:started_at_label],
+          hours: pc[:open_hours]) %>
   </p>
 
   <p>
@@ -23,14 +24,15 @@
     <div class="hm-tc-correction-row">
       <label for="hm_correction_ended_at"><%= l(:label_hm_timeclock_correction_set_end) %></label>
       <%= text_field_tag :ended_at,
-                         Time.at(pc[:suggested_end_unix]).in_time_zone(User.current.time_zone || Time.zone).strftime('%H:%M'),
-                         type: :time,
+                         Time.at(pc[:suggested_end_unix]).in_time_zone(tz).strftime('%Y-%m-%dT%H:%M'),
+                         type: 'datetime-local',
                          id: 'hm_correction_ended_at',
                          required: true,
+                         min: Time.at(pc[:started_at_unix]).in_time_zone(tz).strftime('%Y-%m-%dT%H:%M'),
+                         max: Time.at(pc[:now_unix]).in_time_zone(tz).strftime('%Y-%m-%dT%H:%M'),
                          step: 60 %>
       <span class="hm-tc-correction-hint">
-        (<%= l(:label_hm_timeclock_correction_day_label) %>: <%= pc[:started_on_label] %>,
-        <%= l(:label_hm_timeclock_correction_max_end) %> <%= Time.at(pc[:day_end_unix]).in_time_zone(User.current.time_zone || Time.zone).strftime('%H:%M') %>)
+        <%= l(:label_hm_timeclock_correction_started, started_at: pc[:started_at_label]) %>
       </span>
     </div>
     <p>

@@ -63,20 +63,3 @@
   </div>
   <p><%= submit_tag l(:button_hm_timeclock_save_settings), class: 'button-positive' %></p>
 <% end %>
-
-<h3><%= l(:label_hm_quick_links) %></h3>
-<% api_key = User.current.api_key %>
-<% base    = request.base_url %>
-<p><%= l(:hint_hm_quick_links) %></p>
-<dl class="hm-tc-quick-links">
-  <dt><%= l(:label_hm_quick_link_start) %></dt>
-  <dd><code><%= base %><%= hm_quick_path(do: 'start',  key: api_key) %></code></dd>
-  <dt><%= l(:label_hm_quick_link_stop) %></dt>
-  <dd><code><%= base %><%= hm_quick_path(do: 'stop',   key: api_key) %></code></dd>
-  <dt><%= l(:label_hm_quick_link_toggle) %></dt>
-  <dd><code><%= base %><%= hm_quick_path(do: 'toggle', key: api_key) %></code></dd>
-</dl>
-<p class="hm-tc-quick-warning">⚠ <%= l(:warning_hm_quick_links) %></p>
-<p>
-  <%= link_to l(:label_hm_quick_rotate_key), '/my/account', class: 'icon icon-key' %>
-</p>

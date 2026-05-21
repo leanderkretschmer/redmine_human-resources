@@ -55,13 +55,25 @@ class HmWorkEntry < ActiveRecord::Base
     started_at.in_time_zone(user_time_zone).end_of_day
   end
 
+  # Long-shift detection. On a trust basis the clock never stops automatically;
+  # instead, once an open entry has been running longer than the configured
+  # threshold we flag it so the user view can ask to confirm or correct the end.
+  def self.long_shift_threshold_seconds
+    settings = Setting.plugin_redmine_hm_cratchmere || {}
+    hrs = settings['long_shift_threshold_hours'].to_i
+    hrs = 12 unless hrs.positive?
+    hrs * 3600
+  end
+
   def overdue?(as_of: Time.current)
-    open? && started_on_date < as_of.in_time_zone(user_time_zone).to_date
+    return false unless open?
+    (as_of - started_at).to_i >= self.class.long_shift_threshold_seconds
   end
 
   def effective_end_at(as_of: Time.current)
     return ended_at if ended_at
-    open? ? [as_of, started_day_end].min : started_day_end
+    # No midnight cap — night shifts may legitimately run past 00:00.
+    as_of
   end
 
   def total_break_seconds(as_of: Time.current)

@@ -103,16 +103,14 @@ module RedmineHmCratchmere
     end
 
     def build_correction_payload(entry)
-      started_day_end = entry.started_at.in_time_zone(@tz).end_of_day
-      last_seen       = @setting.last_seen_at
+      last_seen = @setting.last_seen_at
       suggested =
-        if last_seen && last_seen > entry.started_at && last_seen <= started_day_end
+        if last_seen && last_seen > entry.started_at && last_seen <= @now
           last_seen
-        elsif last_seen && last_seen > started_day_end
-          started_day_end
         else
-          started_day_end
+          @now
         end
+      open_hours = ((@now - entry.started_at) / 3600.0).round(1)
       {
         id: entry.id,
         started_at_unix:     entry.started_at.to_i,
@@ -122,8 +120,9 @@ module RedmineHmCratchmere
         last_seen_at_label:  last_seen ? fmt_dt(last_seen) : nil,
         suggested_end_unix:  suggested.to_i,
         suggested_end_label: fmt_dt(suggested),
-        day_end_unix:        started_day_end.to_i,
-        day_end_label:       fmt_dt(started_day_end)
+        open_hours:          open_hours,
+        now_unix:            @now.to_i,
+        now_label:           fmt_dt(@now)
       }
     end
 

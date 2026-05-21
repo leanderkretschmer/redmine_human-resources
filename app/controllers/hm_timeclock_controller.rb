@@ -280,19 +280,22 @@ class HmTimeclockController < ApplicationController
   def parse_correction_time(entry, str, tz)
     return nil if str.blank?
     started_day = entry.started_at.in_time_zone(tz).to_date
-    day_end = entry.started_at.in_time_zone(tz).end_of_day
 
     parsed =
       if str.match?(/\A\d{1,2}:\d{2}\z/)
+        # Bare HH:MM — assume the start day; if that lands before the start
+        # time, roll over to the next day (night shift past midnight).
         h, m = str.split(':').map(&:to_i)
-        Time.use_zone(tz) { Time.zone.local(started_day.year, started_day.month, started_day.day, h, m) }
+        candidate = Time.use_zone(tz) { Time.zone.local(started_day.year, started_day.month, started_day.day, h, m) }
+        candidate <= entry.started_at ? candidate + 1.day : candidate
       else
+        # datetime-local ("YYYY-MM-DDTHH:MM") or any parseable timestamp.
         Time.use_zone(tz) { Time.zone.parse(str) } rescue nil
       end
 
     return nil unless parsed
     return nil if parsed <= entry.started_at
-    return nil if parsed > day_end
+    return nil if parsed > Time.current + 1.minute
     parsed
   end
 end

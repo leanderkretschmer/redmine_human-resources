@@ -33,7 +33,8 @@ Redmine::Plugin.register :redmine_hm_cratchmere do
       'enable_break_notifications'      => '1',
       'poll_interval_seconds'           => 30,
       'notification_emails'             => '',
-      'conflict_padding_days'           => 7
+      'conflict_padding_days'           => 7,
+      'long_shift_threshold_hours'      => 12
     },
     partial: 'settings/hm_cratchmere'
   )
