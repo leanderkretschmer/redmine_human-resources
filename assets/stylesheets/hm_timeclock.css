@@ -769,3 +769,38 @@ button.hm-tc-day-detail-close {
   border-color: #3498db;
   color: #1c5d99;
 }
+
+/* ======= Plugin settings tabs ======= */
+.hm-settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25em;
+  border-bottom: 2px solid #d0d7de;
+  margin-bottom: 1em;
+}
+.hm-settings-tab-btn {
+  border: 1px solid transparent;
+  border-bottom: none;
+  background: transparent;
+  padding: 0.5em 1.1em;
+  font-size: 0.95em;
+  cursor: pointer;
+  border-radius: 6px 6px 0 0;
+  color: #44505f;
+}
+.hm-settings-tab-btn:hover { background: #eef2f6; }
+.hm-settings-tab-btn.active {
+  background: #fff;
+  border-color: #d0d7de;
+  border-bottom: 2px solid #fff;
+  margin-bottom: -2px;
+  font-weight: 600;
+  color: #1c5d99;
+}
+
+/* ======= CSV import ======= */
+.hm-tc-import-bulk { margin: 0.5em 0 1em; }
+.hm-tc-import-table th, .hm-tc-import-table td { vertical-align: middle; }
+.hm-tc-import-table tr.hm-tc-import-invalid { background: #fdeeee; }
+.hm-tc-import-table .hm-tc-import-err { color: #c0392b; font-weight: bold; }
+.hm-tc-import-table select.hm-import-user { max-width: 16em; }

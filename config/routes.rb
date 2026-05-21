@@ -33,6 +33,12 @@ RedmineApp::Application.routes.draw do
   scope 'admin/hm_timeclock' do
     get 'day/:date',       to: 'hm_admin#day',   as: 'hm_admin_day',
         constraints: { date: /\d{4}-\d{2}-\d{2}/ }
+
+    get  'import',          to: 'hm_admin_imports#new',      as: 'hm_admin_import'
+    get  'import/template', to: 'hm_admin_imports#template', as: 'hm_admin_import_template'
+    post 'import/preview',  to: 'hm_admin_imports#preview',  as: 'hm_admin_import_preview'
+    post 'import/commit',   to: 'hm_admin_imports#commit',   as: 'hm_admin_import_commit'
+
     get 'users/:user_id',  to: 'hm_admin#show',  as: 'hm_admin_user'
     get '',                to: 'hm_admin#index', as: 'hm_admin'
 

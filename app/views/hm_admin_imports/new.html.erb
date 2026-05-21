@@ -1,0 +1,29 @@
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag 'hm_timeclock', plugin: 'redmine_hm_cratchmere' %>
+<% end %>
+
+<div class="contextual">
+  <%= link_to l(:label_hm_admin_back), hm_admin_path, class: 'icon icon-back' %>
+</div>
+
+<h2><%= l(:label_hm_admin_import) %></h2>
+
+<p class="hm-tc-section-hint"><%= l(:label_hm_admin_import_intro) %></p>
+
+<p>
+  <%= link_to l(:button_hm_import_download_template), hm_admin_import_template_path, class: 'icon icon-download' %>
+</p>
+
+<%= form_with url: hm_admin_import_preview_path, method: :post, local: true,
+              html: { multipart: true, class: 'hm-tc-settings-form' } do %>
+  <div class="box tabular">
+    <p>
+      <label for="file"><%= l(:label_hm_import_file) %></label>
+      <%= file_field_tag :file, accept: '.csv,text/csv' %>
+    </p>
+    <p>
+      <em class="info"><%= l(:label_hm_import_columns_hint, columns: HmAdminImportsController::COLUMNS.join(', ')) %></em>
+    </p>
+  </div>
+  <p><%= submit_tag l(:button_hm_import_preview), class: 'button-positive' %></p>
+<% end %>
