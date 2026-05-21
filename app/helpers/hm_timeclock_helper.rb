@@ -31,6 +31,15 @@ module HmTimeclockHelper
     ['1', 1, true, 'true'].include?(value)
   end
 
+  # Formats a possibly-fractional day count, e.g. 4.5 → "4,5" (de) / "4.5" (en),
+  # 4.0 → "4". Half days are the only fractions we produce.
+  def hm_format_days(value)
+    v = value.to_f
+    str = (v % 1).zero? ? v.to_i.to_s : format('%.1f', v)
+    str = str.tr('.', I18n.t('number.format.separator', default: '.'))
+    str
+  end
+
   def hm_calendar_cells(month)
     start_pad = (month.cwday - 1)
     cells = Array.new(start_pad)

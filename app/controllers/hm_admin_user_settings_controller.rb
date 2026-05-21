@@ -8,7 +8,7 @@ class HmAdminUserSettingsController < ApplicationController
     setting = HmUserSetting.for(user)
 
     raw = params.require(:hm_user_setting).permit(
-      :hm_employment_type_id,
+      :hm_employment_type_id, :region_code,
       :daily_target_hours, :weekly_target_hours, :max_break_hours,
       :yearly_vacation_days_override, :weekly_school_days_override,
       :allows_monthly_plan_override, :notify_target_reached, :notify_break_over,
@@ -24,6 +24,7 @@ class HmAdminUserSettingsController < ApplicationController
     end
 
     raw['hm_employment_type_id'] = nil if raw['hm_employment_type_id'].to_s.empty?
+    raw['region_code'] = nil if raw['region_code'].to_s.strip.empty?
 
     if raw.key?('school_weekdays_override')
       values = Array(raw['school_weekdays_override']).map(&:to_s).reject(&:blank?).uniq

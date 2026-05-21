@@ -27,6 +27,18 @@
       <%= f.label :reason, l(:label_hm_absence_reason) %>
       <%= f.text_area :reason, rows: 3, cols: 60 %>
     </p>
+    <% if absence.vacation? %>
+      <p>
+        <%= f.label :first_day_half, l(:label_hm_absence_first_day_half) %>
+        <%= f.check_box :first_day_half %>
+        <em class="info"><%= l(:label_hm_absence_first_day_half_hint) %></em>
+      </p>
+      <p>
+        <%= f.label :last_day_half, l(:label_hm_absence_last_day_half) %>
+        <%= f.check_box :last_day_half %>
+        <em class="info"><%= l(:label_hm_absence_last_day_half_hint) %></em>
+      </p>
+    <% end %>
   </div>
   <p><%= submit_tag submit_label, class: 'button-positive' %></p>
 <% end %>

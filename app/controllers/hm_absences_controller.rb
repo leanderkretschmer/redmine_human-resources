@@ -6,7 +6,8 @@ class HmAbsencesController < ApplicationController
 
   def create
     permitted = params.require(:hm_absence).permit(:kind, :starts_on, :ends_on, :reason,
-                                                   :recurrence, :recurrence_until)
+                                                   :recurrence, :recurrence_until,
+                                                   :first_day_half, :last_day_half)
     unless HmAbsence::KINDS.include?(permitted[:kind])
       flash[:error] = l(:notice_hm_absence_forbidden)
       return redirect_back(fallback_location: hm_timeclock_path)
@@ -56,6 +57,11 @@ class HmAbsencesController < ApplicationController
                HmAbsence::STATUS_REQUESTED
              end
 
+    # Half days only apply to vacation (single contiguous booking, no recurrence).
+    half_eligible = permitted[:kind] == HmAbsence::KIND_VACATION
+    first_half = half_eligible && truthy_param(permitted[:first_day_half])
+    last_half  = half_eligible && truthy_param(permitted[:last_day_half])
+
     created = []
     HmAbsence.transaction do
       pairs.each do |s, e|
@@ -64,6 +70,8 @@ class HmAbsencesController < ApplicationController
           reason: permitted[:reason],
           starts_on: s,
           ends_on:   e,
+          first_day_half: first_half,
+          last_day_half:  last_half,
           user_id: User.current.id,
           status: status,
           approved_by_id: status == HmAbsence::STATUS_APPROVED ? User.current.id : nil,
@@ -198,7 +206,18 @@ class HmAbsencesController < ApplicationController
   end
 
   def absence_params
-    params.require(:hm_absence).permit(:starts_on, :ends_on, :reason)
+    permitted = params.require(:hm_absence).permit(:starts_on, :ends_on, :reason,
+                                                   :first_day_half, :last_day_half)
+    # Half-day flags are only meaningful for vacation.
+    unless @absence&.vacation?
+      permitted.delete(:first_day_half)
+      permitted.delete(:last_day_half)
+    end
+    permitted
+  end
+
+  def truthy_param(value)
+    ['1', 1, true, 'true', 'on'].include?(value)
   end
 
   def redirect_target

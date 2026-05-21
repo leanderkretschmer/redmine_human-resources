@@ -20,12 +20,17 @@
         <tr class="hm-tc-abs-row hm-tc-abs-<%= a.status %>">
           <td><%= I18n.l(a.starts_on) %> — <%= I18n.l(a.ends_on) %></td>
           <td>
-            <%= a.days %>
             <% if a.vacation? %>
+              <%= l(:label_hm_absence_working_days_value, days: hm_format_days(a.working_days_value)) %>
+              <% if a.first_day_half? || a.last_day_half? %>
+                <span class="hm-tc-half-marker" title="<%= l(:label_hm_absence_first_day_half) %>"><%= l(:label_hm_absence_half_day_marker) %></span>
+              <% end %>
               <% rem = HmAbsence.vacation_remaining(a.user, a.starts_on.year) %>
-              <span class="hm-tc-vacation-remaining" title="<%= l(:label_hm_vacation_remaining_full, used: rem[:used], allowed: rem[:allowed], year: a.starts_on.year) %>">
-                · <%= l(:label_hm_vacation_remaining_short, remaining: rem[:remaining], allowed: rem[:allowed]) %>
+              <span class="hm-tc-vacation-remaining" title="<%= l(:label_hm_vacation_remaining_full, used: hm_format_days(rem[:used]), allowed: rem[:allowed], year: a.starts_on.year) %>">
+                · <%= l(:label_hm_vacation_remaining_short, remaining: hm_format_days(rem[:remaining]), allowed: rem[:allowed]) %>
               </span>
+            <% else %>
+              <%= a.days %>
             <% end %>
           </td>
           <td>

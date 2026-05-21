@@ -64,8 +64,32 @@ class HmAbsence < ActiveRecord::Base
               .order(:starts_on)
   end
 
+  def region_code
+    @region_code ||= HmUserSetting.for(user).effective_region_code if user
+  end
+
   def breakdown
-    ::RedmineHmCratchmere::Holidays.breakdown(starts_on, ends_on)
+    ::RedmineHmCratchmere::Holidays.breakdown(starts_on, ends_on, region_code: region_code)
+  end
+
+  # Fractional working-day count for this absence within an optional clamp range,
+  # honouring half-day flags on the first/last day.
+  def working_days_value(from: nil, to: nil, region_code: nil)
+    return 0.0 if starts_on.blank? || ends_on.blank?
+    rc = region_code || self.region_code
+    s = from ? [starts_on, from].max : starts_on
+    e = to   ? [ends_on,   to].min   : ends_on
+    return 0.0 if s > e
+    count = ::RedmineHmCratchmere::Holidays.breakdown(s, e, region_code: rc)[:working].to_f
+    if first_day_half? && starts_on >= s && starts_on <= e &&
+       ::RedmineHmCratchmere::Holidays.working_day?(starts_on, region_code: rc)
+      count -= 0.5
+    end
+    if last_day_half? && ends_on != starts_on && ends_on >= s && ends_on <= e &&
+       ::RedmineHmCratchmere::Holidays.working_day?(ends_on, region_code: rc)
+      count -= 0.5
+    end
+    [count, 0.0].max
   end
 
   def self.kind_label(kind)
@@ -210,24 +234,26 @@ class HmAbsence < ActiveRecord::Base
     end
   end
 
-  # Counts working days of approved vacation entries that overlap with the given year.
+  # Counts working days of approved vacation entries that overlap with the given
+  # year. Half-day flags reduce a day to 0.5; result may be fractional.
   def self.vacation_working_days_used(user_id, year = Date.current.year)
     year_start = Date.new(year, 1, 1)
     year_end   = Date.new(year, 12, 31)
-    for_user(user_id).vacation.approved
+    region = HmUserSetting.for(User.find(user_id)).effective_region_code rescue nil
+    total = for_user(user_id).vacation.approved
                      .where('starts_on <= ? AND ends_on >= ?', year_end, year_start)
                      .sum do |a|
-      from = [a.starts_on, year_start].max
-      to   = [a.ends_on,   year_end].min
-      ::RedmineHmCratchmere::Holidays.breakdown(from, to)[:working].to_i
+      a.working_days_value(from: year_start, to: year_end, region_code: region)
     end
+    # Trim floating-point noise.
+    (total * 2).round / 2.0
   end
 
   def self.vacation_remaining(user, year = Date.current.year)
     setting = HmUserSetting.for(user)
     allowed = setting.effective_yearly_vacation_days.to_i
     used = vacation_working_days_used(user.is_a?(User) ? user.id : user.to_i, year)
-    { allowed: allowed, used: used, remaining: allowed - used }
+    { allowed: allowed, used: used, remaining: (allowed - used) }
   end
 
   def self.build_by_day(absences, range_from, range_to)

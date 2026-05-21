@@ -132,6 +132,11 @@ class HmUserSetting < ActiveRecord::Base
     !!template_value(:allows_monthly_plan)
   end
 
+  # Region code (e.g. "DE-BW") used for state-specific public holidays.
+  def effective_region_code
+    region_code.presence
+  end
+
   def monthly_plan_for(date)
     HmMonthlyPlan.for_user(user).for_period(date.year, date.month).first
   end

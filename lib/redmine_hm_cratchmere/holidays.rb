@@ -17,9 +17,9 @@ module RedmineHmCratchmere
       Date.new(year, month, day)
     end
 
-    # Federal German holidays (Bundesweit). State-specific ones omitted on purpose
-    # so we only count what every employee in DE shares.
-    def holidays_for(year)
+    # Federal German holidays (Bundesweit). Used as the offline fallback and when
+    # no region is configured for the employee.
+    def federal_holidays_for(year)
       easter = easter_date(year)
       {
         Date.new(year, 1, 1)   => 'Neujahr',
@@ -34,31 +34,45 @@ module RedmineHmCratchmere
       }
     end
 
-    def holiday?(date)
-      holidays_for(date.year).key?(date)
+    # Region-aware holiday map for a year. With a configured region_code the
+    # state-specific set comes from OpenHolidays (cached); otherwise we use the
+    # federal set. Falls back to federal if the API/cache yields nothing.
+    def holidays_for(year, region_code: nil)
+      if region_code.present? && defined?(HmHolidayCache)
+        cached = HmHolidayCache.holidays(region_code, year)
+        return cached if cached && cached.any?
+      end
+      federal_holidays_for(year)
     end
 
-    def holiday_name(date)
-      holidays_for(date.year)[date]
+    def holiday?(date, region_code: nil)
+      holidays_for(date.year, region_code: region_code).key?(date)
+    end
+
+    def holiday_name(date, region_code: nil)
+      holidays_for(date.year, region_code: region_code)[date]
     end
 
     def weekend?(date)
       date.cwday == 6 || date.cwday == 7
     end
 
-    def working_day?(date)
-      !weekend?(date) && !holiday?(date)
+    def working_day?(date, region_code: nil)
+      !weekend?(date) && !holiday?(date, region_code: region_code)
     end
 
-    def breakdown(starts_on, ends_on)
+    def breakdown(starts_on, ends_on, region_code: nil)
       working = 0
       weekend = 0
       holidays_hit = []
+      # Cache the per-year map so a multi-year range hits the API/cache once per year.
+      year_maps = {}
       (starts_on..ends_on).each do |d|
+        map = (year_maps[d.year] ||= holidays_for(d.year, region_code: region_code))
         if weekend?(d)
           weekend += 1
-        elsif holiday?(d)
-          holidays_hit << { date: d, name: holiday_name(d) }
+        elsif map.key?(d)
+          holidays_hit << { date: d, name: map[d] }
         else
           working += 1
         end

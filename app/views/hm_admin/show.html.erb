@@ -33,6 +33,14 @@
                    { selected: @user_setting.hm_employment_type_id } %>
     </p>
     <p>
+      <%= f.label :region_code, l(:label_hm_region) %>
+      <%= f.select :region_code,
+                   RedmineHmCratchmere::OpenHolidays::GERMAN_STATES.map { |code, name| ["#{name} (#{code})", code] },
+                   { include_blank: l(:label_hm_region_blank) },
+                   { selected: @user_setting.region_code } %>
+      <em class="info"><%= l(:label_hm_region_hint) %></em>
+    </p>
+    <p>
       <%= f.label :daily_target_hours, l(:label_hm_timeclock_required_daily) %>
       <%= number_field_tag 'hm_user_setting[daily_target_hours]',
                            @user_setting.daily_target_minutes ? (@user_setting.daily_target_minutes / 60.0) : nil,

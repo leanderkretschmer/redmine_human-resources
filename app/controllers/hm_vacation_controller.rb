@@ -41,7 +41,7 @@ class HmVacationController < ApplicationController
   end
 
   def absence_params
-    params.require(:hm_absence).permit(:starts_on, :ends_on, :reason)
+    params.require(:hm_absence).permit(:starts_on, :ends_on, :reason, :first_day_half, :last_day_half)
   end
 
   def parse_month_param
