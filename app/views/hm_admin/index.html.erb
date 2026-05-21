@@ -9,6 +9,45 @@
 
 <h2><%= l(:label_hm_admin) %></h2>
 
+<div class="hm-tc-kpis">
+  <div class="hm-tc-kpi">
+    <span class="hm-tc-kpi-value"><%= @kpi[:users] %></span>
+    <span class="hm-tc-kpi-label"><%= l(:label_hm_admin_kpi_users) %></span>
+  </div>
+  <div class="hm-tc-kpi">
+    <span class="hm-tc-kpi-value"><%= hm_format_seconds(@kpi[:worked_today]) %></span>
+    <span class="hm-tc-kpi-label"><%= l(:label_hm_admin_kpi_worked_today) %></span>
+  </div>
+  <div class="hm-tc-kpi">
+    <span class="hm-tc-kpi-value"><%= hm_format_seconds(@kpi[:worked_month]) %></span>
+    <span class="hm-tc-kpi-label"><%= l(:label_hm_admin_kpi_worked_month) %></span>
+  </div>
+  <div class="hm-tc-kpi <%= 'hm-tc-kpi-alert' if @kpi[:pending].positive? %>">
+    <span class="hm-tc-kpi-value"><%= @kpi[:pending] %></span>
+    <span class="hm-tc-kpi-label"><%= l(:label_hm_admin_kpi_pending) %></span>
+  </div>
+  <div class="hm-tc-kpi">
+    <span class="hm-tc-kpi-value"><%= @kpi[:absent_today] %></span>
+    <span class="hm-tc-kpi-label"><%= l(:label_hm_admin_kpi_absent_today) %></span>
+  </div>
+</div>
+
+<% if @chart_rows.any? %>
+  <h3><%= l(:label_hm_admin_chart_worked_month) %></h3>
+  <div class="hm-tc-barchart">
+    <% @chart_rows.each do |row| %>
+      <% pct = @chart_max.positive? ? (row[:seconds].to_f / @chart_max * 100).round(1) : 0 %>
+      <div class="hm-tc-bar-row">
+        <span class="hm-tc-bar-name"><%= link_to h(row[:user].name), hm_admin_user_path(user_id: row[:user].id) %></span>
+        <span class="hm-tc-bar-track">
+          <span class="hm-tc-bar-fill" style="width: <%= [pct, 2].max %>%"></span>
+        </span>
+        <span class="hm-tc-bar-value"><%= hm_format_seconds(row[:seconds]) %></span>
+      </div>
+    <% end %>
+  </div>
+<% end %>
+
 <h3><%= l(:label_hm_admin_global_calendar) %></h3>
 <%= render partial: 'hm_timeclock/calendar', locals: {
       month: @month, entries: [], user: nil,
@@ -61,11 +100,12 @@
       <tr>
         <th><%= l(:label_hm_admin_user) %></th>
         <th><%= l(:field_login) %></th>
-        <th><%= l(:field_mail) %></th>
+        <th><%= l(:label_hm_employment_type) %></th>
         <th><%= l(:label_hm_admin_total_today) %></th>
         <th><%= l(:label_hm_admin_total_week) %></th>
         <th><%= l(:label_hm_admin_total_month) %></th>
         <th><%= l(:label_hm_admin_last_entry) %></th>
+        <th></th>
       </tr>
     </thead>
     <tbody>
@@ -74,13 +114,16 @@
         <tr class="<%= cycle('odd', 'even') %>">
           <td><%= link_to u.name, hm_admin_user_path(user_id: u.id) %></td>
           <td><%= h u.login %></td>
-          <td><%= h u.mail %></td>
+          <td><%= @employment_labels[u.id] ? h(@employment_labels[u.id]) : content_tag(:span, '—', class: 'hm-tc-muted') %></td>
           <td><%= hm_format_seconds(s[:today]) %></td>
           <td><%= hm_format_seconds(s[:week]) %></td>
           <td><%= hm_format_seconds(s[:month]) %></td>
           <td><%= s[:last_entry] ? format_time(s[:last_entry].started_at) : '—' %></td>
+          <td><%= link_to l(:label_hm_admin_details), hm_admin_user_path(user_id: u.id), class: 'icon icon-magnifier' %></td>
         </tr>
       <% end %>
     </tbody>
   </table>
+
+  <span class="pagination"><%= pagination_links_full @paginator %></span>
 <% end %>

@@ -798,6 +798,40 @@ button.hm-tc-day-detail-close {
   color: #1c5d99;
 }
 
+/* ======= Admin dashboard ======= */
+.hm-tc-kpis {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.8em;
+  margin: 0.5em 0 1.5em;
+}
+.hm-tc-kpi {
+  flex: 1 1 8em;
+  min-width: 8em;
+  background: #f4f7fa;
+  border: 1px solid #dde4ec;
+  border-radius: 8px;
+  padding: 0.8em 1em;
+  text-align: center;
+}
+.hm-tc-kpi-value { display: block; font-size: 1.6em; font-weight: 700; color: #1c5d99; line-height: 1.2; }
+.hm-tc-kpi-label { display: block; font-size: 0.85em; color: #5a6776; margin-top: 0.2em; }
+.hm-tc-kpi-alert { background: #fff5e6; border-color: #f0c27a; }
+.hm-tc-kpi-alert .hm-tc-kpi-value { color: #c87f0a; }
+
+.hm-tc-barchart { margin: 0.5em 0 1.5em; }
+.hm-tc-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0.25em 0;
+}
+.hm-tc-bar-name { flex: 0 0 12em; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-tc-bar-track { flex: 1 1 auto; background: #eef2f6; border-radius: 4px; height: 1.2em; position: relative; overflow: hidden; }
+.hm-tc-bar-fill { display: block; height: 100%; background: linear-gradient(90deg, #3498db, #2980b9); border-radius: 4px; }
+.hm-tc-bar-value { flex: 0 0 4.5em; font-variant-numeric: tabular-nums; color: #2c3e50; }
+.hm-tc-muted { color: #97a2af; }
+
 /* ======= CSV import ======= */
 .hm-tc-import-bulk { margin: 0.5em 0 1em; }
 .hm-tc-import-table th, .hm-tc-import-table td { vertical-align: middle; }

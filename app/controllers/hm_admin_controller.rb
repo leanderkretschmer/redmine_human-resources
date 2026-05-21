@@ -19,15 +19,43 @@ class HmAdminController < ApplicationController
       n = "%#{@filter_name.downcase}%"
       relation = relation.where('LOWER(firstname) LIKE :n OR LOWER(lastname) LIKE :n', n: n)
     end
-    @users = relation.sorted.to_a
-    @summaries = @users.each_with_object({}) { |u, h| h[u.id] = compute_summary(u) }
-    @users.sort_by! { |u| -(@summaries[u.id][:month].to_i) }
+    all_users = relation.sorted.to_a
+    @summaries = all_users.each_with_object({}) { |u, h| h[u.id] = compute_summary(u) }
+    all_users.sort_by! { |u| -(@summaries[u.id][:month].to_i) }
 
     range_from = @month
     range_to   = @month.end_of_month
     overlay = HmAbsence.active.overlapping(range_from, range_to).includes(:user).to_a
     @absences_by_day = HmAbsence.build_by_day(overlay, range_from, range_to)
     @pending_absences = HmAbsence.pending.includes(:user, :approver).order(:starts_on).limit(100).to_a
+
+    # ── Dashboard KPIs (computed across the full filtered set) ──
+    today = Date.current
+    absent_today = HmAbsence.active.where('starts_on <= ? AND ends_on >= ?', today, today).distinct.pluck(:user_id)
+    @kpi = {
+      users:        all_users.size,
+      worked_month: all_users.sum { |u| @summaries[u.id][:month].to_i },
+      worked_today: all_users.sum { |u| @summaries[u.id][:today].to_i },
+      pending:      @pending_absences.size,
+      absent_today: (absent_today & all_users.map(&:id)).size
+    }
+    # Top users by month worked, for the bar chart (reuses computed summaries).
+    @chart_rows = all_users.reject { |u| @summaries[u.id][:month].to_i.zero? }
+                           .first(12)
+                           .map { |u| { user: u, seconds: @summaries[u.id][:month].to_i } }
+    @chart_max = (@chart_rows.map { |r| r[:seconds] }.max || 0)
+
+    # Employment-type label per user for the table.
+    settings = HmUserSetting.where(user_id: all_users.map(&:id)).includes(:hm_employment_type).index_by(&:user_id)
+    @employment_labels = all_users.each_with_object({}) do |u, h|
+      h[u.id] = settings[u.id]&.hm_employment_type&.name
+    end
+
+    # ── Pagination ──
+    per_page = 25
+    @user_count = all_users.size
+    @paginator = Redmine::Pagination::Paginator.new(@user_count, per_page, params[:page])
+    @users = all_users[@paginator.offset, @paginator.per_page] || []
   end
 
   def show
