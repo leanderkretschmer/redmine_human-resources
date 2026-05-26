@@ -200,7 +200,7 @@ class HmUserSetting < ActiveRecord::Base
   end
 
   def plugin_default(key, fallback)
-    settings = Setting.plugin_redmine_hm_cratchmere || {}
+    settings = Setting.plugin_redmine_human_resources || {}
     val = settings[key.to_s]
     val.to_i.positive? ? val.to_i : fallback
   end

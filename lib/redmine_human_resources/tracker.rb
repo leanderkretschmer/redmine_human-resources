@@ -1,4 +1,4 @@
-module RedmineHmCratchmere
+module RedmineHumanResources
   module Tracker
     DEBOUNCE_SECONDS = 60
 

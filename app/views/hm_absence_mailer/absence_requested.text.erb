@@ -21,13 +21,13 @@
 
 <% if @conflicts.any? %>
 
-<%= l(:mail_label_conflicts, padding: ::RedmineHmCratchmere::Notifications.conflict_padding_days) %>:
+<%= l(:mail_label_conflicts, padding: ::RedmineHumanResources::Notifications.conflict_padding_days) %>:
 <% @conflicts.each do |c| %>
 - <%= c.user.name %>: <%= I18n.l(c.starts_on) %> – <%= I18n.l(c.ends_on) %> (<%= c.days %> <%= l(:label_hm_absence_days) %>)
 <% end %>
 <% else %>
 
-<%= l(:mail_label_no_conflicts, padding: ::RedmineHmCratchmere::Notifications.conflict_padding_days) %>
+<%= l(:mail_label_no_conflicts, padding: ::RedmineHumanResources::Notifications.conflict_padding_days) %>
 <% end %>
 
 ---

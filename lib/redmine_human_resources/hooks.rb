@@ -1,10 +1,10 @@
-module RedmineHmCratchmere
+module RedmineHumanResources
   class Hooks < Redmine::Hook::ViewListener
     render_on :view_layouts_base_html_head,
-              partial: 'hooks/redmine_hm_cratchmere/html_head'
+              partial: 'hooks/redmine_human_resources/html_head'
 
     render_on :view_users_form,
-              partial: 'hooks/redmine_hm_cratchmere/view_users_form'
+              partial: 'hooks/redmine_human_resources/view_users_form'
   end
 
   class ControllerHooks < Redmine::Hook::Listener

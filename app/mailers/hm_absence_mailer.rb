@@ -11,7 +11,7 @@ class HmAbsenceMailer < Mailer
     @absence   = HmAbsence.find(absence_id)
     @user      = @absence.user
     @breakdown = @absence.breakdown
-    @conflicts = @absence.conflicts(padding_days: ::RedmineHmCratchmere::Notifications.conflict_padding_days).to_a
+    @conflicts = @absence.conflicts(padding_days: ::RedmineHumanResources::Notifications.conflict_padding_days).to_a
     mail to: recipients,
          subject: I18n.t(:mail_subject_hm_absence_requested,
                          user: @user.name,
@@ -43,11 +43,11 @@ class HmAbsenceMailer < Mailer
 
   def self.deliver_absence_requested(absence)
     return unless absence&.vacation?
-    recipients = ::RedmineHmCratchmere::Notifications.recipients
+    recipients = ::RedmineHumanResources::Notifications.recipients
     return if recipients.empty?
     user = absence.user
     return unless user
-    ::RedmineHmCratchmere::Notifications.deliver_message(
+    ::RedmineHumanResources::Notifications.deliver_message(
       absence_requested(user, recipients, absence.id)
     )
   end
@@ -56,7 +56,7 @@ class HmAbsenceMailer < Mailer
     return unless absence&.vacation?
     user = absence.user
     return unless user
-    ::RedmineHmCratchmere::Notifications.deliver_message(
+    ::RedmineHumanResources::Notifications.deliver_message(
       absence_decided(user, absence.id)
     )
   end
@@ -66,7 +66,7 @@ class HmAbsenceMailer < Mailer
     return if absence.user_id == editor.id
     user = absence.user
     return unless user
-    ::RedmineHmCratchmere::Notifications.deliver_message(
+    ::RedmineHumanResources::Notifications.deliver_message(
       absence_edited(user, absence.id, editor.id)
     )
   end

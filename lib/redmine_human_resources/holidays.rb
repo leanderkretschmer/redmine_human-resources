@@ -1,4 +1,4 @@
-module RedmineHmCratchmere
+module RedmineHumanResources
   module Holidays
     module_function
 

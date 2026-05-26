@@ -31,7 +31,7 @@
 
 <h3><%= l(:mail_label_conflicts_heading) %></h3>
 <% if @conflicts.any? %>
-  <p><%= l(:mail_label_conflicts, padding: ::RedmineHmCratchmere::Notifications.conflict_padding_days) %></p>
+  <p><%= l(:mail_label_conflicts, padding: ::RedmineHumanResources::Notifications.conflict_padding_days) %></p>
   <ul>
     <% @conflicts.each do |c| %>
       <li>
@@ -42,7 +42,7 @@
     <% end %>
   </ul>
 <% else %>
-  <p><%= l(:mail_label_no_conflicts, padding: ::RedmineHmCratchmere::Notifications.conflict_padding_days) %></p>
+  <p><%= l(:mail_label_no_conflicts, padding: ::RedmineHumanResources::Notifications.conflict_padding_days) %></p>
 <% end %>
 
 <hr>

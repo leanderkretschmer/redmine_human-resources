@@ -127,7 +127,7 @@ class HmAdminController < ApplicationController
       }
     end
   rescue StandardError => e
-    Rails.logger.warn("[hm_cratchmere] ticket coverage failed: #{e.message}")
+    Rails.logger.warn("[hr] ticket coverage failed: #{e.message}")
     {}
   end
 

@@ -59,7 +59,7 @@ class HmWorkEntry < ActiveRecord::Base
   # instead, once an open entry has been running longer than the configured
   # threshold we flag it so the user view can ask to confirm or correct the end.
   def self.long_shift_threshold_seconds
-    settings = Setting.plugin_redmine_hm_cratchmere || {}
+    settings = Setting.plugin_redmine_human_resources || {}
     hrs = settings['long_shift_threshold_hours'].to_i
     hrs = 12 unless hrs.positive?
     hrs * 3600

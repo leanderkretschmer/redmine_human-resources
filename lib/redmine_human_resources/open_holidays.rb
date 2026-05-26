@@ -2,7 +2,7 @@ require 'net/http'
 require 'json'
 require 'uri'
 
-module RedmineHmCratchmere
+module RedmineHumanResources
   # Thin client for the OpenHolidays API (https://openholidaysapi.org).
   # Public, no API key. We only request *public* holidays for a German
   # subdivision (e.g. "DE-BW") and one calendar year at a time.
@@ -68,7 +68,7 @@ module RedmineHmCratchmere
         h[date] = name
       end
     rescue StandardError => e
-      Rails.logger.warn("[hm_cratchmere] OpenHolidays fetch failed (#{region_code}/#{year}): #{e.message}") if defined?(Rails)
+      Rails.logger.warn("[hr] OpenHolidays fetch failed (#{region_code}/#{year}): #{e.message}") if defined?(Rails)
       nil
     end
 
@@ -81,10 +81,10 @@ module RedmineHmCratchmere
       req['Accept'] = 'application/json'
       res = http.request(req)
       return res.body if res.is_a?(Net::HTTPSuccess)
-      Rails.logger.warn("[hm_cratchmere] OpenHolidays HTTP #{res.code}") if defined?(Rails)
+      Rails.logger.warn("[hr] OpenHolidays HTTP #{res.code}") if defined?(Rails)
       nil
     rescue StandardError => e
-      Rails.logger.warn("[hm_cratchmere] OpenHolidays HTTP error: #{e.message}") if defined?(Rails)
+      Rails.logger.warn("[hr] OpenHolidays HTTP error: #{e.message}") if defined?(Rails)
       nil
     end
 

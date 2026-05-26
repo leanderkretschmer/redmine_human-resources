@@ -1,5 +1,5 @@
 <% content_for :header_tags do %>
-  <%= stylesheet_link_tag 'hm_timeclock', plugin: 'redmine_hm_cratchmere' %>
+  <%= stylesheet_link_tag 'hm_timeclock', plugin: 'redmine_human_resources' %>
 <% end %>
 
 <div class="contextual">
@@ -35,7 +35,7 @@
     <p>
       <%= f.label :region_code, l(:label_hm_region) %>
       <%= f.select :region_code,
-                   RedmineHmCratchmere::OpenHolidays::GERMAN_STATES.map { |code, name| ["#{name} (#{code})", code] },
+                   RedmineHumanResources::OpenHolidays::GERMAN_STATES.map { |code, name| ["#{name} (#{code})", code] },
                    { include_blank: l(:label_hm_region_blank) },
                    { selected: @user_setting.region_code } %>
       <em class="info"><%= l(:label_hm_region_hint) %></em>

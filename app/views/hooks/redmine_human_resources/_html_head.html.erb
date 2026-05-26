@@ -1,10 +1,10 @@
 <% if User.current.logged? %>
-  <%= stylesheet_link_tag 'hm_timeclock', plugin: 'redmine_hm_cratchmere' %>
-  <%= javascript_include_tag 'hm_timeclock', plugin: 'redmine_hm_cratchmere' %>
+  <%= stylesheet_link_tag 'hm_timeclock', plugin: 'redmine_human_resources' %>
+  <%= javascript_include_tag 'hm_timeclock', plugin: 'redmine_human_resources' %>
   <%
-    poll = (Setting.plugin_redmine_hm_cratchmere || {})['poll_interval_seconds'].to_i
+    poll = (Setting.plugin_redmine_human_resources || {})['poll_interval_seconds'].to_i
     poll = 30 unless poll.positive?
-    snapshot = (RedmineHmCratchmere::Snapshot.new(User.current).to_h rescue nil)
+    snapshot = (RedmineHumanResources::Snapshot.new(User.current).to_h rescue nil)
     menu_items = [
       { url: hm_timeclock_path, label: I18n.t(:label_hm_hr_timeclock) },
       { url: hm_vacation_path,  label: I18n.t(:label_hm_hr_vacation) },

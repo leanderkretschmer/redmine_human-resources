@@ -1,12 +1,12 @@
 # Companion-app routes — what the plugin currently exposes
 
-This document lists every endpoint the `redmine_hm_cratchmere` plugin
+This document lists every endpoint the `redmine_human_resources` plugin
 *currently* provides, with the shape a phone/wall companion app needs:
 HTTP method, path, auth, body, response, and notes on whether it is
 machine-friendly (JSON) or HTML-only.
 
 Sourced from `config/routes.rb`, `app/controllers/hm_timeclock_controller.rb`
-and `lib/redmine_hm_cratchmere/snapshot.rb`. No endpoints in this list are
+and `lib/redmine_human_resources/snapshot.rb`. No endpoints in this list are
 hypothetical — they all exist on `main` today.
 
 > **Reader-mode endpoints (signed-token toggle, BLE identifier ingestion) are
@@ -85,7 +85,7 @@ Headers: X-Redmine-API-Key: <key>
         Accept: application/json
 ```
 
-**Response 200** (shape from `RedmineHmCratchmere::Snapshot#to_h`):
+**Response 200** (shape from `RedmineHumanResources::Snapshot#to_h`):
 
 ```jsonc
 {

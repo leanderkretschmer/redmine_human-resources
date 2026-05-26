@@ -97,7 +97,7 @@ class HmAbsence < ActiveRecord::Base
   end
 
   def breakdown
-    ::RedmineHmCratchmere::Holidays.breakdown(starts_on, ends_on, region_code: region_code)
+    ::RedmineHumanResources::Holidays.breakdown(starts_on, ends_on, region_code: region_code)
   end
 
   # Fractional working-day count for this absence within an optional clamp range,
@@ -108,13 +108,13 @@ class HmAbsence < ActiveRecord::Base
     s = from ? [starts_on, from].max : starts_on
     e = to   ? [ends_on,   to].min   : ends_on
     return 0.0 if s > e
-    count = ::RedmineHmCratchmere::Holidays.breakdown(s, e, region_code: rc)[:working].to_f
+    count = ::RedmineHumanResources::Holidays.breakdown(s, e, region_code: rc)[:working].to_f
     if first_day_half? && starts_on >= s && starts_on <= e &&
-       ::RedmineHmCratchmere::Holidays.working_day?(starts_on, region_code: rc)
+       ::RedmineHumanResources::Holidays.working_day?(starts_on, region_code: rc)
       count -= 0.5
     end
     if last_day_half? && ends_on != starts_on && ends_on >= s && ends_on <= e &&
-       ::RedmineHmCratchmere::Holidays.working_day?(ends_on, region_code: rc)
+       ::RedmineHumanResources::Holidays.working_day?(ends_on, region_code: rc)
       count -= 0.5
     end
     [count, 0.0].max
@@ -244,7 +244,7 @@ class HmAbsence < ActiveRecord::Base
       notes:       notes
     )
   rescue StandardError => e
-    Rails.logger.warn("[hm_cratchmere] failed to log audit: #{e.message}") if defined?(Rails)
+    Rails.logger.warn("[hr] failed to log audit: #{e.message}") if defined?(Rails)
     nil
   end
 

@@ -1,14 +1,14 @@
-module RedmineHmCratchmere
+module RedmineHumanResources
   module Notifications
     module_function
 
     def recipients
-      raw = (Setting.plugin_redmine_hm_cratchmere || {})['notification_emails'].to_s
+      raw = (Setting.plugin_redmine_human_resources || {})['notification_emails'].to_s
       raw.split(/[,;\s]+/).map(&:strip).reject(&:blank?).uniq
     end
 
     def conflict_padding_days
-      raw = (Setting.plugin_redmine_hm_cratchmere || {})['conflict_padding_days'].to_i
+      raw = (Setting.plugin_redmine_human_resources || {})['conflict_padding_days'].to_i
       raw.positive? ? raw : 7
     end
 
@@ -20,7 +20,7 @@ module RedmineHmCratchmere
         message.deliver_now
       end
     rescue StandardError => e
-      Rails.logger.warn("[hm_cratchmere] mail delivery failed: #{e.class}: #{e.message}") if defined?(Rails)
+      Rails.logger.warn("[hr] mail delivery failed: #{e.class}: #{e.message}") if defined?(Rails)
       nil
     end
   end

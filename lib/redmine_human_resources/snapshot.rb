@@ -1,4 +1,4 @@
-module RedmineHmCratchmere
+module RedmineHumanResources
   class Snapshot
     def initialize(user, user_setting = nil, now: Time.current)
       @user    = user
@@ -8,7 +8,7 @@ module RedmineHmCratchmere
     end
 
     def to_h
-      settings = Setting.plugin_redmine_hm_cratchmere || {}
+      settings = Setting.plugin_redmine_human_resources || {}
       today                = today_date
       daily_target_seconds = @setting.effective_daily_target_minutes(on_date: today).to_i * 60
       max_break_seconds    = @setting.effective_max_break_minutes.to_i * 60

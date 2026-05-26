@@ -1,7 +1,7 @@
 # Wall-mounted reader — implementation notes
 
 Two candidate architectures for a wall-mounted clock-in / clock-out device for
-`redmine_hm_cratchmere`. Both work on **iPhone *and* Android** without
+`redmine_human_resources`. Both work on **iPhone *and* Android** without
 requiring a physical card, sticker, key fob, or back-of-phone NFC tag.
 
 The constraint that drives both designs:

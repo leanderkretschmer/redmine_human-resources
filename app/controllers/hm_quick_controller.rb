@@ -88,7 +88,7 @@ class HmQuickController < ApplicationController
 
   def build_snapshot
     setting = HmUserSetting.for(@user)
-    RedmineHmCratchmere::Snapshot.new(@user, setting).to_h
+    RedmineHumanResources::Snapshot.new(@user, setting).to_h
   rescue StandardError
     nil
   end

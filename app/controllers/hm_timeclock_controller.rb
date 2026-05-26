@@ -199,7 +199,7 @@ class HmTimeclockController < ApplicationController
   end
 
   def build_snapshot
-    RedmineHmCratchmere::Snapshot.new(User.current, @user_setting).to_h
+    RedmineHumanResources::Snapshot.new(User.current, @user_setting).to_h
   end
 
   def calendar_payload

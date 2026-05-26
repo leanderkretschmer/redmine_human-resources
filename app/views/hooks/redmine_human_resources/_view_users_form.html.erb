@@ -19,7 +19,7 @@
   <%= select_tag 'hm_user_setting[region_code]',
                  options_for_select(
                    [[l(:label_hm_region_blank), '']] +
-                     RedmineHmCratchmere::OpenHolidays::GERMAN_STATES.map { |code, name| ["#{name} (#{code})", code] },
+                     RedmineHumanResources::OpenHolidays::GERMAN_STATES.map { |code, name| ["#{name} (#{code})", code] },
                    hm_user_setting&.region_code),
                  id: 'hm_user_setting_region_code' %>
   <em class="info"><%= l(:label_hm_region_hint) %></em>

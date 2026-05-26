@@ -15,7 +15,7 @@ class HmHolidayCache < ActiveRecord::Base
       return decode(rec.payload)
     end
 
-    fetched = ::RedmineHmCratchmere::OpenHolidays.fetch(region_code, year)
+    fetched = ::RedmineHumanResources::OpenHolidays.fetch(region_code, year)
     if fetched
       store(region_code, year, fetched)
       return fetched
@@ -32,7 +32,7 @@ class HmHolidayCache < ActiveRecord::Base
     rec.fetched_at = Time.current
     rec.save!
   rescue StandardError => e
-    Rails.logger.warn("[hm_cratchmere] holiday cache store failed: #{e.message}") if defined?(Rails)
+    Rails.logger.warn("[hr] holiday cache store failed: #{e.message}") if defined?(Rails)
     nil
   end
 
