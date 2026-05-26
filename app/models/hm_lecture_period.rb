@@ -1,5 +1,5 @@
 class HmLecturePeriod < ActiveRecord::Base
-  self.table_name = 'hm_lecture_periods'
+  self.table_name = 'hr_lecture_periods'
 
   KIND_LECTURE = 'lecture'.freeze
   KIND_BREAK   = 'break'.freeze

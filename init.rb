@@ -1,28 +1,32 @@
 require 'redmine'
 
 # One-time fixup: plugin was renamed from `redmine_hm_cratchmere` to
-# `redmine_human_resources` (commit 39c6557). Redmine keys plugin migration
-# state by plugin name in `plugin_schema_info`, so without this the new name
-# starts at version 0 and re-runs 001 against existing tables.
+# `redmine_human_resources` (commit 39c6557). Redmine 6 stores plugin
+# migration state in `schema_migrations` with versions like
+# "1-redmine_hm_cratchmere". Without this rename the new plugin id starts
+# at version 0 and re-runs 001 against existing tables.
 begin
   conn = ActiveRecord::Base.connection
-  if conn.data_source_exists?('plugin_schema_info')
-    old_name = 'redmine_hm_cratchmere'
-    new_name = 'redmine_human_resources'
-    quoted_old = conn.quote(old_name)
-    quoted_new = conn.quote(new_name)
-    has_old = conn.select_value("SELECT 1 FROM plugin_schema_info WHERE plugin_name = #{quoted_old}")
-    has_new = conn.select_value("SELECT 1 FROM plugin_schema_info WHERE plugin_name = #{quoted_new}")
-    if has_old && !has_new
-      conn.execute("UPDATE plugin_schema_info SET plugin_name = #{quoted_new} WHERE plugin_name = #{quoted_old}")
-    elsif has_old && has_new
-      conn.execute("DELETE FROM plugin_schema_info WHERE plugin_name = #{quoted_old}")
+  if conn.data_source_exists?('schema_migrations')
+    old_suffix = '-redmine_hm_cratchmere'
+    new_suffix = '-redmine_human_resources'
+    quoted_old = conn.quote("%#{old_suffix}")
+    rows = conn.select_values("SELECT version FROM schema_migrations WHERE version LIKE #{quoted_old}")
+    rows.each do |old_version|
+      new_version = old_version.sub(/#{Regexp.escape(old_suffix)}\z/, new_suffix)
+      next if old_version == new_version
+      already_present = conn.select_value("SELECT 1 FROM schema_migrations WHERE version = #{conn.quote(new_version)}")
+      if already_present
+        conn.execute("DELETE FROM schema_migrations WHERE version = #{conn.quote(old_version)}")
+      else
+        conn.execute("UPDATE schema_migrations SET version = #{conn.quote(new_version)} WHERE version = #{conn.quote(old_version)}")
+      end
     end
   end
 rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished
   # DB not ready (e.g. initial setup) — nothing to fix yet.
 rescue => e
-  Rails.logger.warn("[redmine_human_resources] plugin_schema_info rename skipped: #{e.class}: #{e.message}") if defined?(Rails) && Rails.logger
+  Rails.logger.warn("[redmine_human_resources] schema_migrations rename skipped: #{e.class}: #{e.message}") if defined?(Rails) && Rails.logger
 end
 
 Rails.application.config.to_prepare do

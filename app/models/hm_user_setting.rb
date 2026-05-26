@@ -1,5 +1,5 @@
 class HmUserSetting < ActiveRecord::Base
-  self.table_name = 'hm_user_settings'
+  self.table_name = 'hr_user_settings'
 
   belongs_to :user
   belongs_to :hm_employment_type, optional: true

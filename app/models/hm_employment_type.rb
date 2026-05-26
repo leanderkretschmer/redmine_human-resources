@@ -1,5 +1,5 @@
 class HmEmploymentType < ActiveRecord::Base
-  self.table_name = 'hm_employment_types'
+  self.table_name = 'hr_employment_types'
 
   has_many :hm_user_settings, foreign_key: :hm_employment_type_id, dependent: :nullify
 

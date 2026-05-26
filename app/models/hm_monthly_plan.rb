@@ -1,5 +1,5 @@
 class HmMonthlyPlan < ActiveRecord::Base
-  self.table_name = 'hm_monthly_plans'
+  self.table_name = 'hr_monthly_plans'
 
   belongs_to :user
   belongs_to :created_by, class_name: 'User', optional: true

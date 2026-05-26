@@ -1,5 +1,5 @@
 class HmHolidayCache < ActiveRecord::Base
-  self.table_name = 'hm_holiday_caches'
+  self.table_name = 'hr_holiday_caches'
 
   validates :region_code, presence: true
   validates :year, presence: true

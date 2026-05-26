@@ -1,5 +1,5 @@
 class HmBreakEntry < ActiveRecord::Base
-  self.table_name = 'hm_break_entries'
+  self.table_name = 'hr_break_entries'
 
   belongs_to :hm_work_entry
 

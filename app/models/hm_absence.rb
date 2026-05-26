@@ -1,5 +1,5 @@
 class HmAbsence < ActiveRecord::Base
-  self.table_name = 'hm_absences'
+  self.table_name = 'hr_absences'
 
   KIND_VACATION = 'vacation'.freeze
   KIND_SICKNESS = 'sickness'.freeze

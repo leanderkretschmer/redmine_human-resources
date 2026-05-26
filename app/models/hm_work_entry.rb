@@ -1,5 +1,5 @@
 class HmWorkEntry < ActiveRecord::Base
-  self.table_name = 'hm_work_entries'
+  self.table_name = 'hr_work_entries'
 
   STATE_RUNNING   = 'running'.freeze
   STATE_PAUSED    = 'paused'.freeze

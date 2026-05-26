@@ -1,5 +1,5 @@
 class HmAbsenceAudit < ActiveRecord::Base
-  self.table_name = 'hm_absence_audits'
+  self.table_name = 'hr_absence_audits'
 
   ACTION_CREATED  = 'created'.freeze
   ACTION_UPDATED  = 'updated'.freeze
