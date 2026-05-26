@@ -20,14 +20,21 @@ class HmUserSetting < ActiveRecord::Base
   # ── Effective values: own override → template → plugin default → hardcoded fallback ──
 
   def effective_daily_target_minutes(on_date: nil)
+    base = base_daily_target_minutes(on_date: on_date)
+    return base unless on_date
+    # Partial-time absences (e.g. sick 08:00–14:30) reduce that day's target by
+    # exactly the covered minutes, so the user only needs to make up the rest.
+    reduced = base - partial_absence_minutes_on(on_date)
+    [reduced, 0].max
+  end
+
+  def base_daily_target_minutes(on_date: nil)
     # A self-service blocked day (Berufsschule, Vorlesung, …) frees the day.
     return 0 if on_date && blocked_day?(on_date)
 
     if on_date
       period = active_lecture_period(on_date)
-      if period
-        return period.daily_minutes_for(on_date)
-      end
+      return period.daily_minutes_for(on_date) if period
     end
 
     if on_date && allows_monthly_plan?
@@ -54,6 +61,16 @@ class HmUserSetting < ActiveRecord::Base
     return 0 if partial <= 0
     partial_day = weekdays.min
     on_date.cwday == partial_day ? [partial, base].min : 0
+  end
+
+  def partial_absence_minutes_on(date)
+    return 0 unless date && user
+    HmAbsence.for_user(user).active
+             .where(starts_on: date, ends_on: date)
+             .where.not(start_time: nil).where.not(end_time: nil)
+             .to_a.sum { |a| a.partial_minutes_on(date) }
+  rescue ActiveRecord::StatementInvalid, NameError
+    0
   end
 
   def effective_weekly_target_minutes(on_date: nil)

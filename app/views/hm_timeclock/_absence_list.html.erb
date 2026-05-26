@@ -18,7 +18,12 @@
     <tbody>
       <% absences.each do |a| %>
         <tr class="hm-tc-abs-row hm-tc-abs-<%= a.status %>">
-          <td><%= I18n.l(a.starts_on) %> — <%= I18n.l(a.ends_on) %></td>
+          <td>
+            <%= I18n.l(a.starts_on) %><% if a.starts_on != a.ends_on %> — <%= I18n.l(a.ends_on) %><% end %>
+            <% if a.partial? %>
+              <span class="hm-tc-partial-time">· <%= h a.start_time %> – <%= h a.end_time %></span>
+            <% end %>
+          </td>
           <td>
             <% if a.vacation? %>
               <%= l(:label_hm_absence_working_days_value, days: hm_format_days(a.working_days_value)) %>

@@ -32,8 +32,22 @@
   </div>
 </div>
 
+<h3><%= l(:label_hm_admin_users) %></h3>
+
+<%= form_with url: hm_admin_path, method: :get, local: true, html: { class: 'hm-admin-filters' } do %>
+  <%= hidden_field_tag :month, @month.strftime('%Y-%m') %>
+  <p>
+    <label for="filter_name"><%= l(:label_hm_admin_search_name) %></label>
+    <%= text_field_tag :filter_name, @filter_name, size: 28, id: 'filter_name',
+                       placeholder: l(:label_hm_admin_search_placeholder) %>
+    <%= submit_tag l(:button_apply), name: nil %>
+    <% if @filter_name.present? %>
+      <%= link_to l(:button_clear), hm_admin_path(month: @month.strftime('%Y-%m')), class: 'icon icon-reload' %>
+    <% end %>
+  </p>
+<% end %>
+
 <% if @chart_rows.any? %>
-  <h3><%= l(:label_hm_admin_chart_worked_month) %></h3>
   <div class="hm-tc-barchart">
     <% @chart_rows.each do |row| %>
       <% pct = @chart_max.positive? ? (row[:seconds].to_f / @chart_max * 100).round(1) : 0 %>
@@ -43,9 +57,13 @@
           <span class="hm-tc-bar-fill" style="width: <%= [pct, 2].max %>%"></span>
         </span>
         <span class="hm-tc-bar-value"><%= hm_format_seconds(row[:seconds]) %></span>
+        <span class="hm-tc-bar-meta"><%= row[:last_entry] ? format_time(row[:last_entry].started_at) : '—' %></span>
       </div>
     <% end %>
   </div>
+  <span class="pagination"><%= pagination_links_full @paginator %></span>
+<% else %>
+  <p class="nodata"><%= l(:label_hm_admin_no_users) %></p>
 <% end %>
 
 <h3><%= l(:label_hm_admin_global_calendar) %></h3>
@@ -68,62 +86,4 @@
       } %>
 <% end %>
 
-<h3><%= l(:label_hm_admin_users) %></h3>
-
-<%= form_with url: hm_admin_path, method: :get, local: true, html: { class: 'hm-admin-filters' } do %>
-  <%= hidden_field_tag :month, @month.strftime('%Y-%m') %>
-  <fieldset class="collapsible">
-    <legend><%= l(:label_hm_admin_filters) %></legend>
-    <p>
-      <label for="filter_login"><%= l(:field_login) %></label>
-      <%= text_field_tag :filter_login, @filter_login, size: 16, id: 'filter_login' %>
-
-      <label for="filter_mail"><%= l(:field_mail) %></label>
-      <%= text_field_tag :filter_mail, @filter_mail, size: 24, id: 'filter_mail' %>
-
-      <label for="filter_name"><%= l(:field_name) %></label>
-      <%= text_field_tag :filter_name, @filter_name, size: 24, id: 'filter_name' %>
-
-      <%= submit_tag l(:button_apply), name: nil %>
-      <%= link_to l(:button_clear), hm_admin_path(month: @month.strftime('%Y-%m')), class: 'icon icon-reload' %>
-    </p>
-  </fieldset>
-<% end %>
-
 <%= render partial: 'hm_timeclock/absence_edit_modal' %>
-
-<% if @users.empty? %>
-  <p class="nodata"><%= l(:label_hm_admin_no_users) %></p>
-<% else %>
-  <table class="list">
-    <thead>
-      <tr>
-        <th><%= l(:label_hm_admin_user) %></th>
-        <th><%= l(:field_login) %></th>
-        <th><%= l(:label_hm_employment_type) %></th>
-        <th><%= l(:label_hm_admin_total_today) %></th>
-        <th><%= l(:label_hm_admin_total_week) %></th>
-        <th><%= l(:label_hm_admin_total_month) %></th>
-        <th><%= l(:label_hm_admin_last_entry) %></th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody>
-      <% @users.each do |u| %>
-        <% s = @summaries[u.id] %>
-        <tr class="<%= cycle('odd', 'even') %>">
-          <td><%= link_to u.name, hm_admin_user_path(user_id: u.id) %></td>
-          <td><%= h u.login %></td>
-          <td><%= @employment_labels[u.id] ? h(@employment_labels[u.id]) : content_tag(:span, '—', class: 'hm-tc-muted') %></td>
-          <td><%= hm_format_seconds(s[:today]) %></td>
-          <td><%= hm_format_seconds(s[:week]) %></td>
-          <td><%= hm_format_seconds(s[:month]) %></td>
-          <td><%= s[:last_entry] ? format_time(s[:last_entry].started_at) : '—' %></td>
-          <td><%= link_to l(:label_hm_admin_details), hm_admin_user_path(user_id: u.id), class: 'icon icon-magnifier' %></td>
-        </tr>
-      <% end %>
-    </tbody>
-  </table>
-
-  <span class="pagination"><%= pagination_links_full @paginator %></span>
-<% end %>

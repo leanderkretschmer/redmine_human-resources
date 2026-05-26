@@ -264,6 +264,10 @@ class HmTimeclockController < ApplicationController
         reason: a.reason,
         starts_on: a.starts_on.iso8601,
         ends_on:   a.ends_on.iso8601,
+        start_time: a.start_time,
+        end_time:   a.end_time,
+        partial:    a.partial?,
+        partial_minutes: a.partial_minutes_on(date),
         can_manage: can_manage,
         edit_url:   can_manage ? edit_hm_absence_path(a, format: nil) : nil,
         delete_url: can_manage ? hm_absence_path(a, format: nil)      : nil

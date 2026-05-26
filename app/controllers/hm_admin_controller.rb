@@ -9,15 +9,10 @@ class HmAdminController < ApplicationController
     base_user_ids = (HmWorkEntry.distinct.pluck(:user_id) + HmAbsence.distinct.pluck(:user_id)).uniq
     relation = User.where(id: base_user_ids)
 
-    @filter_login = params[:filter_login].to_s.strip
-    @filter_mail  = params[:filter_mail].to_s.strip
-    @filter_name  = params[:filter_name].to_s.strip
-
-    relation = relation.where('LOWER(login) LIKE ?', "%#{@filter_login.downcase}%") if @filter_login.present?
-    relation = relation.where('LOWER(mail) LIKE ?',  "%#{@filter_mail.downcase}%")  if @filter_mail.present?
+    @filter_name = params[:filter_name].to_s.strip
     if @filter_name.present?
       n = "%#{@filter_name.downcase}%"
-      relation = relation.where('LOWER(firstname) LIKE :n OR LOWER(lastname) LIKE :n', n: n)
+      relation = relation.where('LOWER(firstname) LIKE :n OR LOWER(lastname) LIKE :n OR LOWER(login) LIKE :n', n: n)
     end
     all_users = relation.sorted.to_a
     @summaries = all_users.each_with_object({}) { |u, h| h[u.id] = compute_summary(u) }
@@ -29,7 +24,7 @@ class HmAdminController < ApplicationController
     @absences_by_day = HmAbsence.build_by_day(overlay, range_from, range_to)
     @pending_absences = HmAbsence.pending.includes(:user, :approver).order(:starts_on).limit(100).to_a
 
-    # ── Dashboard KPIs (computed across the full filtered set) ──
+    # ── Dashboard KPIs (across the full filtered set, all pages) ──
     today = Date.current
     absent_today = HmAbsence.active.where('starts_on <= ? AND ends_on >= ?', today, today).distinct.pluck(:user_id)
     @kpi = {
@@ -39,23 +34,14 @@ class HmAdminController < ApplicationController
       pending:      @pending_absences.size,
       absent_today: (absent_today & all_users.map(&:id)).size
     }
-    # Top users by month worked, for the bar chart (reuses computed summaries).
-    @chart_rows = all_users.reject { |u| @summaries[u.id][:month].to_i.zero? }
-                           .first(12)
-                           .map { |u| { user: u, seconds: @summaries[u.id][:month].to_i } }
-    @chart_max = (@chart_rows.map { |r| r[:seconds] }.max || 0)
+    @chart_max = all_users.map { |u| @summaries[u.id][:month].to_i }.max || 0
 
-    # Employment-type label per user for the table.
-    settings = HmUserSetting.where(user_id: all_users.map(&:id)).includes(:hm_employment_type).index_by(&:user_id)
-    @employment_labels = all_users.each_with_object({}) do |u, h|
-      h[u.id] = settings[u.id]&.hm_employment_type&.name
-    end
-
-    # ── Pagination ──
-    per_page = 25
+    # ── Pagination of the employee list (10/page) ──
+    per_page = 10
     @user_count = all_users.size
     @paginator = Redmine::Pagination::Paginator.new(@user_count, per_page, params[:page])
-    @users = all_users[@paginator.offset, @paginator.per_page] || []
+    @chart_rows = (all_users[@paginator.offset, @paginator.per_page] || [])
+                   .map { |u| { user: u, seconds: @summaries[u.id][:month].to_i, last_entry: @summaries[u.id][:last_entry] } }
   end
 
   def show

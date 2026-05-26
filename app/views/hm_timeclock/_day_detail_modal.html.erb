@@ -15,6 +15,42 @@
     <h3 class="hm-tc-day-detail-title">—</h3>
     <div class="hm-tc-day-detail-loading"><%= l(:label_hm_day_detail_loading) %></div>
     <div class="hm-tc-day-detail-events" hidden>
+      <section class="hm-tc-day-detail-section hm-tc-day-detail-timeline-section">
+        <h4><%= l(:label_hm_day_detail_timeline) %></h4>
+        <p class="hm-tc-day-detail-hint"><%= l(:label_hm_day_detail_timeline_hint) %></p>
+        <div class="hm-tc-day-timeline" data-bind="timeline" data-start-hour="0" data-end-hour="24">
+          <div class="hm-tc-day-timeline-axis" data-bind="timeline-axis"></div>
+          <div class="hm-tc-day-timeline-track">
+            <div class="hm-tc-day-timeline-bands" data-bind="timeline-bands"></div>
+            <div class="hm-tc-day-timeline-selection" data-bind="timeline-selection" hidden></div>
+          </div>
+        </div>
+        <div class="hm-tc-day-timeline-popover" data-bind="timeline-popover" hidden>
+          <div class="hm-tc-day-timeline-popover-row">
+            <label><%= l(:label_hm_absence_kind) %></label>
+            <select data-bind="popover-kind">
+              <option value="<%= HmAbsence::KIND_SICKNESS %>"><%= HmAbsence.kind_label(HmAbsence::KIND_SICKNESS) %></option>
+              <option value="<%= HmAbsence::KIND_BLOCK %>"><%= HmAbsence.kind_label(HmAbsence::KIND_BLOCK) %></option>
+              <option value="<%= HmAbsence::KIND_SCHOOL %>"><%= HmAbsence.kind_label(HmAbsence::KIND_SCHOOL) %></option>
+              <option value="<%= HmAbsence::KIND_OFFSITE %>"><%= HmAbsence.kind_label(HmAbsence::KIND_OFFSITE) %></option>
+            </select>
+          </div>
+          <div class="hm-tc-day-timeline-popover-row">
+            <label data-bind="popover-from-label"><%= l(:label_hm_absence_starts_on) %></label>
+            <input type="time" data-bind="popover-from" step="60">
+            <label data-bind="popover-to-label"><%= l(:label_hm_absence_ends_on) %></label>
+            <input type="time" data-bind="popover-to" step="60">
+          </div>
+          <div class="hm-tc-day-timeline-popover-row">
+            <label><%= l(:label_hm_absence_reason) %></label>
+            <input type="text" data-bind="popover-reason" maxlength="200">
+          </div>
+          <div class="hm-tc-day-timeline-popover-actions">
+            <button type="button" class="button-positive" data-bind="popover-save"><%= l(:button_hm_absence_save) %></button>
+            <button type="button" data-bind="popover-cancel"><%= l(:button_cancel) %></button>
+          </div>
+        </div>
+      </section>
       <section class="hm-tc-day-detail-section hm-tc-day-detail-work">
         <h4><%= l(:label_hm_day_detail_work) %></h4>
         <ul class="hm-tc-day-detail-list" data-bind="work"></ul>

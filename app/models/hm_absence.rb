@@ -28,6 +28,7 @@ class HmAbsence < ActiveRecord::Base
   validates :status, inclusion: { in: STATUSES }
   validates :starts_on, :ends_on, presence: true
   validate  :ends_after_starts
+  validate  :time_range_consistent
 
   scope :for_user,  ->(u) { where(user_id: u.is_a?(User) ? u.id : u.to_i) }
   scope :vacation,  -> { where(kind: KIND_VACATION) }
@@ -57,6 +58,22 @@ class HmAbsence < ActiveRecord::Base
   def days
     return 0 if starts_on.blank? || ends_on.blank?
     (ends_on - starts_on).to_i + 1
+  end
+
+  # A partial-time absence covers only a sub-window of a single day.
+  def partial?
+    start_time.present? && end_time.present?
+  end
+
+  # Minutes covered on a given calendar date. Returns 0 if the day isn't in the
+  # absence range or the time fields are unset on a single-day partial.
+  def partial_minutes_on(date)
+    return 0 unless partial?
+    return 0 unless includes_date?(date) && starts_on == date && ends_on == date
+    s = parse_hhmm(start_time)
+    e = parse_hhmm(end_time)
+    return 0 if s.nil? || e.nil? || e <= s
+    e - s
   end
 
   def includes_date?(date)
@@ -285,5 +302,29 @@ class HmAbsence < ActiveRecord::Base
   def ends_after_starts
     return if starts_on.blank? || ends_on.blank?
     errors.add(:ends_on, :greater_than_or_equal_to) if ends_on < starts_on
+  end
+
+  def parse_hhmm(value)
+    return nil if value.blank?
+    m = value.to_s.match(/\A(\d{1,2}):(\d{2})\z/)
+    return nil unless m
+    h = m[1].to_i
+    mm = m[2].to_i
+    return nil if h.negative? || h > 24 || mm.negative? || mm > 59
+    h * 60 + mm
+  end
+
+  def time_range_consistent
+    return if start_time.blank? && end_time.blank?
+    if start_time.blank? || end_time.blank?
+      errors.add(:base, :hm_absence_time_range_incomplete) and return
+    end
+    s = parse_hhmm(start_time)
+    e = parse_hhmm(end_time)
+    if s.nil? || e.nil?
+      errors.add(:base, :hm_absence_time_range_invalid) and return
+    end
+    errors.add(:base, :hm_absence_time_range_order) if e <= s
+    errors.add(:base, :hm_absence_time_range_single_day) if starts_on && ends_on && starts_on != ends_on
   end
 end

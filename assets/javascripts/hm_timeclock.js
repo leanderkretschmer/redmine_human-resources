@@ -482,6 +482,9 @@
           if (a.starts_on !== a.ends_on) {
             html += ' · ' + a.starts_on + ' → ' + a.ends_on;
           }
+          if (a.partial && a.start_time && a.end_time) {
+            html += ' · ' + escapeHtml(a.start_time) + ' – ' + escapeHtml(a.end_time);
+          }
           if (a.reason) html += '<div class="hm-tc-day-event-reason">' + escapeHtml(a.reason) + '</div>';
           html += '<div class="hm-tc-day-event-actions">';
           if (a.edit_url) {
@@ -513,7 +516,204 @@
         });
         if (absEmpty) absEmpty.hidden = absences.length > 0;
       }
+
+      renderTimeline(data);
     }
+
+    function minutesFromTimeStr(s) {
+      if (!s) return null;
+      var m = String(s).match(/^(\d{1,2}):(\d{2})/);
+      if (!m) return null;
+      return parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+    }
+    function minutesFromUnix(unix, dateIso) {
+      if (!unix) return null;
+      var d = new Date(unix * 1000);
+      var dayStart = new Date(dateIso + 'T00:00:00');
+      var diff = (d.getTime() - dayStart.getTime()) / 60000;
+      if (diff < 0) return 0;
+      if (diff > 24 * 60) return 24 * 60;
+      return diff;
+    }
+    function fmtMinutes(m) {
+      m = Math.max(0, Math.min(24 * 60, Math.round(m)));
+      var h = Math.floor(m / 60);
+      var mm = m % 60;
+      return (h < 10 ? '0' : '') + h + ':' + (mm < 10 ? '0' : '') + mm;
+    }
+    function snap15(m) { return Math.round(m / 15) * 15; }
+
+    function renderTimeline(data) {
+      var tl = detailModal.querySelector('[data-bind="timeline"]');
+      if (!tl) return;
+      var axis  = tl.querySelector('[data-bind="timeline-axis"]');
+      var bands = tl.querySelector('[data-bind="timeline-bands"]');
+      if (!axis || !bands) return;
+      var startH = parseInt(tl.getAttribute('data-start-hour') || '0', 10);
+      var endH   = parseInt(tl.getAttribute('data-end-hour')   || '24', 10);
+      var totalMin = (endH - startH) * 60;
+      tl.dataset.date = data.date;
+
+      axis.innerHTML = '';
+      for (var h = startH; h <= endH; h += 4) {
+        var t = document.createElement('span');
+        t.className = 'hm-tc-day-timeline-tick';
+        t.style.left = ((h - startH) / (endH - startH) * 100).toFixed(2) + '%';
+        t.textContent = (h < 10 ? '0' : '') + h + ':00';
+        axis.appendChild(t);
+      }
+
+      bands.innerHTML = '';
+      function placeBand(fromMin, toMin, cls, label) {
+        if (toMin <= fromMin) return;
+        var left  = Math.max(0, (fromMin - startH * 60) / totalMin * 100);
+        var width = Math.min(100 - left, (toMin - fromMin) / totalMin * 100);
+        if (width <= 0) return;
+        var el = document.createElement('div');
+        el.className = 'hm-tc-day-band ' + cls;
+        el.style.left  = left.toFixed(2) + '%';
+        el.style.width = width.toFixed(2) + '%';
+        el.title = label || '';
+        bands.appendChild(el);
+      }
+
+      (data.events || []).filter(function (e) { return e.type === 'work'; }).forEach(function (e) {
+        var s = minutesFromUnix(e.starts_at_unix, data.date);
+        var t = minutesFromUnix(e.ends_at_unix,   data.date);
+        if (s === null || t === null) return;
+        placeBand(s, t, 'hm-tc-day-band-work', e.starts_label + ' – ' + e.ends_label);
+      });
+      (data.absences || []).forEach(function (a) {
+        var cls = 'hm-tc-day-band-absence hm-tc-day-band-' + a.kind;
+        if (a.partial && a.start_time && a.end_time) {
+          var s = minutesFromTimeStr(a.start_time);
+          var t = minutesFromTimeStr(a.end_time);
+          if (s !== null && t !== null) {
+            placeBand(s, t, cls + ' hm-tc-day-band-partial', (a.kind_label || '') + ' ' + a.start_time + '–' + a.end_time);
+          }
+        } else {
+          placeBand(startH * 60, endH * 60, cls + ' hm-tc-day-band-full', a.kind_label || '');
+        }
+      });
+    }
+
+    function setupTimelineInteractions() {
+      var tl = detailModal && detailModal.querySelector('[data-bind="timeline"]');
+      if (!tl) return;
+      var track = tl.querySelector('.hm-tc-day-timeline-track');
+      var sel   = tl.querySelector('[data-bind="timeline-selection"]');
+      var pop   = detailModal.querySelector('[data-bind="timeline-popover"]');
+      if (!track || !sel || !pop) return;
+
+      var dragging = false;
+      var dragStart = 0;
+      var dragEnd = 0;
+
+      function rectMin(e) {
+        var r = track.getBoundingClientRect();
+        var x = e.clientX - r.left;
+        var startH = parseInt(tl.getAttribute('data-start-hour') || '0', 10);
+        var endH   = parseInt(tl.getAttribute('data-end-hour')   || '24', 10);
+        var totalMin = (endH - startH) * 60;
+        var m = startH * 60 + (x / r.width) * totalMin;
+        return Math.max(startH * 60, Math.min(endH * 60, m));
+      }
+      function updateSel() {
+        var lo = Math.min(dragStart, dragEnd);
+        var hi = Math.max(dragStart, dragEnd);
+        var startH = parseInt(tl.getAttribute('data-start-hour') || '0', 10);
+        var endH   = parseInt(tl.getAttribute('data-end-hour')   || '24', 10);
+        var totalMin = (endH - startH) * 60;
+        sel.hidden = false;
+        sel.style.left  = ((lo - startH * 60) / totalMin * 100).toFixed(2) + '%';
+        sel.style.width = ((hi - lo) / totalMin * 100).toFixed(2) + '%';
+      }
+
+      track.addEventListener('mousedown', function (e) {
+        if (e.target.classList.contains('hm-tc-day-band')) return;
+        dragging = true;
+        dragStart = dragEnd = rectMin(e);
+        updateSel();
+        e.preventDefault();
+      });
+      document.addEventListener('mousemove', function (e) {
+        if (!dragging) return;
+        dragEnd = rectMin(e);
+        updateSel();
+      });
+      document.addEventListener('mouseup', function (e) {
+        if (!dragging) return;
+        dragging = false;
+        var lo = snap15(Math.min(dragStart, dragEnd));
+        var hi = snap15(Math.max(dragStart, dragEnd));
+        if (hi - lo < 15) { sel.hidden = true; return; }
+        showTimelinePopover(lo, hi, e);
+      });
+
+      pop.querySelector('[data-bind="popover-cancel"]').addEventListener('click', function () {
+        pop.hidden = true;
+        sel.hidden = true;
+      });
+      pop.querySelector('[data-bind="popover-save"]').addEventListener('click', function () {
+        submitTimelineCreate();
+      });
+    }
+
+    function showTimelinePopover(loMin, hiMin, evt) {
+      var tl  = detailModal.querySelector('[data-bind="timeline"]');
+      var pop = detailModal.querySelector('[data-bind="timeline-popover"]');
+      if (!pop || !tl) return;
+      pop.hidden = false;
+      pop.querySelector('[data-bind="popover-from"]').value = fmtMinutes(loMin);
+      pop.querySelector('[data-bind="popover-to"]').value   = fmtMinutes(hiMin);
+      pop.querySelector('[data-bind="popover-reason"]').value = '';
+      // Reason input gets focus to let the user type the reason directly.
+      setTimeout(function () { pop.querySelector('[data-bind="popover-reason"]').focus(); }, 0);
+    }
+
+    function submitTimelineCreate() {
+      var pop = detailModal.querySelector('[data-bind="timeline-popover"]');
+      var sel = detailModal.querySelector('[data-bind="timeline-selection"]');
+      var date = detailModal.dataset.date;
+      var newUrl = detailModal.getAttribute('data-new-url');
+      if (!pop || !date || !newUrl) return;
+
+      var kind = pop.querySelector('[data-bind="popover-kind"]').value;
+      var from = pop.querySelector('[data-bind="popover-from"]').value;
+      var to   = pop.querySelector('[data-bind="popover-to"]').value;
+      var reason = pop.querySelector('[data-bind="popover-reason"]').value;
+      if (!from || !to || from >= to) { return; }
+
+      var token = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
+      var fd = new FormData();
+      fd.append('hm_absence[kind]', kind);
+      fd.append('hm_absence[starts_on]', date);
+      fd.append('hm_absence[ends_on]',   date);
+      fd.append('hm_absence[start_time]', from);
+      fd.append('hm_absence[end_time]',   to);
+      fd.append('hm_absence[reason]', reason);
+      fd.append('authenticity_token', token);
+
+      var saveBtn = pop.querySelector('[data-bind="popover-save"]');
+      if (saveBtn) saveBtn.disabled = true;
+      fetch(newUrl, {
+        method: 'POST',
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json', 'X-CSRF-Token': token },
+        body: fd
+      }).then(function (r) {
+        if (saveBtn) saveBtn.disabled = false;
+        if (!r.ok) return r.text().then(function (t) { alert(t || ('HTTP ' + r.status)); });
+        pop.hidden = true;
+        if (sel) sel.hidden = true;
+        fetchDayDetail(date);
+      }).catch(function (err) {
+        if (saveBtn) saveBtn.disabled = false;
+        alert((err && err.message) || 'Speichern fehlgeschlagen');
+      });
+    }
+
+    setupTimelineInteractions();
 
     function escapeHtml(s) {
       return String(s).replace(/[&<>"']/g, function (c) {

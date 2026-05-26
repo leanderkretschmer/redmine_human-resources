@@ -7,7 +7,8 @@ class HmAbsencesController < ApplicationController
   def create
     permitted = params.require(:hm_absence).permit(:kind, :starts_on, :ends_on, :reason,
                                                    :recurrence, :recurrence_until,
-                                                   :first_day_half, :last_day_half)
+                                                   :first_day_half, :last_day_half,
+                                                   :start_time, :end_time)
     unless HmAbsence::KINDS.include?(permitted[:kind])
       flash[:error] = l(:notice_hm_absence_forbidden)
       return redirect_back(fallback_location: hm_timeclock_path)
@@ -73,6 +74,8 @@ class HmAbsencesController < ApplicationController
           ends_on:   e,
           first_day_half: first_half,
           last_day_half:  last_half,
+          start_time: normalize_hhmm(permitted[:start_time]),
+          end_time:   normalize_hhmm(permitted[:end_time]),
           user_id: User.current.id,
           status: status,
           approved_by_id: status == HmAbsence::STATUS_APPROVED ? User.current.id : nil,
@@ -210,17 +213,32 @@ class HmAbsencesController < ApplicationController
 
   def absence_params
     permitted = params.require(:hm_absence).permit(:starts_on, :ends_on, :reason,
-                                                   :first_day_half, :last_day_half)
+                                                   :first_day_half, :last_day_half,
+                                                   :start_time, :end_time)
     # Half-day flags are only meaningful for vacation.
     unless @absence&.vacation?
       permitted.delete(:first_day_half)
       permitted.delete(:last_day_half)
+    end
+    if permitted.key?(:start_time)
+      permitted[:start_time] = normalize_hhmm(permitted[:start_time])
+    end
+    if permitted.key?(:end_time)
+      permitted[:end_time] = normalize_hhmm(permitted[:end_time])
     end
     permitted
   end
 
   def truthy_param(value)
     ['1', 1, true, 'true', 'on'].include?(value)
+  end
+
+  def normalize_hhmm(value)
+    return nil if value.blank?
+    s = value.to_s.strip
+    return nil if s.empty?
+    return s if s.match?(/\A\d{1,2}:\d{2}\z/)
+    nil
   end
 
   def redirect_target
