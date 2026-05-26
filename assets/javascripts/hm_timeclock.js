@@ -703,7 +703,11 @@
         body: fd
       }).then(function (r) {
         if (saveBtn) saveBtn.disabled = false;
-        if (!r.ok) return r.text().then(function (t) { alert(t || ('HTTP ' + r.status)); });
+        if (!r.ok) return r.text().then(function (t) {
+          var msg = t;
+          try { var j = JSON.parse(t); msg = j.error || j.message || t; } catch (e) {}
+          alert(msg || ('HTTP ' + r.status));
+        });
         pop.hidden = true;
         if (sel) sel.hidden = true;
         fetchDayDetail(date);

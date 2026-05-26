@@ -10,8 +10,7 @@ class HmAbsencesController < ApplicationController
                                                    :first_day_half, :last_day_half,
                                                    :start_time, :end_time)
     unless HmAbsence::KINDS.include?(permitted[:kind])
-      flash[:error] = l(:notice_hm_absence_forbidden)
-      return redirect_back(fallback_location: hm_timeclock_path)
+      return respond_create_failure(l(:notice_hm_absence_forbidden))
     end
 
     starts_on = parse_date(permitted[:starts_on])
@@ -19,21 +18,18 @@ class HmAbsencesController < ApplicationController
 
     hard_gate = HmAbsence.validate_kind_window(permitted[:kind], starts_on, ends_on)
     if hard_gate
-      flash[:error] = window_error_message(permitted[:kind], hard_gate)
-      return redirect_back(fallback_location: hm_timeclock_path)
+      return respond_create_failure(window_error_message(permitted[:kind], hard_gate))
     end
     unless User.current.admin?
       user_gate = HmAbsence.validate_user_window(permitted[:kind], starts_on, ends_on)
       if user_gate
-        flash[:error] = window_error_message(permitted[:kind], user_gate)
-        return redirect_back(fallback_location: hm_timeclock_path)
+        return respond_create_failure(window_error_message(permitted[:kind], user_gate))
       end
     end
 
     if HmAbsence::EXCLUSIVE_KINDS.include?(permitted[:kind]) &&
        HmAbsence.overlapping_for(User.current.id, permitted[:kind], starts_on, ends_on).exists?
-      flash[:error] = l(:notice_hm_absence_overlap, kind: HmAbsence.kind_label(permitted[:kind]))
-      return redirect_back(fallback_location: hm_timeclock_path)
+      return respond_create_failure(l(:notice_hm_absence_overlap, kind: HmAbsence.kind_label(permitted[:kind])))
     end
 
     recurrence_capable = HmAbsence::RECURRENCE_CAPABLE_KINDS.include?(permitted[:kind])
@@ -43,8 +39,7 @@ class HmAbsencesController < ApplicationController
        recurrence_kind &&
        recurrence_kind != HmAbsence::RECURRENCE_NONE &&
        recurrence_until.blank?
-      flash[:error] = l(:notice_hm_recurrence_until_required)
-      return redirect_back(fallback_location: hm_timeclock_path)
+      return respond_create_failure(l(:notice_hm_recurrence_until_required))
     end
 
     pairs = if recurrence_capable
@@ -88,22 +83,22 @@ class HmAbsencesController < ApplicationController
     end
 
     @absence = created.first
+    notice = nil
     if @absence
       HmAbsenceMailer.deliver_absence_requested(@absence) if @absence.vacation?
-      flash[:notice] = if created.size > 1
-                         l(:notice_hm_recurrence_created, count: created.size)
-                       elsif @absence.vacation?
-                         l(:notice_hm_absence_requested)
-                       elsif @absence.sickness?
-                         l(:notice_hm_sickness_logged)
-                       else
-                         l(:notice_hm_offsite_logged)
-                       end
+      notice = if created.size > 1
+                 l(:notice_hm_recurrence_created, count: created.size)
+               elsif @absence.vacation?
+                 l(:notice_hm_absence_requested)
+               elsif @absence.sickness?
+                 l(:notice_hm_sickness_logged)
+               else
+                 l(:notice_hm_offsite_logged)
+               end
     end
-    redirect_back(fallback_location: hm_timeclock_path)
+    respond_create_success(notice)
   rescue ActiveRecord::RecordInvalid => e
-    flash[:error] = e.record&.errors&.full_messages&.join(', ') || e.message
-    redirect_back(fallback_location: hm_timeclock_path)
+    respond_create_failure(e.record&.errors&.full_messages&.join(', ') || e.message)
   end
 
   def edit
@@ -239,6 +234,26 @@ class HmAbsencesController < ApplicationController
     return nil if s.empty?
     return s if s.match?(/\A\d{1,2}:\d{2}\z/)
     nil
+  end
+
+  def respond_create_failure(message)
+    respond_to do |format|
+      format.html do
+        flash[:error] = message
+        redirect_back(fallback_location: hm_timeclock_path)
+      end
+      format.json { render json: { error: message }, status: :unprocessable_entity }
+    end
+  end
+
+  def respond_create_success(message)
+    respond_to do |format|
+      format.html do
+        flash[:notice] = message if message.present?
+        redirect_back(fallback_location: hm_timeclock_path)
+      end
+      format.json { render json: { ok: true, id: @absence&.id, message: message } }
+    end
   end
 
   def redirect_target
