@@ -1,5 +1,30 @@
 require 'redmine'
 
+# One-time fixup: plugin was renamed from `redmine_hm_cratchmere` to
+# `redmine_human_resources` (commit 39c6557). Redmine keys plugin migration
+# state by plugin name in `plugin_schema_info`, so without this the new name
+# starts at version 0 and re-runs 001 against existing tables.
+begin
+  conn = ActiveRecord::Base.connection
+  if conn.data_source_exists?('plugin_schema_info')
+    old_name = 'redmine_hm_cratchmere'
+    new_name = 'redmine_human_resources'
+    quoted_old = conn.quote(old_name)
+    quoted_new = conn.quote(new_name)
+    has_old = conn.select_value("SELECT 1 FROM plugin_schema_info WHERE plugin_name = #{quoted_old}")
+    has_new = conn.select_value("SELECT 1 FROM plugin_schema_info WHERE plugin_name = #{quoted_new}")
+    if has_old && !has_new
+      conn.execute("UPDATE plugin_schema_info SET plugin_name = #{quoted_new} WHERE plugin_name = #{quoted_old}")
+    elsif has_old && has_new
+      conn.execute("DELETE FROM plugin_schema_info WHERE plugin_name = #{quoted_old}")
+    end
+  end
+rescue ActiveRecord::NoDatabaseError, ActiveRecord::ConnectionNotEstablished
+  # DB not ready (e.g. initial setup) — nothing to fix yet.
+rescue => e
+  Rails.logger.warn("[redmine_human_resources] plugin_schema_info rename skipped: #{e.class}: #{e.message}") if defined?(Rails) && Rails.logger
+end
+
 Rails.application.config.to_prepare do
   require_dependency File.expand_path('lib/redmine_human_resources/snapshot',                   __dir__)
   require_dependency File.expand_path('lib/redmine_human_resources/tracker',                    __dir__)
