@@ -64,7 +64,12 @@ Redmine::Plugin.register :redmine_human_resources do
       'poll_interval_seconds'           => 30,
       'notification_emails'             => '',
       'conflict_padding_days'           => 7,
-      'long_shift_threshold_hours'      => 12
+      'long_shift_threshold_hours'      => 12,
+      'enable_break_reminder'           => '0',
+      'break_reminder_minutes'          => 330,
+      'default_homeoffice_days_per_year' => 0,
+      'default_care_hours_couple'        => 0,
+      'default_care_hours_single'        => 0
     },
     partial: 'settings/human_resources'
   )

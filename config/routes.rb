@@ -17,11 +17,15 @@ RedmineApp::Application.routes.draw do
           constraints: { do: /start|stop|toggle/ }
   end
 
-  get  'hm_vacation', to: 'hm_vacation#show',   as: 'hm_vacation'
-  post 'hm_vacation', to: 'hm_vacation#create'
-  get  'hm_sickness', to: 'hm_sickness#show',   as: 'hm_sickness'
-  post 'hm_sickness', to: 'hm_sickness#create'
-  get  'hm_planning', to: 'hm_planning#show',   as: 'hm_planning'
+  get  'hm_vacation',   to: 'hm_vacation#show',   as: 'hm_vacation'
+  post 'hm_vacation',   to: 'hm_vacation#create'
+  get  'hm_sickness',   to: 'hm_sickness#show',   as: 'hm_sickness'
+  post 'hm_sickness',   to: 'hm_sickness#create'
+  get  'hm_homeoffice', to: 'hm_homeoffice#show', as: 'hm_homeoffice'
+  post 'hm_homeoffice', to: 'hm_homeoffice#create'
+  get  'hm_care',       to: 'hm_care#show',       as: 'hm_care'
+  post 'hm_care',       to: 'hm_care#create'
+  get  'hm_planning',   to: 'hm_planning#show',   as: 'hm_planning'
 
   post   'hm_absences',              to: 'hm_absences#create',  as: 'hm_absences'
   get    'hm_absences/:id/edit',     to: 'hm_absences#edit',    as: 'edit_hm_absence'

@@ -14,6 +14,7 @@ module RedmineHumanResources
       max_break_seconds    = @setting.effective_max_break_minutes.to_i * 60
       overtime_threshold   = (positive_int(settings['overtime_threshold_minutes']) || 480) * 60
       poll_interval        = positive_int(settings['poll_interval_seconds']) || 30
+      break_reminder_secs  = (positive_int(settings['break_reminder_minutes']) || 330) * 60
 
       open_entry = HmWorkEntry.for_user(@user).open.order(started_at: :desc).first
       if open_entry &&
@@ -74,11 +75,14 @@ module RedmineHumanResources
         pending_correction: pending_correction,
         notify_target_reached: !!@setting.notify_target_reached && truthy?(settings['enable_target_notifications']),
         notify_break_over:     !!@setting.notify_break_over     && truthy?(settings['enable_break_notifications']),
+        break_reminder_enabled: truthy?(settings['enable_break_reminder']),
+        break_reminder_seconds: break_reminder_secs,
         poll_interval_seconds: poll_interval,
         monthly_plan: monthly_plan_payload(today),
         labels: {
           target_reached:   I18n.t(:hm_timeclock_notify_target_reached),
           break_over:       I18n.t(:hm_timeclock_notify_break_over),
+          break_reminder:   I18n.t(:hm_timeclock_notify_break_reminder),
           needs_correction: I18n.t(:label_hm_timeclock_needs_correction),
           target_done:      I18n.t(:label_hm_timeclock_target_done),
           overtime_prefix:  I18n.t(:label_hm_timeclock_overtime_prefix)

@@ -1,19 +1,24 @@
 class HmAbsence < ActiveRecord::Base
   self.table_name = 'hr_absences'
 
-  KIND_VACATION = 'vacation'.freeze
-  KIND_SICKNESS = 'sickness'.freeze
-  KIND_OFFSITE  = 'offsite'.freeze
-  KIND_SCHOOL   = 'school'.freeze    # Berufsschule / Prüfung (self-service, recurring)
-  KIND_BLOCK    = 'blocked'.freeze   # geblockter Tag mit Grund, z.B. Vorlesung (variable Stellen)
-  KINDS         = [KIND_VACATION, KIND_SICKNESS, KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK].freeze
+  KIND_VACATION   = 'vacation'.freeze
+  KIND_SICKNESS   = 'sickness'.freeze
+  KIND_OFFSITE    = 'offsite'.freeze
+  KIND_SCHOOL     = 'school'.freeze    # Berufsschule / Prüfung (self-service, recurring)
+  KIND_BLOCK      = 'blocked'.freeze   # geblockter Tag mit Grund, z.B. Vorlesung (variable Stellen)
+  KIND_HOMEOFFICE = 'homeoffice'.freeze
+  KIND_CARE       = 'care'.freeze      # Betreuungszeit (§45 SGB V) — krankes Kind
+  KINDS           = [KIND_VACATION, KIND_SICKNESS, KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK,
+                     KIND_HOMEOFFICE, KIND_CARE].freeze
   USER_BACKDATE_LIMIT_DAYS = 3
 
   AUTO_APPROVED_KINDS = [KIND_SICKNESS, KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK].freeze
   # Kinds that the user may freely plan into the future with a recurrence interval.
-  RECURRENCE_CAPABLE_KINDS = [KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK].freeze
+  RECURRENCE_CAPABLE_KINDS = [KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK, KIND_HOMEOFFICE].freeze
   # Kinds that mark a day as non-working (daily target becomes 0).
   BLOCKING_KINDS = [KIND_SCHOOL, KIND_BLOCK].freeze
+  # Homeoffice is only a marker; the timer keeps running. Care is treated like
+  # a (possibly partial) absence — it reduces the day target.
 
   STATUS_REQUESTED = 'requested'.freeze
   STATUS_APPROVED  = 'approved'.freeze
@@ -30,25 +35,29 @@ class HmAbsence < ActiveRecord::Base
   validate  :ends_after_starts
   validate  :time_range_consistent
 
-  scope :for_user,  ->(u) { where(user_id: u.is_a?(User) ? u.id : u.to_i) }
-  scope :vacation,  -> { where(kind: KIND_VACATION) }
-  scope :sickness,  -> { where(kind: KIND_SICKNESS) }
-  scope :offsite,   -> { where(kind: KIND_OFFSITE) }
-  scope :school,    -> { where(kind: KIND_SCHOOL) }
-  scope :blocked,   -> { where(kind: KIND_BLOCK) }
-  scope :blocking,  -> { where(kind: BLOCKING_KINDS) }
-  scope :counted,   -> { where(kind: [KIND_VACATION, KIND_SICKNESS]) }
+  scope :for_user,    ->(u) { where(user_id: u.is_a?(User) ? u.id : u.to_i) }
+  scope :vacation,    -> { where(kind: KIND_VACATION) }
+  scope :sickness,    -> { where(kind: KIND_SICKNESS) }
+  scope :offsite,     -> { where(kind: KIND_OFFSITE) }
+  scope :school,      -> { where(kind: KIND_SCHOOL) }
+  scope :blocked,     -> { where(kind: KIND_BLOCK) }
+  scope :homeoffice,  -> { where(kind: KIND_HOMEOFFICE) }
+  scope :care,        -> { where(kind: KIND_CARE) }
+  scope :blocking,    -> { where(kind: BLOCKING_KINDS) }
+  scope :counted,     -> { where(kind: [KIND_VACATION, KIND_SICKNESS]) }
   scope :pending,   -> { where(status: STATUS_REQUESTED) }
   scope :approved,  -> { where(status: STATUS_APPROVED) }
   scope :rejected,  -> { where(status: STATUS_REJECTED) }
   scope :active,    -> { where(status: [STATUS_REQUESTED, STATUS_APPROVED]) }
   scope :overlapping, ->(from, to) { where('starts_on <= ? AND ends_on >= ?', to, from) }
 
-  def vacation?;  kind == KIND_VACATION; end
-  def sickness?;  kind == KIND_SICKNESS; end
-  def offsite?;   kind == KIND_OFFSITE;  end
-  def school?;    kind == KIND_SCHOOL;   end
-  def blocked?;   kind == KIND_BLOCK;    end
+  def vacation?;   kind == KIND_VACATION;   end
+  def sickness?;   kind == KIND_SICKNESS;   end
+  def offsite?;    kind == KIND_OFFSITE;    end
+  def school?;     kind == KIND_SCHOOL;     end
+  def blocked?;    kind == KIND_BLOCK;      end
+  def homeoffice?; kind == KIND_HOMEOFFICE; end
+  def care?;       kind == KIND_CARE;       end
   def auto_approved?; AUTO_APPROVED_KINDS.include?(kind); end
   def requested?; status == STATUS_REQUESTED; end
   def approved?;  status == STATUS_APPROVED; end
@@ -122,11 +131,13 @@ class HmAbsence < ActiveRecord::Base
 
   def self.kind_label(kind)
     case kind
-    when KIND_VACATION then I18n.t(:label_hm_hr_vacation)
-    when KIND_SICKNESS then I18n.t(:label_hm_hr_sickness)
-    when KIND_OFFSITE  then I18n.t(:label_hm_hr_offsite)
-    when KIND_SCHOOL   then I18n.t(:label_hm_hr_school)
-    when KIND_BLOCK    then I18n.t(:label_hm_hr_block)
+    when KIND_VACATION   then I18n.t(:label_hm_hr_vacation)
+    when KIND_SICKNESS   then I18n.t(:label_hm_hr_sickness)
+    when KIND_OFFSITE    then I18n.t(:label_hm_hr_offsite)
+    when KIND_SCHOOL     then I18n.t(:label_hm_hr_school)
+    when KIND_BLOCK      then I18n.t(:label_hm_hr_block)
+    when KIND_HOMEOFFICE then I18n.t(:label_hm_hr_homeoffice)
+    when KIND_CARE       then I18n.t(:label_hm_hr_care)
     else kind.to_s.humanize
     end
   end
@@ -284,6 +295,58 @@ class HmAbsence < ActiveRecord::Base
     allowed = setting.effective_yearly_vacation_days.to_i
     used = vacation_working_days_used(user.is_a?(User) ? user.id : user.to_i, year)
     { allowed: allowed, used: used, remaining: (allowed - used) }
+  end
+
+  # Sum of working days of approved homeoffice entries within a year.
+  def self.homeoffice_working_days_used(user_id, year = Date.current.year)
+    year_start = Date.new(year, 1, 1)
+    year_end   = Date.new(year, 12, 31)
+    region = HmUserSetting.for(User.find(user_id)).effective_region_code rescue nil
+    total = for_user(user_id).homeoffice.approved
+                     .where('starts_on <= ? AND ends_on >= ?', year_end, year_start)
+                     .sum { |a| a.working_days_value(from: year_start, to: year_end, region_code: region) }
+    (total * 2).round / 2.0
+  end
+
+  def self.homeoffice_remaining(user, year = Date.current.year)
+    setting = HmUserSetting.for(user)
+    allowed = setting.effective_homeoffice_days_per_year.to_i
+    used = homeoffice_working_days_used(user.is_a?(User) ? user.id : user.to_i, year)
+    { allowed: allowed, used: used, remaining: (allowed - used) }
+  end
+
+  # Care quota is tracked in MINUTES. A full-day entry counts the user's base
+  # daily target as consumed minutes; a partial entry counts the explicit
+  # start/end window.
+  def care_consumed_minutes
+    return 0 unless care?
+    setting = HmUserSetting.for(user) if user
+    daily = setting ? setting.base_daily_target_minutes : 480
+    total = 0
+    (starts_on..ends_on).each do |d|
+      if partial? && starts_on == d
+        total += partial_minutes_on(d)
+      else
+        total += daily
+      end
+    end
+    total
+  end
+
+  def self.care_minutes_used(user_id, year = Date.current.year)
+    year_start = Date.new(year, 1, 1)
+    year_end   = Date.new(year, 12, 31)
+    for_user(user_id).care.approved
+             .where('starts_on <= ? AND ends_on >= ?', year_end, year_start)
+             .sum(&:care_consumed_minutes)
+  end
+
+  def self.care_remaining(user, year = Date.current.year)
+    setting = HmUserSetting.for(user)
+    allowed_hours = setting.effective_care_hours_per_year.to_i
+    allowed_min   = allowed_hours * 60
+    used_min      = care_minutes_used(user.is_a?(User) ? user.id : user.to_i, year)
+    { allowed_minutes: allowed_min, used_minutes: used_min, remaining_minutes: (allowed_min - used_min) }
   end
 
   def self.build_by_day(absences, range_from, range_to)

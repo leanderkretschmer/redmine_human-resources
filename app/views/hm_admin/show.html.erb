@@ -17,6 +17,27 @@
   <div><strong><%= l(:label_hm_admin_total_month) %>:</strong> <%= hm_format_seconds(@summary[:month]) %></div>
 </div>
 
+<%= form_with url: hm_admin_user_path(user_id: @user.id), method: :get, local: true, html: { class: 'hm-admin-view-toggle' } do %>
+  <strong><%= l(:label_hm_admin_view_mode) %>:</strong>
+  <% %w[day week month].each do |mode| %>
+    <label class="hm-tc-view-mode-option">
+      <%= radio_button_tag :view_mode, mode, @view_mode == mode, onchange: 'this.form.submit()' %>
+      <%= l("label_hm_admin_view_mode_#{mode}") %>
+    </label>
+  <% end %>
+  <% if @view_mode == 'month' %>
+    <%= hidden_field_tag :month, @month.strftime('%Y-%m') %>
+  <% else %>
+    <%= date_field_tag :focus_date, @focus_date.strftime('%Y-%m-%d'),
+                       onchange: 'this.form.submit()' %>
+  <% end %>
+<% end %>
+
+<p class="hm-tc-section-hint">
+  <strong><%= I18n.l(@range_from) %> – <%= I18n.l(@range_to) %>:</strong>
+  <%= hm_format_seconds(@entries.sum(&:net_seconds)) %>
+</p>
+
 <h3><%= l(:label_hm_admin_user_setting) %></h3>
 <% selected_weekdays = @user_setting.effective_school_weekdays %>
 <% breakdown = @user_setting.hour_distribution %>
@@ -67,6 +88,29 @@
                          min: 0, step: 1,
                          placeholder: @user_setting.effective_yearly_vacation_days %>
     </p>
+    <p>
+      <%= f.label :homeoffice_days_per_year_override, l(:label_hm_admin_homeoffice_days_override) %>
+      <%= f.number_field :homeoffice_days_per_year_override,
+                         min: 0, step: 1,
+                         placeholder: @user_setting.effective_homeoffice_days_per_year %>
+    </p>
+    <p>
+      <%= f.label :care_status, l(:label_hm_admin_care_status) %>
+      <%= f.select :care_status,
+                   [[l(:label_hm_admin_care_status_none), ''],
+                    [l(:label_hm_admin_care_status_couple), HmUserSetting::CARE_STATUS_COUPLE],
+                    [l(:label_hm_admin_care_status_single), HmUserSetting::CARE_STATUS_SINGLE]],
+                   {},
+                   { selected: @user_setting.care_status || '' } %>
+    </p>
+    <% if @user_setting.care_visible? %>
+      <p>
+        <%= f.label :care_hours_per_year_override, l(:label_hm_admin_care_hours_override) %>
+        <%= f.number_field :care_hours_per_year_override,
+                           min: 0, step: 1,
+                           placeholder: @user_setting.effective_care_hours_per_year %>
+      </p>
+    <% end %>
     <p>
       <%= label_tag :school_weekdays, l(:label_hm_school_weekdays) %>
       <span class="hm-tc-weekday-group">

@@ -1,15 +1,24 @@
 class HmUserSetting < ActiveRecord::Base
   self.table_name = 'hr_user_settings'
 
+  # Care quota tiers (anonymised in the UI as "Betreuung X/Y Stunden"). The
+  # actual annual quota in hours is admin-configured per tier and per user.
+  CARE_STATUS_COUPLE = 'couple'.freeze   # § 45 SGB V: pro Elternteil, gepaartes Elternpaar
+  CARE_STATUS_SINGLE = 'single'.freeze   # alleinerziehend, doppeltes Stundenkontingent
+  CARE_STATUSES      = [CARE_STATUS_COUPLE, CARE_STATUS_SINGLE].freeze
+
   belongs_to :user
   belongs_to :hm_employment_type, optional: true
 
   validates :user_id, uniqueness: true
-  validates :daily_target_minutes,           numericality: { greater_than_or_equal_to: 0, allow_nil: true }
-  validates :weekly_target_minutes,          numericality: { greater_than_or_equal_to: 0, allow_nil: true }
-  validates :max_break_minutes,              numericality: { greater_than_or_equal_to: 0, allow_nil: true }
-  validates :yearly_vacation_days_override,  numericality: { greater_than_or_equal_to: 0, allow_nil: true }
-  validates :weekly_school_days_override,    numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 5, allow_nil: true }
+  validates :daily_target_minutes,                numericality: { greater_than_or_equal_to: 0, allow_nil: true }
+  validates :weekly_target_minutes,               numericality: { greater_than_or_equal_to: 0, allow_nil: true }
+  validates :max_break_minutes,                   numericality: { greater_than_or_equal_to: 0, allow_nil: true }
+  validates :yearly_vacation_days_override,       numericality: { greater_than_or_equal_to: 0, allow_nil: true }
+  validates :weekly_school_days_override,         numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 5, allow_nil: true }
+  validates :homeoffice_days_per_year_override,   numericality: { greater_than_or_equal_to: 0, allow_nil: true }
+  validates :care_hours_per_year_override,        numericality: { greater_than_or_equal_to: 0, allow_nil: true }
+  validates :care_status, inclusion: { in: CARE_STATUSES, allow_nil: true }
 
   def self.for(user)
     rec = find_or_initialize_by(user_id: user.id)
@@ -131,6 +140,28 @@ class HmUserSetting < ActiveRecord::Base
   def effective_yearly_vacation_days
     return yearly_vacation_days_override unless yearly_vacation_days_override.nil?
     template_value(:yearly_vacation_days) || 20
+  end
+
+  def effective_homeoffice_days_per_year
+    return homeoffice_days_per_year_override unless homeoffice_days_per_year_override.nil?
+    plugin_default(:default_homeoffice_days_per_year, 0)
+  end
+
+  # Care quota in hours. If admin set a per-user override, that wins. Otherwise
+  # the plugin defaults provide a value keyed by care_status (couple vs single).
+  def effective_care_hours_per_year
+    return care_hours_per_year_override unless care_hours_per_year_override.nil?
+    case care_status
+    when CARE_STATUS_COUPLE then plugin_default(:default_care_hours_couple, 0)
+    when CARE_STATUS_SINGLE then plugin_default(:default_care_hours_single, 0)
+    else 0
+    end
+  end
+
+  # The "Betreuungszeit" menu entry is hidden unless the admin has assigned a
+  # care_status to this user.
+  def care_visible?
+    CARE_STATUSES.include?(care_status)
   end
 
   def effective_weekly_school_days

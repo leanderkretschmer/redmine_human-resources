@@ -9,7 +9,7 @@
 <h2><%= l(:label_hm_admin_day_title, date: I18n.l(@date)) %></h2>
 
 <h3><%= l(:label_hm_admin_day_worktime) %></h3>
-<% if @entries.empty? %>
+<% if @entry_rows.empty? %>
   <p class="nodata"><%= l(:label_hm_admin_day_no_worktime) %></p>
 <% else %>
   <table class="list">
@@ -24,14 +24,19 @@
       </tr>
     </thead>
     <tbody>
-      <% @entries.each do |e| %>
+      <% @entry_rows.each do |row| %>
         <tr>
-          <td><%= link_to h(e.user.name), hm_admin_user_path(user_id: e.user_id) %></td>
-          <td><%= format_time(e.started_at) %></td>
-          <td><%= e.ended_at ? format_time(e.ended_at) : '—' %></td>
-          <td><%= hm_format_seconds(e.total_break_seconds) %></td>
-          <td><%= hm_format_seconds(e.net_seconds) %></td>
-          <td><%= hm_state_label(e.state) %></td>
+          <td>
+            <%= link_to h(row[:user].name), hm_admin_user_path(user_id: row[:user].id) %>
+            <% if row[:entry_count] > 1 %>
+              <span class="hm-tc-segments" title="<%= row[:entry_count] %> Segmente">×<%= row[:entry_count] %></span>
+            <% end %>
+          </td>
+          <td><%= format_time(row[:started_at]) %></td>
+          <td><%= row[:ended_at] ? format_time(row[:ended_at]) : '—' %></td>
+          <td><%= hm_format_seconds(row[:break_seconds]) %></td>
+          <td><%= hm_format_seconds(row[:net_seconds]) %></td>
+          <td><%= hm_state_label(row[:state]) %></td>
         </tr>
       <% end %>
     </tbody>

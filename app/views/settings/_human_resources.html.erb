@@ -10,6 +10,7 @@
     <button type="button" class="hm-settings-tab-btn" data-tab="notify"><%= l(:hm_settings_tab_notify) %></button>
     <button type="button" class="hm-settings-tab-btn" data-tab="nfc"><%= l(:hm_settings_tab_nfc) %></button>
     <button type="button" class="hm-settings-tab-btn" data-tab="import"><%= l(:hm_settings_tab_import) %></button>
+    <button type="button" class="hm-settings-tab-btn" data-tab="experimental"><%= l(:hm_settings_tab_experimental) %></button>
   </div>
 
   <%# ---------------- General ---------------- %>
@@ -124,6 +125,28 @@
     </p>
     <p class="info"><%= l(:hm_settings_import_note) %></p>
   </div>
+
+  <%# ---------------- Experimental ---------------- %>
+  <div class="hm-settings-panel" data-panel="experimental" style="display:none">
+    <p class="hm-tc-quick-warning"><%= l(:hm_settings_experimental_note) %></p>
+    <div class="box tabular settings">
+      <p>
+        <label for="settings_enable_break_reminder"><%= l(:hm_settings_enable_break_reminder) %></label>
+        <%= hidden_field_tag 'settings[enable_break_reminder]', '0' %>
+        <%= check_box_tag 'settings[enable_break_reminder]', '1',
+                          ['1', 1, true, 'true'].include?(@settings['enable_break_reminder']) %>
+        <em class="info"><%= l(:hm_settings_enable_break_reminder_hint) %></em>
+      </p>
+      <p>
+        <label for="settings_break_reminder_minutes"><%= l(:hm_settings_break_reminder_after) %></label>
+        <%= number_field_tag 'settings[break_reminder_minutes_hours]',
+                             hm_minutes_to_hours(@settings['break_reminder_minutes']),
+                             min: 0, step: 0.5, size: 6 %>
+        <em class="info"><%= l(:hm_settings_in_hours_note) %></em>
+        <%= hidden_field_tag 'settings[break_reminder_minutes]', @settings['break_reminder_minutes'] %>
+      </p>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -148,7 +171,8 @@
       ['settings[default_daily_target_minutes_hours]', 'settings[default_daily_target_minutes]'],
       ['settings[default_weekly_target_minutes_hours]', 'settings[default_weekly_target_minutes]'],
       ['settings[default_max_break_minutes_hours]', 'settings[default_max_break_minutes]'],
-      ['settings[overtime_threshold_minutes_hours]', 'settings[overtime_threshold_minutes]']
+      ['settings[overtime_threshold_minutes_hours]', 'settings[overtime_threshold_minutes]'],
+      ['settings[break_reminder_minutes_hours]', 'settings[break_reminder_minutes]']
     ];
     function sync() {
       mappings.forEach(function (m) {

@@ -7,6 +7,7 @@
   var statusUrl = null;
   var notifiedTarget = false;
   var notifiedBreak = false;
+  var notifiedBreakReminder = false;
   var permissionAsked = false;
   var lastForcePollAt = 0;
   var NAV_END_KEY = 'hm_show_navbar_end';
@@ -22,6 +23,23 @@
   }
 
   function pad(n) { return n < 10 ? '0' + n : '' + n; }
+
+  // Persist "already shown today" flags so popups fire once per day instead of
+  // on every page navigation (each navigation reloads the in-memory state).
+  function notifyDayKey() {
+    var d = new Date();
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate());
+  }
+  function notifyFlagStorageKey(kind) { return 'hm_tc_notified_' + kind + '_' + notifyDayKey(); }
+  function loadNotifyFlag(kind) {
+    try { return localStorage.getItem(notifyFlagStorageKey(kind)) === '1'; } catch (e) { return false; }
+  }
+  function persistNotifyFlag(kind, value) {
+    try {
+      if (value) localStorage.setItem(notifyFlagStorageKey(kind), '1');
+      else localStorage.removeItem(notifyFlagStorageKey(kind));
+    } catch (e) {}
+  }
   function clampPos(n) { return n < 0 ? 0 : n; }
 
   function fmtHMS(seconds) {
@@ -1071,7 +1089,8 @@
     if (!live) return;
 
     if (snapshot.state === 'idle' || snapshot.state === 'needs_correction') {
-      notifiedTarget = false;
+      if (notifiedTarget) { notifiedTarget = false; persistNotifyFlag('target', false); }
+      if (notifiedBreakReminder) { notifiedBreakReminder = false; persistNotifyFlag('break_reminder', false); }
     }
     if (snapshot.state !== 'on_break') {
       notifiedBreak = false;
@@ -1084,6 +1103,17 @@
         live.worked >= snapshot.daily_target_seconds) {
       showNotification(snapshot.labels.target_reached);
       notifiedTarget = true;
+      persistNotifyFlag('target', true);
+    }
+
+    if (snapshot.break_reminder_enabled &&
+        snapshot.state === 'working' &&
+        !notifiedBreakReminder &&
+        snapshot.break_reminder_seconds > 0 &&
+        live.worked >= snapshot.break_reminder_seconds) {
+      showNotification(snapshot.labels.break_reminder);
+      notifiedBreakReminder = true;
+      persistNotifyFlag('break_reminder', true);
     }
 
     if (snapshot.notify_break_over &&
@@ -1185,6 +1215,9 @@
     setupCalendarInteractions();
     setupAbsenceEditModal();
     setupNavEndToggle();
+
+    notifiedTarget = loadNotifyFlag('target');
+    notifiedBreakReminder = loadNotifyFlag('break_reminder');
 
     if (!snapshot) {
       fetchStatus().then(tick);

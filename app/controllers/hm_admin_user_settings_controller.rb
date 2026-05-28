@@ -12,6 +12,8 @@ class HmAdminUserSettingsController < ApplicationController
       :daily_target_hours, :weekly_target_hours, :max_break_hours,
       :yearly_vacation_days_override, :weekly_school_days_override,
       :allows_monthly_plan_override, :notify_target_reached, :notify_break_over,
+      :homeoffice_days_per_year_override,
+      :care_status, :care_hours_per_year_override,
       school_weekdays_override: []
     ).to_h
 
@@ -25,6 +27,10 @@ class HmAdminUserSettingsController < ApplicationController
 
     raw['hm_employment_type_id'] = nil if raw['hm_employment_type_id'].to_s.empty?
     raw['region_code'] = nil if raw['region_code'].to_s.strip.empty?
+    raw['care_status'] = nil if raw['care_status'].to_s.strip.empty?
+    %w[homeoffice_days_per_year_override care_hours_per_year_override].each do |k|
+      raw[k] = nil if raw[k].to_s.strip.empty?
+    end
 
     if raw.key?('school_weekdays_override')
       values = Array(raw['school_weekdays_override']).map(&:to_s).reject(&:blank?).uniq

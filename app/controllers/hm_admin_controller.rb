@@ -47,15 +47,25 @@ class HmAdminController < ApplicationController
   def show
     @user = User.find(params[:user_id])
     tz = @user.time_zone || Time.zone
-    @month = parse_month_param || Date.current.beginning_of_month
+    @view_mode = %w[day week month].include?(params[:view_mode]) ? params[:view_mode] : 'month'
+    @focus_date = parse_focus_param || Date.current
+    @month = parse_month_param || @focus_date.beginning_of_month
+    range_from, range_to = case @view_mode
+                            when 'day'
+                              [@focus_date, @focus_date]
+                            when 'week'
+                              [@focus_date.beginning_of_week, @focus_date.end_of_week]
+                            else
+                              [@month, @month.end_of_month]
+                            end
+    @range_from = range_from
+    @range_to   = range_to
     @entries = HmWorkEntry.for_user(@user)
-                          .in_range(@month.in_time_zone(tz).beginning_of_day,
-                                    @month.end_of_month.in_time_zone(tz).end_of_day)
+                          .in_range(range_from.in_time_zone(tz).beginning_of_day,
+                                    range_to.in_time_zone(tz).end_of_day)
                           .order(:started_at).to_a
-    range_from = @month
-    range_to   = @month.end_of_month
-    overlay = HmAbsence.for_user(@user).active.overlapping(range_from, range_to).to_a
-    @absences_by_day = HmAbsence.build_by_day(overlay, range_from, range_to)
+    overlay = HmAbsence.for_user(@user).active.overlapping(@month, @month.end_of_month).to_a
+    @absences_by_day = HmAbsence.build_by_day(overlay, @month, @month.end_of_month)
     @absences = HmAbsence.for_user(@user).order(starts_on: :desc).limit(50).to_a
     @summary = compute_summary(@user)
     HmEmploymentType.seed_legal_defaults! if HmEmploymentType.count.zero?
@@ -77,7 +87,8 @@ class HmAdminController < ApplicationController
     @date = Date.parse(params[:date])
     range_from = @date.beginning_of_day
     range_to   = @date.end_of_day
-    @entries  = HmWorkEntry.in_range(range_from, range_to).includes(:user).order(:started_at).to_a
+    @entries  = HmWorkEntry.in_range(range_from, range_to).includes(:user, :hm_break_entries).order(:started_at).to_a
+    @entry_rows = aggregate_entries_per_user(@entries)
     @absences = HmAbsence.where('starts_on <= ? AND ends_on >= ?', @date, @date).includes(:user, :approver).to_a
     @ticket_coverage = build_ticket_coverage(@date, @entries)
   rescue ArgumentError
@@ -86,9 +97,42 @@ class HmAdminController < ApplicationController
 
   private
 
+  # Combine multiple work entries from the same user on the same day into a
+  # single row: first start, last end, summed breaks and net work. State
+  # collapses to the "most open" status across the entries so an in-progress
+  # shift isn't hidden behind earlier completed segments.
+  def aggregate_entries_per_user(entries)
+    entries.group_by(&:user_id).map do |_uid, list|
+      list = list.sort_by(&:started_at)
+      has_running = list.any? { |e| e.state == HmWorkEntry::STATE_RUNNING }
+      has_paused  = list.any? { |e| e.state == HmWorkEntry::STATE_PAUSED }
+      has_open    = list.any? { |e| e.ended_at.nil? }
+      state = if has_running then HmWorkEntry::STATE_RUNNING
+              elsif has_paused then HmWorkEntry::STATE_PAUSED
+              else HmWorkEntry::STATE_COMPLETED
+              end
+      {
+        user: list.first.user,
+        started_at: list.first.started_at,
+        ended_at:   has_open ? nil : list.map(&:ended_at).compact.max,
+        break_seconds: list.sum { |e| e.total_break_seconds },
+        net_seconds:   list.sum { |e| e.net_seconds },
+        state: state,
+        entry_count: list.size
+      }
+    end.sort_by { |row| row[:started_at] }
+  end
+
   def parse_month_param
     return nil unless params[:month].present?
     Date.parse("#{params[:month]}-01")
+  rescue ArgumentError
+    nil
+  end
+
+  def parse_focus_param
+    return nil unless params[:focus_date].present?
+    Date.parse(params[:focus_date])
   rescue ArgumentError
     nil
   end

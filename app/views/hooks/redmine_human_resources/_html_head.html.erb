@@ -5,12 +5,17 @@
     poll = (Setting.plugin_redmine_human_resources || {})['poll_interval_seconds'].to_i
     poll = 30 unless poll.positive?
     snapshot = (RedmineHumanResources::Snapshot.new(User.current).to_h rescue nil)
+    user_setting = (HmUserSetting.for(User.current) rescue nil)
     menu_items = [
-      { url: hm_timeclock_path, label: I18n.t(:label_hm_hr_timeclock) },
-      { url: hm_vacation_path,  label: I18n.t(:label_hm_hr_vacation) },
-      { url: hm_sickness_path,  label: I18n.t(:label_hm_hr_sickness) }
+      { url: hm_timeclock_path,   label: I18n.t(:label_hm_hr_timeclock) },
+      { url: hm_vacation_path,    label: I18n.t(:label_hm_hr_vacation) },
+      { url: hm_sickness_path,    label: I18n.t(:label_hm_hr_sickness) },
+      { url: hm_homeoffice_path,  label: I18n.t(:label_hm_hr_homeoffice) }
     ]
-    if (HmUserSetting.for(User.current).planning_eligible? rescue false)
+    if user_setting && user_setting.care_visible?
+      menu_items << { url: hm_care_path, label: I18n.t(:label_hm_hr_care) }
+    end
+    if (user_setting && user_setting.planning_eligible? rescue false)
       menu_items << { url: hm_planning_path, label: I18n.t(:label_hm_hr_planning) }
     end
     if User.current.admin?
