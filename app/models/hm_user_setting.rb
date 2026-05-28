@@ -76,6 +76,7 @@ class HmUserSetting < ActiveRecord::Base
     return 0 unless date && user
     HmAbsence.for_user(user).active
              .where(starts_on: date, ends_on: date)
+             .where.not(kind: HmAbsence::NON_REDUCING_KINDS)
              .where.not(start_time: nil).where.not(end_time: nil)
              .to_a.sum { |a| a.partial_minutes_on(date) }
   rescue ActiveRecord::StatementInvalid, NameError

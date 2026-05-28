@@ -17,8 +17,11 @@ class HmAbsence < ActiveRecord::Base
   RECURRENCE_CAPABLE_KINDS = [KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK, KIND_HOMEOFFICE].freeze
   # Kinds that mark a day as non-working (daily target becomes 0).
   BLOCKING_KINDS = [KIND_SCHOOL, KIND_BLOCK].freeze
-  # Homeoffice is only a marker; the timer keeps running. Care is treated like
-  # a (possibly partial) absence — it reduces the day target.
+  # "Working elsewhere" markers: the person is still working, just not in the
+  # office, so these never reduce the day's target. Offsite (Auswärtstätigkeit)
+  # and homeoffice are informational only — tracked hours must count as normal
+  # work, not overtime. Care, by contrast, is genuine time off and does reduce.
+  NON_REDUCING_KINDS = [KIND_OFFSITE, KIND_HOMEOFFICE].freeze
 
   STATUS_REQUESTED = 'requested'.freeze
   STATUS_APPROVED  = 'approved'.freeze
