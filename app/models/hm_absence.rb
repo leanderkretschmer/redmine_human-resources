@@ -8,20 +8,22 @@ class HmAbsence < ActiveRecord::Base
   KIND_BLOCK      = 'blocked'.freeze   # geblockter Tag mit Grund, z.B. Vorlesung (variable Stellen)
   KIND_HOMEOFFICE = 'homeoffice'.freeze
   KIND_CARE       = 'care'.freeze      # Betreuungszeit (§45 SGB V) — krankes Kind
+  KIND_WORKDAY    = 'workday'.freeze   # Werkstudent/Praktikant: "ich arbeite an diesem Tag"
   KINDS           = [KIND_VACATION, KIND_SICKNESS, KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK,
-                     KIND_HOMEOFFICE, KIND_CARE].freeze
+                     KIND_HOMEOFFICE, KIND_CARE, KIND_WORKDAY].freeze
   USER_BACKDATE_LIMIT_DAYS = 3
 
-  AUTO_APPROVED_KINDS = [KIND_SICKNESS, KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK].freeze
+  AUTO_APPROVED_KINDS = [KIND_SICKNESS, KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK, KIND_WORKDAY].freeze
   # Kinds that the user may freely plan into the future with a recurrence interval.
-  RECURRENCE_CAPABLE_KINDS = [KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK, KIND_HOMEOFFICE].freeze
+  RECURRENCE_CAPABLE_KINDS = [KIND_OFFSITE, KIND_SCHOOL, KIND_BLOCK, KIND_HOMEOFFICE, KIND_WORKDAY].freeze
   # Kinds that mark a day as non-working (daily target becomes 0).
   BLOCKING_KINDS = [KIND_SCHOOL, KIND_BLOCK].freeze
-  # "Working elsewhere" markers: the person is still working, just not in the
-  # office, so these never reduce the day's target. Offsite (Auswärtstätigkeit)
-  # and homeoffice are informational only — tracked hours must count as normal
-  # work, not overtime. Care, by contrast, is genuine time off and does reduce.
-  NON_REDUCING_KINDS = [KIND_OFFSITE, KIND_HOMEOFFICE].freeze
+  # "Working elsewhere" / "actually working" markers: the person is still
+  # working, just not in the office (or explicitly planned a workday), so these
+  # never reduce the day's target. Offsite (Auswärtstätigkeit), homeoffice and
+  # workday are informational only — tracked hours must count as normal work,
+  # not overtime. Care, by contrast, is genuine time off and does reduce.
+  NON_REDUCING_KINDS = [KIND_OFFSITE, KIND_HOMEOFFICE, KIND_WORKDAY].freeze
 
   STATUS_REQUESTED = 'requested'.freeze
   STATUS_APPROVED  = 'approved'.freeze
@@ -46,6 +48,7 @@ class HmAbsence < ActiveRecord::Base
   scope :blocked,     -> { where(kind: KIND_BLOCK) }
   scope :homeoffice,  -> { where(kind: KIND_HOMEOFFICE) }
   scope :care,        -> { where(kind: KIND_CARE) }
+  scope :workday,     -> { where(kind: KIND_WORKDAY) }
   scope :blocking,    -> { where(kind: BLOCKING_KINDS) }
   scope :counted,     -> { where(kind: [KIND_VACATION, KIND_SICKNESS]) }
   scope :pending,   -> { where(status: STATUS_REQUESTED) }
@@ -61,6 +64,7 @@ class HmAbsence < ActiveRecord::Base
   def blocked?;    kind == KIND_BLOCK;      end
   def homeoffice?; kind == KIND_HOMEOFFICE; end
   def care?;       kind == KIND_CARE;       end
+  def workday?;    kind == KIND_WORKDAY;    end
   def auto_approved?; AUTO_APPROVED_KINDS.include?(kind); end
   def requested?; status == STATUS_REQUESTED; end
   def approved?;  status == STATUS_APPROVED; end
@@ -141,6 +145,7 @@ class HmAbsence < ActiveRecord::Base
     when KIND_BLOCK      then I18n.t(:label_hm_hr_block)
     when KIND_HOMEOFFICE then I18n.t(:label_hm_hr_homeoffice)
     when KIND_CARE       then I18n.t(:label_hm_hr_care)
+    when KIND_WORKDAY    then I18n.t(:label_hm_hr_workday)
     else kind.to_s.humanize
     end
   end

@@ -28,20 +28,31 @@ class HmAdminController < ApplicationController
     today = Date.current
     absent_today = HmAbsence.active.where('starts_on <= ? AND ends_on >= ?', today, today).distinct.pluck(:user_id)
     @kpi = {
-      users:        all_users.size,
-      worked_month: all_users.sum { |u| @summaries[u.id][:month].to_i },
-      worked_today: all_users.sum { |u| @summaries[u.id][:today].to_i },
-      pending:      @pending_absences.size,
-      absent_today: (absent_today & all_users.map(&:id)).size
+      worked_month:        all_users.sum { |u| @summaries[u.id][:month].to_i },
+      worked_today:        all_users.sum { |u| @summaries[u.id][:today].to_i },
+      planned_today_secs:  planned_today_seconds(all_users, today),
+      pending:             @pending_absences.size,
+      absent_today:        (absent_today & all_users.map(&:id)).size
     }
-    @chart_max = all_users.map { |u| @summaries[u.id][:month].to_i }.max || 0
+    # ── Bar chart view-range toggle (today / week / month, default today) ──
+    @chart_view = %w[today week month].include?(params[:chart_view]) ? params[:chart_view] : 'today'
+    chart_from, chart_to = case @chart_view
+                            when 'week'  then [today.beginning_of_week, today.end_of_week]
+                            when 'month' then [today.beginning_of_month, today.end_of_month]
+                            else              [today, today]
+                            end
 
     # ── Pagination of the employee list (10/page) ──
     per_page = 10
     @user_count = all_users.size
     @paginator = Redmine::Pagination::Paginator.new(@user_count, per_page, params[:page])
-    @chart_rows = (all_users[@paginator.offset, @paginator.per_page] || [])
-                   .map { |u| { user: u, seconds: @summaries[u.id][:month].to_i, last_entry: @summaries[u.id][:last_entry] } }
+    page_users = all_users[@paginator.offset, @paginator.per_page] || []
+    @chart_rows = page_users.map do |u|
+      m = compute_chart_metrics(u, chart_from, chart_to)
+      { user: u, work: m[:work], break_secs: m[:break_secs], coverage: m[:coverage],
+        last_entry: @summaries[u.id][:last_entry] }
+    end
+    @chart_max = @chart_rows.map { |r| r[:work].to_i + r[:break_secs].to_i }.max || 0
   end
 
   def show
@@ -173,6 +184,43 @@ class HmAdminController < ApplicationController
   rescue StandardError => e
     Rails.logger.warn("[hr] ticket coverage failed: #{e.message}")
     {}
+  end
+
+  # Sum the planned daily target across `users` for `date`, excluding people
+  # who are out for the whole day on a full-day absence (vacation, sickness,
+  # care). Weekends and regional public holidays already count as 0 in
+  # effective_daily_target_minutes, so they fall out naturally.
+  def planned_today_seconds(users, date)
+    full_day_off_kinds = [HmAbsence::KIND_VACATION, HmAbsence::KIND_SICKNESS, HmAbsence::KIND_CARE]
+    off_user_ids = HmAbsence.active
+                            .where(kind: full_day_off_kinds)
+                            .where(start_time: nil, end_time: nil)
+                            .where('starts_on <= ? AND ends_on >= ?', date, date)
+                            .distinct.pluck(:user_id).to_set
+    users.sum do |user|
+      next 0 if off_user_ids.include?(user.id)
+      setting = HmUserSetting.for(user)
+      mins = setting.effective_daily_target_minutes(on_date: date)
+      mins.to_i * 60
+    end
+  end
+
+  # Per-user metrics for the admin bar chart over an arbitrary date range:
+  # work (net clocked time), break (paused time inside open shifts) and
+  # coverage (TimeEntry hours booked to issues / projects).
+  def compute_chart_metrics(user, range_from, range_to)
+    tz = user.time_zone || Time.zone
+    entries = HmWorkEntry.for_user(user)
+                         .in_range(range_from.in_time_zone(tz).beginning_of_day,
+                                   range_to.in_time_zone(tz).end_of_day).to_a
+    now = Time.current
+    work_secs  = entries.sum { |e| e.net_seconds(as_of: now) }
+    break_secs = entries.sum { |e| e.total_break_seconds(as_of: now) }
+    coverage_h = TimeEntry.where(user_id: user.id, spent_on: range_from..range_to).sum(:hours).to_f
+    { work: work_secs.to_i, break_secs: break_secs.to_i, coverage: (coverage_h * 3600).round }
+  rescue StandardError => e
+    Rails.logger.warn("[hr] compute_chart_metrics failed for user #{user.id}: #{e.message}")
+    { work: 0, break_secs: 0, coverage: 0 }
   end
 
   def compute_summary(user)

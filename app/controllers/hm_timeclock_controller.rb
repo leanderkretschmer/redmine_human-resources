@@ -17,6 +17,14 @@ class HmTimeclockController < ApplicationController
     overlay = HmAbsence.for_user(User.current).active.overlapping(@month, @month.end_of_month).to_a
     @absences_by_day = HmAbsence.build_by_day(overlay, @month, @month.end_of_month)
     @snapshot = build_snapshot
+
+    @chart_view = %w[today week month].include?(params[:chart_view]) ? params[:chart_view] : 'today'
+    chart_from, chart_to = case @chart_view
+                            when 'week'  then [today.beginning_of_week, today.end_of_week]
+                            when 'month' then [today.beginning_of_month, today.end_of_month]
+                            else              [today, today]
+                            end
+    @chart_metrics = compute_personal_chart_metrics(User.current, chart_from, chart_to, tz)
   end
 
   def status
@@ -200,6 +208,20 @@ class HmTimeclockController < ApplicationController
 
   def build_snapshot
     RedmineHumanResources::Snapshot.new(User.current, @user_setting).to_h
+  end
+
+  def compute_personal_chart_metrics(user, range_from, range_to, tz)
+    entries = HmWorkEntry.for_user(user)
+                         .in_range(range_from.in_time_zone(tz).beginning_of_day,
+                                   range_to.in_time_zone(tz).end_of_day).to_a
+    now = Time.current
+    work_secs  = entries.sum { |e| e.net_seconds(as_of: now) }
+    break_secs = entries.sum { |e| e.total_break_seconds(as_of: now) }
+    coverage_h = TimeEntry.where(user_id: user.id, spent_on: range_from..range_to).sum(:hours).to_f
+    { work: work_secs.to_i, break_secs: break_secs.to_i, coverage: (coverage_h * 3600).round }
+  rescue StandardError => e
+    Rails.logger.warn("[hr] compute_personal_chart_metrics failed: #{e.message}")
+    { work: 0, break_secs: 0, coverage: 0 }
   end
 
   def calendar_payload

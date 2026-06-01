@@ -45,6 +45,23 @@
             <label><%= l(:label_hm_absence_reason) %></label>
             <input type="text" data-bind="popover-reason" maxlength="200">
           </div>
+          <div class="hm-tc-day-timeline-popover-row" data-bind="popover-recurrence-row" hidden>
+            <label><%= l(:label_hm_recurrence) %></label>
+            <select data-bind="popover-recurrence">
+              <option value="<%= HmAbsence::RECURRENCE_NONE %>"><%= l(:label_hm_recurrence_none) %></option>
+              <option value="<%= HmAbsence::RECURRENCE_WEEKLY %>"><%= l(:label_hm_recurrence_weekly) %></option>
+              <option value="<%= HmAbsence::RECURRENCE_BIWEEKLY %>"><%= l(:label_hm_recurrence_biweekly) %></option>
+              <option value="<%= HmAbsence::RECURRENCE_4_WEEKLY %>"><%= l(:label_hm_recurrence_four_weekly) %></option>
+              <option value="<%= HmAbsence::RECURRENCE_MONTHLY %>"><%= l(:label_hm_recurrence_monthly) %></option>
+              <option value="<%= HmAbsence::RECURRENCE_QUARTERLY %>"><%= l(:label_hm_recurrence_quarterly) %></option>
+              <option value="<%= HmAbsence::RECURRENCE_HALFYEARLY %>"><%= l(:label_hm_recurrence_half_yearly) %></option>
+              <option value="<%= HmAbsence::RECURRENCE_YEARLY %>"><%= l(:label_hm_recurrence_yearly) %></option>
+            </select>
+          </div>
+          <div class="hm-tc-day-timeline-popover-row" data-bind="popover-recurrence-until-row" hidden>
+            <label><%= l(:label_hm_recurrence_until) %></label>
+            <input type="date" data-bind="popover-recurrence-until">
+          </div>
           <div class="hm-tc-day-timeline-popover-actions">
             <button type="button" class="button-positive" data-bind="popover-save"><%= l(:button_hm_absence_save) %></button>
             <button type="button" data-bind="popover-cancel"><%= l(:button_cancel) %></button>

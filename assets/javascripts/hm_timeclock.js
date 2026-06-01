@@ -675,6 +675,32 @@
       pop.querySelector('[data-bind="popover-save"]').addEventListener('click', function () {
         submitTimelineCreate();
       });
+      var kindSel = pop.querySelector('[data-bind="popover-kind"]');
+      if (kindSel) kindSel.addEventListener('change', updateTimelineRecurrenceVisibility);
+      var recSel = pop.querySelector('[data-bind="popover-recurrence"]');
+      if (recSel) recSel.addEventListener('change', updateTimelineRecurrenceVisibility);
+    }
+
+    // Sickness on the timeline is a one-off event; only "still working but
+    // off-site / school / planned block" kinds may repeat.
+    var TIMELINE_RECURRENCE_KINDS = ['offsite', 'school', 'block', 'homeoffice'];
+
+    function updateTimelineRecurrenceVisibility() {
+      var pop = detailModal && detailModal.querySelector('[data-bind="timeline-popover"]');
+      if (!pop) return;
+      var kindSel = pop.querySelector('[data-bind="popover-kind"]');
+      var recRow  = pop.querySelector('[data-bind="popover-recurrence-row"]');
+      var recSel  = pop.querySelector('[data-bind="popover-recurrence"]');
+      var untilRow = pop.querySelector('[data-bind="popover-recurrence-until-row"]');
+      if (!kindSel || !recRow || !recSel || !untilRow) return;
+      var capable = TIMELINE_RECURRENCE_KINDS.indexOf(kindSel.value) !== -1;
+      recRow.hidden = !capable;
+      if (!capable) {
+        recSel.value = 'none';
+        untilRow.hidden = true;
+        return;
+      }
+      untilRow.hidden = recSel.value === 'none' || !recSel.value;
     }
 
     function showTimelinePopover(loMin, hiMin, evt) {
@@ -685,6 +711,11 @@
       pop.querySelector('[data-bind="popover-from"]').value = fmtMinutes(loMin);
       pop.querySelector('[data-bind="popover-to"]').value   = fmtMinutes(hiMin);
       pop.querySelector('[data-bind="popover-reason"]').value = '';
+      var recSel = pop.querySelector('[data-bind="popover-recurrence"]');
+      if (recSel) recSel.value = 'none';
+      var untilInput = pop.querySelector('[data-bind="popover-recurrence-until"]');
+      if (untilInput) untilInput.value = '';
+      updateTimelineRecurrenceVisibility();
       // Reason input gets focus to let the user type the reason directly.
       setTimeout(function () { pop.querySelector('[data-bind="popover-reason"]').focus(); }, 0);
     }
@@ -702,6 +733,13 @@
       var reason = pop.querySelector('[data-bind="popover-reason"]').value;
       if (!from || !to || from >= to) { return; }
 
+      var recSel   = pop.querySelector('[data-bind="popover-recurrence"]');
+      var untilInp = pop.querySelector('[data-bind="popover-recurrence-until"]');
+      var recurrence      = recSel ? recSel.value : '';
+      var recurrenceUntil = untilInp ? untilInp.value : '';
+      var recurring = TIMELINE_RECURRENCE_KINDS.indexOf(kind) !== -1 &&
+                      recurrence && recurrence !== 'none';
+
       var token = (document.querySelector('meta[name="csrf-token"]') || {}).content || '';
       var fd = new FormData();
       fd.append('hm_absence[kind]', kind);
@@ -710,6 +748,10 @@
       fd.append('hm_absence[start_time]', from);
       fd.append('hm_absence[end_time]',   to);
       fd.append('hm_absence[reason]', reason);
+      if (recurring) {
+        fd.append('hm_absence[recurrence]', recurrence);
+        fd.append('hm_absence[recurrence_until]', recurrenceUntil);
+      }
       fd.append('authenticity_token', token);
 
       var saveBtn = pop.querySelector('[data-bind="popover-save"]');

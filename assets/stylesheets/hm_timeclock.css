@@ -261,9 +261,11 @@ table.hm-tc-calendar-grid {
 }
 .hm-tc-cal-marker-vacation { background: #3498db; }
 .hm-tc-cal-marker-sickness { background: #e74c3c; }
-.hm-tc-cal-marker-offsite  { background: #9b59b6; }
+.hm-tc-cal-marker-offsite  { background: #f1c40f; }
 .hm-tc-cal-marker-school   { background: #16a085; }
 .hm-tc-cal-marker-blocked  { background: #e67e22; }
+.hm-tc-cal-marker-workday  { background: #27ae60; }
+.hm-tc-cal-marker-homeoffice { background: #8e44ad; }
 .hm-tc-cal-marker-pending {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.65) 3px, rgba(255,255,255,0.65) 6px);
 }
@@ -329,9 +331,11 @@ table.hm-tc-calendar-grid {
 }
 .hm-tc-cal-user-pill-vacation { background: #3498db; }
 .hm-tc-cal-user-pill-sickness { background: #e74c3c; }
-.hm-tc-cal-user-pill-offsite  { background: #9b59b6; }
+.hm-tc-cal-user-pill-offsite  { background: #f1c40f; color: #2c3e50; }
 .hm-tc-cal-user-pill-school   { background: #16a085; }
 .hm-tc-cal-user-pill-blocked  { background: #e67e22; }
+.hm-tc-cal-user-pill-workday  { background: #27ae60; }
+.hm-tc-cal-user-pill-homeoffice { background: #8e44ad; }
 .hm-tc-cal-user-pill-pending {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.45) 4px, rgba(255,255,255,0.45) 8px);
   border: 1px dashed rgba(255,255,255,0.85);
@@ -355,7 +359,7 @@ table.hm-tc-calendar-grid {
 }
 .hm-tc-cal-legend-vacation { background: #3498db; }
 .hm-tc-cal-legend-sickness { background: #e74c3c; }
-.hm-tc-cal-legend-offsite  { background: #9b59b6; }
+.hm-tc-cal-legend-offsite  { background: #f1c40f; }
 .hm-tc-cal-legend-pending  {
   background:
     repeating-linear-gradient(45deg, #95a5a6, #95a5a6 4px, #fff 4px, #fff 8px);
@@ -371,9 +375,11 @@ table.hm-tc-calendar-grid {
 }
 .hm-tc-abs-pill-vacation { background: #3498db; }
 .hm-tc-abs-pill-sickness { background: #e74c3c; }
-.hm-tc-abs-pill-offsite  { background: #9b59b6; }
+.hm-tc-abs-pill-offsite  { background: #f1c40f; color: #2c3e50; }
 .hm-tc-abs-pill-school   { background: #16a085; }
 .hm-tc-abs-pill-blocked  { background: #e67e22; }
+.hm-tc-abs-pill-workday  { background: #27ae60; }
+.hm-tc-abs-pill-homeoffice { background: #8e44ad; }
 .hm-tc-abs-pill-pending {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.45) 4px, rgba(255,255,255,0.45) 8px);
   border: 1px dashed rgba(255,255,255,0.9);
@@ -465,9 +471,11 @@ table.hm-tc-calendar-grid {
 .hm-tc-day-event-work { border-left-color: #2ecc71; }
 .hm-tc-day-event-absence.hm-tc-day-event-vacation { border-left-color: #3498db; }
 .hm-tc-day-event-absence.hm-tc-day-event-sickness { border-left-color: #e74c3c; }
-.hm-tc-day-event-absence.hm-tc-day-event-offsite  { border-left-color: #9b59b6; }
+.hm-tc-day-event-absence.hm-tc-day-event-offsite  { border-left-color: #f1c40f; }
 .hm-tc-day-event-absence.hm-tc-day-event-school   { border-left-color: #16a085; }
 .hm-tc-day-event-absence.hm-tc-day-event-blocked  { border-left-color: #e67e22; }
+.hm-tc-day-event-absence.hm-tc-day-event-workday  { border-left-color: #27ae60; }
+.hm-tc-day-event-absence.hm-tc-day-event-homeoffice { border-left-color: #8e44ad; }
 .hm-tc-day-event-breaks {
   margin: 0.2em 0 0 1em;
   padding: 0;
@@ -823,6 +831,7 @@ button.hm-tc-day-detail-close {
   text-align: center;
 }
 .hm-tc-kpi-value { display: block; font-size: 1.6em; font-weight: 700; color: #1c5d99; line-height: 1.2; }
+.hm-tc-kpi-target { font-size: 0.55em; font-weight: 500; color: #6c7a89; margin-left: 0.2em; vertical-align: middle; }
 .hm-tc-kpi-label { display: block; font-size: 0.85em; color: #5a6776; margin-top: 0.2em; }
 .hm-tc-kpi-alert { background: #fff5e6; border-color: #f0c27a; }
 .hm-tc-kpi-alert .hm-tc-kpi-value { color: #c87f0a; }
@@ -840,6 +849,39 @@ button.hm-tc-day-detail-close {
 .hm-tc-bar-value { flex: 0 0 4.5em; font-variant-numeric: tabular-nums; color: #2c3e50; }
 .hm-tc-bar-meta  { flex: 0 0 6em; color: #97a2af; font-size: 0.85em; text-align: right; }
 .hm-tc-muted { color: #97a2af; }
+
+/* Stacked + overlaid bar: work and break sit flush next to each other, then
+   the green coverage bar is z-stacked on top — its length is min(coverage,
+   work), so what remains visible to the right is the break time. */
+.hm-tc-bar-track-stacked { display: flex; align-items: stretch; overflow: visible; }
+.hm-tc-bar-track-stacked .hm-tc-bar-seg {
+  display: block;
+  height: 100%;
+  flex: 0 0 auto;
+  cursor: help;
+}
+.hm-tc-bar-seg-work     { background: linear-gradient(90deg, #3498db, #2980b9); border-top-left-radius: 4px; border-bottom-left-radius: 4px; }
+.hm-tc-bar-seg-break    { background: linear-gradient(90deg, #d6dee6, #b9c3cf); border-top-right-radius: 4px; border-bottom-right-radius: 4px; }
+.hm-tc-bar-seg-coverage {
+  position: absolute;
+  top: 0; bottom: 0;
+  background: linear-gradient(90deg, #2ecc71, #1f8f4f);
+  border-top-left-radius: 4px;
+  border-bottom-left-radius: 4px;
+  box-shadow: inset 0 -1px 0 rgba(0,0,0,0.08);
+  opacity: 0.92;
+}
+.hm-tc-bar-seg-coverage:hover { opacity: 1; }
+
+.hm-tc-barchart-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.6em;
+  margin: 0 0 0.6em;
+  font-size: 0.92em;
+}
+.hm-tc-chart-view-option { display: inline-flex; align-items: center; gap: 0.25em; cursor: pointer; }
+.hm-tc-chart-view-option input[type="radio"] { margin: 0; }
 
 /* ======= Day-detail timeline ======= */
 .hm-tc-day-timeline {
@@ -886,9 +928,11 @@ button.hm-tc-day-detail-close {
 .hm-tc-day-band-full     { opacity: 0.45; }
 .hm-tc-day-band-vacation { background: #3498db; }
 .hm-tc-day-band-sickness { background: #e74c3c; }
-.hm-tc-day-band-offsite  { background: #9b59b6; }
+.hm-tc-day-band-offsite  { background: #f1c40f; }
 .hm-tc-day-band-school   { background: #16a085; }
 .hm-tc-day-band-blocked  { background: #e67e22; }
+.hm-tc-day-band-workday  { background: #27ae60; }
+.hm-tc-day-band-homeoffice { background: #8e44ad; }
 .hm-tc-day-timeline-selection {
   position: absolute;
   top: 0; bottom: 0;

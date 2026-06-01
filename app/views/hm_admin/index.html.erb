@@ -11,11 +11,10 @@
 
 <div class="hm-tc-kpis">
   <div class="hm-tc-kpi">
-    <span class="hm-tc-kpi-value"><%= @kpi[:users] %></span>
-    <span class="hm-tc-kpi-label"><%= l(:label_hm_admin_kpi_users) %></span>
-  </div>
-  <div class="hm-tc-kpi">
-    <span class="hm-tc-kpi-value"><%= hm_format_seconds(@kpi[:worked_today]) %></span>
+    <span class="hm-tc-kpi-value">
+      <%= hm_format_seconds(@kpi[:worked_today]) %><%
+        if @kpi[:planned_today_secs].to_i.positive? %><span class="hm-tc-kpi-target"> / <%= hm_format_seconds(@kpi[:planned_today_secs]) %></span><% end %>
+    </span>
     <span class="hm-tc-kpi-label"><%= l(:label_hm_admin_kpi_worked_today) %></span>
   </div>
   <div class="hm-tc-kpi">
@@ -48,15 +47,49 @@
 <% end %>
 
 <% if @chart_rows.any? %>
+  <%= form_with url: hm_admin_path, method: :get, local: true, html: { class: 'hm-tc-barchart-toggle' } do %>
+    <%= hidden_field_tag :month, @month.strftime('%Y-%m') %>
+    <%= hidden_field_tag :filter_name, @filter_name if @filter_name.present? %>
+    <strong><%= l(:label_hm_admin_chart_view) %>:</strong>
+    <% %w[today week month].each do |mode| %>
+      <label class="hm-tc-chart-view-option">
+        <%= radio_button_tag :chart_view, mode, @chart_view == mode, onchange: 'this.form.submit()' %>
+        <%= l("label_hm_admin_chart_view_#{mode}") %>
+      </label>
+    <% end %>
+  <% end %>
   <div class="hm-tc-barchart">
     <% @chart_rows.each do |row| %>
-      <% pct = @chart_max.positive? ? (row[:seconds].to_f / @chart_max * 100).round(1) : 0 %>
+      <%
+        work_s   = row[:work].to_i
+        break_s  = row[:break_secs].to_i
+        cover_s  = row[:coverage].to_i
+        scale    = @chart_max.positive? ? @chart_max : 1
+        work_pct = (work_s.to_f / scale * 100).round(2)
+        brk_pct  = (break_s.to_f / scale * 100).round(2)
+        cov_pct  = ([cover_s, work_s].min.to_f / scale * 100).round(2)
+        work_title    = "#{l(:label_hm_admin_bar_work)}: #{hm_format_seconds(work_s)}"
+        break_title   = "#{l(:label_hm_admin_bar_break)}: #{hm_format_seconds(break_s)}"
+        coverage_title = "#{l(:label_hm_admin_bar_coverage)}: #{hm_format_seconds(cover_s)}"
+      %>
       <div class="hm-tc-bar-row">
         <span class="hm-tc-bar-name"><%= link_to h(row[:user].name), hm_admin_user_path(user_id: row[:user].id) %></span>
-        <span class="hm-tc-bar-track">
-          <span class="hm-tc-bar-fill" style="width: <%= [pct, 2].max %>%"></span>
+        <span class="hm-tc-bar-track hm-tc-bar-track-stacked">
+          <span class="hm-tc-bar-seg hm-tc-bar-seg-work"
+                style="width: <%= [work_pct, 0.5].max %>%"
+                title="<%= h work_title %>"></span>
+          <% if break_s.positive? %>
+            <span class="hm-tc-bar-seg hm-tc-bar-seg-break"
+                  style="width: <%= [brk_pct, 0.5].max %>%"
+                  title="<%= h break_title %>"></span>
+          <% end %>
+          <% if cover_s.positive? && work_s.positive? %>
+            <span class="hm-tc-bar-seg hm-tc-bar-seg-coverage"
+                  style="left: 0; width: <%= [cov_pct, 0.5].max %>%"
+                  title="<%= h coverage_title %>"></span>
+          <% end %>
         </span>
-        <span class="hm-tc-bar-value"><%= hm_format_seconds(row[:seconds]) %></span>
+        <span class="hm-tc-bar-value" title="<%= h work_title %>"><%= hm_format_seconds(work_s) %></span>
         <span class="hm-tc-bar-meta"><%= row[:last_entry] ? format_time(row[:last_entry].started_at) : '—' %></span>
       </div>
     <% end %>

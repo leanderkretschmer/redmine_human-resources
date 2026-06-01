@@ -128,6 +128,9 @@ class HmUserSetting < ActiveRecord::Base
     kinds << HmAbsence::KIND_SCHOOL if effective_weekly_school_days.to_i.positive? || effective_school_weekdays.any?
     kinds << HmAbsence::KIND_BLOCK  if allows_monthly_plan?
     kinds = [HmAbsence::KIND_BLOCK, HmAbsence::KIND_SCHOOL] if kinds.empty? && planning_eligible?
+    # Werkstudent / Praktikant may also positively mark a day as a planned
+    # workday — same self-service planning UX as the blocking kinds.
+    kinds << HmAbsence::KIND_WORKDAY if allows_monthly_plan?
     kinds
   end
 

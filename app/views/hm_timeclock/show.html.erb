@@ -88,6 +88,54 @@
   </div>
 </div>
 
+<% if @chart_metrics %>
+  <h3><%= l(:label_hm_personal_chart_title) %></h3>
+  <%= form_with url: hm_timeclock_path, method: :get, local: true, html: { class: 'hm-tc-barchart-toggle' } do %>
+    <%= hidden_field_tag :month, @month.strftime('%Y-%m') %>
+    <strong><%= l(:label_hm_admin_chart_view) %>:</strong>
+    <% %w[today week month].each do |mode| %>
+      <label class="hm-tc-chart-view-option">
+        <%= radio_button_tag :chart_view, mode, @chart_view == mode, onchange: 'this.form.submit()' %>
+        <%= l("label_hm_admin_chart_view_#{mode}") %>
+      </label>
+    <% end %>
+  <% end %>
+  <%
+    work_s   = @chart_metrics[:work].to_i
+    break_s  = @chart_metrics[:break_secs].to_i
+    cover_s  = @chart_metrics[:coverage].to_i
+    total    = work_s + break_s
+    scale    = total.positive? ? total : 1
+    work_pct = (work_s.to_f / scale * 100).round(2)
+    brk_pct  = (break_s.to_f / scale * 100).round(2)
+    cov_pct  = ([cover_s, work_s].min.to_f / scale * 100).round(2)
+    work_title    = "#{l(:label_hm_admin_bar_work)}: #{hm_format_seconds(work_s)}"
+    break_title   = "#{l(:label_hm_admin_bar_break)}: #{hm_format_seconds(break_s)}"
+    coverage_title = "#{l(:label_hm_admin_bar_coverage)}: #{hm_format_seconds(cover_s)}"
+  %>
+  <div class="hm-tc-barchart">
+    <div class="hm-tc-bar-row">
+      <span class="hm-tc-bar-name"><%= h User.current.name %></span>
+      <span class="hm-tc-bar-track hm-tc-bar-track-stacked">
+        <span class="hm-tc-bar-seg hm-tc-bar-seg-work"
+              style="width: <%= [work_pct, 0.5].max %>%"
+              title="<%= h work_title %>"></span>
+        <% if break_s.positive? %>
+          <span class="hm-tc-bar-seg hm-tc-bar-seg-break"
+                style="width: <%= [brk_pct, 0.5].max %>%"
+                title="<%= h break_title %>"></span>
+        <% end %>
+        <% if cover_s.positive? && work_s.positive? %>
+          <span class="hm-tc-bar-seg hm-tc-bar-seg-coverage"
+                style="left: 0; width: <%= [cov_pct, 0.5].max %>%"
+                title="<%= h coverage_title %>"></span>
+        <% end %>
+      </span>
+      <span class="hm-tc-bar-value" title="<%= h work_title %>"><%= hm_format_seconds(work_s) %></span>
+    </div>
+  </div>
+<% end %>
+
 <h3><%= l(:label_hm_timeclock_today) %></h3>
 <%= render partial: 'entries_table', locals: { entries: @entries_today } %>
 
