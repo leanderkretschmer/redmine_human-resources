@@ -10,6 +10,10 @@
   var notifiedBreakReminder = false;
   var permissionAsked = false;
   var lastForcePollAt = 0;
+  // Set to true once the server has signalled this client is no longer
+  // authenticated (401/403). Stops all subsequent polling so an idle tab
+  // doesn't keep hammering /hm_timeclock/status.json with anonymous requests.
+  var pollingStopped = false;
   var NAV_END_KEY = 'hm_show_navbar_end';
 
   function navEndEnabled() {
@@ -1169,7 +1173,7 @@
   }
 
   function maybeForcePoll() {
-    if (!snapshot) return;
+    if (!snapshot || pollingStopped) return;
     var nowSec = Date.now() / 1000;
     if (nowSec - lastForcePollAt < 5) return;
     var live = liveValues();
@@ -1195,13 +1199,19 @@
   }
 
   function fetchStatus() {
-    if (!statusUrl) return Promise.resolve();
+    if (!statusUrl || pollingStopped) return Promise.resolve();
     return fetch(statusUrl, {
       credentials: 'same-origin',
       headers: { 'Accept': 'application/json' },
       cache: 'no-store'
     })
-      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (r) {
+        if (r.status === 401 || r.status === 403) {
+          pollingStopped = true;
+          return null;
+        }
+        return r.ok ? r.json() : null;
+      })
       .then(function (data) { if (data) applySnapshot(data); })
       .catch(function () {});
   }
@@ -1214,7 +1224,9 @@
   }
 
   function schedulePoll() {
+    if (pollingStopped) return;
     setTimeout(function () {
+      if (pollingStopped) return;
       fetchStatus().then(function () {
         tick();
         schedulePoll();
