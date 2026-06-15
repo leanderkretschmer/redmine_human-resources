@@ -5,7 +5,7 @@ This document lists every endpoint the `redmine_human_resources` plugin
 HTTP method, path, auth, body, response, and notes on whether it is
 machine-friendly (JSON) or HTML-only.
 
-Sourced from `config/routes.rb`, `app/controllers/hm_timeclock_controller.rb`
+Sourced from `config/routes.rb`, `app/controllers/hr_timeclock_controller.rb`
 and `lib/redmine_human_resources/snapshot.rb`. No endpoints in this list are
 hypothetical — they all exist on `main` today.
 
@@ -74,13 +74,13 @@ for the token format).
 
 ## Timeclock — read endpoints
 
-### `GET /hm_timeclock/status` **[JSON]**
+### `GET /hr_timeclock/status` **[JSON]**
 
 The canonical snapshot the navbar ticker and the in-app timer should both
 read. Safe to poll every 10–30 s.
 
 ```
-GET /hm_timeclock/status
+GET /hr_timeclock/status
 Headers: X-Redmine-API-Key: <key>
         Accept: application/json
 ```
@@ -129,13 +129,13 @@ information you'd need to render a corrective form, but the actual
 `POST /correct/:id` action is form-encoded HTML only (no JSON path) — for now,
 deep-link out to the Redmine web UI for that case.
 
-### `GET /hm_timeclock/calendar` **[JSON]**
+### `GET /hr_timeclock/calendar` **[JSON]**
 
 Per-day net-worked totals for one month. Used to render the monthly
 "how much did I work" calendar.
 
 ```
-GET /hm_timeclock/calendar?month=2026-05
+GET /hr_timeclock/calendar?month=2026-05
 Headers: X-Redmine-API-Key: <key>
         Accept: application/json
 ```
@@ -156,25 +156,25 @@ Headers: X-Redmine-API-Key: <key>
 }
 ```
 
-### `GET /hm_timeclock/export` (CSV)
+### `GET /hr_timeclock/export` (CSV)
 
 Per-month CSV export for the current user — useful if the app wants a
 "share my month" button.
 
 ```
-GET /hm_timeclock/export?month=2026-05
+GET /hr_timeclock/export?month=2026-05
 Headers: X-Redmine-API-Key: <key>
 ```
 
 Returns `Content-Type: text/csv; charset=utf-8` with filename
-`hm_timeclock_<login>_<YYYY-MM>.csv`. Not JSON, not paginated.
+`hr_timeclock_<login>_<YYYY-MM>.csv`. Not JSON, not paginated.
 
-### `GET /hm_timeclock/` (HTML only)
+### `GET /hr_timeclock/` (HTML only)
 
 The full Stempeluhr web page. Not useful for the app except as a deep-link
 target (e.g. when the app needs to bounce out for correction).
 
-### `GET /hm_timeclock/settings` (HTML only)
+### `GET /hr_timeclock/settings` (HTML only)
 
 The settings form. JSON equivalent is `update_settings` below — there is
 no JSON GET for the current values today; the relevant numbers live in the
@@ -195,10 +195,10 @@ called with `Accept: application/json`. Idempotency rules:
   warning, *no* state mutation. The app must resolve the correction first
   (web UI, see above) before further taps take effect.
 
-### `POST /hm_timeclock/start` **[JSON]**
+### `POST /hr_timeclock/start` **[JSON]**
 
 ```
-POST /hm_timeclock/start
+POST /hr_timeclock/start
 Headers: X-Redmine-API-Key: <key>
         Accept: application/json
         Content-Length: 0
@@ -206,40 +206,40 @@ Headers: X-Redmine-API-Key: <key>
 
 Body: none. Response: same shape as `/status`.
 
-### `POST /hm_timeclock/pause` **[JSON]**
+### `POST /hr_timeclock/pause` **[JSON]**
 
 Same shape as `/start`. Closes the current running interval implicitly by
-opening a `hm_break_entries` row.
+opening a `hr_break_entries` row.
 
-### `POST /hm_timeclock/resume` **[JSON]**
+### `POST /hr_timeclock/resume` **[JSON]**
 
 Same shape. Closes the open break row, returns to `working`.
 
-### `POST /hm_timeclock/stop` **[JSON]**
+### `POST /hr_timeclock/stop` **[JSON]**
 
 Same shape. Closes the open break (if any) and the work entry.
 
-### `POST /hm_timeclock/correct/:id` (HTML only)
+### `POST /hr_timeclock/correct/:id` (HTML only)
 
 Form-encoded `ended_at=HH:MM` or an ISO timestamp. No JSON support today —
 the app should *not* call this; bounce the user to the web UI when
 `state == needs_correction`.
 
-### `POST /hm_timeclock/settings` **[JSON]**
+### `POST /hr_timeclock/settings` **[JSON]**
 
 Updates per-user target/break/notification settings.
 
 ```
-POST /hm_timeclock/settings
+POST /hr_timeclock/settings
 Headers: X-Redmine-API-Key: <key>
         Accept: application/json
         Content-Type: application/x-www-form-urlencoded
 
-hm_user_setting[daily_target_minutes]=480
-hm_user_setting[weekly_target_minutes]=2400
-hm_user_setting[max_break_minutes]=60
-hm_user_setting[notify_target_reached]=1
-hm_user_setting[notify_break_over]=1
+hr_user_setting[daily_target_minutes]=480
+hr_user_setting[weekly_target_minutes]=2400
+hr_user_setting[max_break_minutes]=60
+hr_user_setting[notify_target_reached]=1
+hr_user_setting[notify_break_over]=1
 ```
 
 Response 200: fresh snapshot. Response 422 on validation error:
@@ -259,24 +259,24 @@ open the Redmine page in an embedded webview.
 
 | Method   | Path                              | Action               | Auth      |
 |----------|-----------------------------------|----------------------|-----------|
-| `GET`    | `/hm_vacation`                    | List own vacation    | logged-in |
-| `POST`   | `/hm_vacation`                    | Create vacation      | logged-in |
-| `GET`    | `/hm_sickness`                    | List own sickness    | logged-in |
-| `POST`   | `/hm_sickness`                    | Create sickness      | logged-in |
-| `POST`   | `/hm_absences`                    | Create (kind in body)| logged-in |
-| `GET`    | `/hm_absences/:id/edit`           | Edit form            | owner or admin |
-| `PATCH`  | `/hm_absences/:id`                | Update               | owner or admin |
-| `DELETE` | `/hm_absences/:id`                | Delete               | owner or admin |
-| `POST`   | `/hm_absences/:id/approve`        | Approve              | admin     |
-| `POST`   | `/hm_absences/:id/reject`         | Reject               | admin     |
+| `GET`    | `/hr_vacation`                    | List own vacation    | logged-in |
+| `POST`   | `/hr_vacation`                    | Create vacation      | logged-in |
+| `GET`    | `/hr_sickness`                    | List own sickness    | logged-in |
+| `POST`   | `/hr_sickness`                    | Create sickness      | logged-in |
+| `POST`   | `/hr_absences`                    | Create (kind in body)| logged-in |
+| `GET`    | `/hr_absences/:id/edit`           | Edit form            | owner or admin |
+| `PATCH`  | `/hr_absences/:id`                | Update               | owner or admin |
+| `DELETE` | `/hr_absences/:id`                | Delete               | owner or admin |
+| `POST`   | `/hr_absences/:id/approve`        | Approve              | admin     |
+| `POST`   | `/hr_absences/:id/reject`         | Reject               | admin     |
 
-`POST /hm_absences` body:
+`POST /hr_absences` body:
 
 ```
-hm_absence[kind]=vacation|sickness
-hm_absence[starts_on]=2026-06-01
-hm_absence[ends_on]=2026-06-07
-hm_absence[reason]=Sommerurlaub
+hr_absence[kind]=vacation|sickness
+hr_absence[starts_on]=2026-06-01
+hr_absence[ends_on]=2026-06-07
+hr_absence[reason]=Sommerurlaub
 ```
 
 Response: redirect (HTML). To make this usable from a native app you would
@@ -290,9 +290,9 @@ HTML only, gated by Redmine admin. Listed for completeness.
 
 | Method | Path                                    | Action            |
 |--------|-----------------------------------------|-------------------|
-| `GET`  | `/admin/hm_timeclock`                   | Global overview   |
-| `GET`  | `/admin/hm_timeclock/day/:date`         | Day drill-down    |
-| `GET`  | `/admin/hm_timeclock/users/:user_id`    | Per-user detail   |
+| `GET`  | `/admin/hr_timeclock`                   | Global overview   |
+| `GET`  | `/admin/hr_timeclock/day/:date`         | Day drill-down    |
+| `GET`  | `/admin/hr_timeclock/users/:user_id`    | Per-user detail   |
 
 ---
 
@@ -302,11 +302,11 @@ HTML only, gated by Redmine admin. Listed for completeness.
 1. App start
    GET /users/current.json
       → store user.id, user.login, user.firstname
-   GET /hm_timeclock/status
+   GET /hr_timeclock/status
       → render state, timer, expected end
 
 2. Background poll every 30 s (or 10 s while screen on)
-   GET /hm_timeclock/status
+   GET /hr_timeclock/status
       → reconcile local timer with server truth
       → fire local notification when:
           - state was "working" and worked_seconds_today crosses daily_target_seconds
@@ -315,19 +315,19 @@ HTML only, gated by Redmine admin. Listed for completeness.
             AND notify_break_over is true
 
 3. Buttons
-   "Clock in"  → POST /hm_timeclock/start   → use returned snapshot
-   "Pause"     → POST /hm_timeclock/pause   → use returned snapshot
-   "Resume"    → POST /hm_timeclock/resume  → use returned snapshot
-   "Clock out" → POST /hm_timeclock/stop    → use returned snapshot
+   "Clock in"  → POST /hr_timeclock/start   → use returned snapshot
+   "Pause"     → POST /hr_timeclock/pause   → use returned snapshot
+   "Resume"    → POST /hr_timeclock/resume  → use returned snapshot
+   "Clock out" → POST /hr_timeclock/stop    → use returned snapshot
 
 4. Correction
    If snapshot.state == "needs_correction":
       → show banner with snapshot.pending_correction.started_at_label
-      → "Open in Redmine" button → deep-link to /hm_timeclock
+      → "Open in Redmine" button → deep-link to /hr_timeclock
 
 5. Monthly view
-   GET /hm_timeclock/calendar?month=YYYY-MM
-   "Export" button → GET /hm_timeclock/export?month=YYYY-MM (share sheet)
+   GET /hr_timeclock/calendar?month=YYYY-MM
+   "Export" button → GET /hr_timeclock/export?month=YYYY-MM (share sheet)
 ```
 
 ---
@@ -342,7 +342,7 @@ wall-device implementation is:
 2. **Phone fetches `/users/current.json`** at install time, caches `id` and
    `login`.
 3. When the BLE app detects the wall device's service UUID + RSSI threshold,
-   it directly POSTs `/hm_timeclock/start` or `/hm_timeclock/stop`
+   it directly POSTs `/hr_timeclock/start` or `/hr_timeclock/stop`
    (or computes "auto" from a fresh `/status` and chooses the right verb)
    *itself*, using its own API key.
 4. The wall device's only job is to **broadcast a static service UUID**
@@ -368,19 +368,19 @@ To support a wall device that *posts on behalf of* a user (rather than the
 user's own app doing it), the following endpoints would need to be added.
 None of them exist today:
 
-- `POST /hm_timeclock/reader_toggle`
+- `POST /hr_timeclock/reader_toggle`
   Body: `{ token, nonce, action }` where `token` is a server-issued,
   HMAC-signed payload containing `user_id|ts|nonce`. Returns a snapshot
   plus a greeting string. *Not yet implemented.*
-- `GET /hm_timeclock/reader_recent?device=&since=`
+- `GET /hr_timeclock/reader_recent?device=&since=`
   For wall devices that do not see the user's HTTP response and need to
   poll for "what just happened on me". *Not yet implemented.*
-- Per-user `reader_token` column on `hm_user_settings` plus a rotation /
-  revocation UI in `/hm_timeclock/settings`. *Not yet implemented.*
+- Per-user `reader_token` column on `hr_user_settings` plus a rotation /
+  revocation UI in `/hr_timeclock/settings`. *Not yet implemented.*
 
 Until those land, the wall-mounted device is limited to **observer mode**:
 it can show whoever last tapped *via the phone's own API call* by polling
-`/hm_timeclock/status` for a known set of users — which only works if the
+`/hr_timeclock/status` for a known set of users — which only works if the
 wall device has API keys for them, which defeats the point. The
 phone-central design above is therefore the only one buildable against the
 current routes without further server work.

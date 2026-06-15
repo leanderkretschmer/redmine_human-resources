@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-    <title><%= h(@title || l(:label_hm_hr)) %></title>
+    <title><%= h(@title || l(:label_hr_hr)) %></title>
     <meta name="robots" content="noindex, nofollow">
     <style>
       html, body {
@@ -14,7 +14,7 @@
         color: #1d2433;
       }
       body { display: flex; align-items: center; justify-content: center; padding: 1.5em; }
-      .hm-quick-card {
+      .hr-quick-card {
         max-width: 420px; width: 100%;
         background: #fff;
         border-radius: 12px;
@@ -23,34 +23,34 @@
         box-shadow: 0 10px 32px rgba(0,0,0,0.08);
         border-top: 6px solid #95a5a6;
       }
-      .hm-quick-status-success { border-top-color: #27ae60; }
-      .hm-quick-status-info    { border-top-color: #2980b9; }
-      .hm-quick-status-warning { border-top-color: #f39c12; }
-      .hm-quick-status-error   { border-top-color: #c0392b; }
-      .hm-quick-emoji {
+      .hr-quick-status-success { border-top-color: #27ae60; }
+      .hr-quick-status-info    { border-top-color: #2980b9; }
+      .hr-quick-status-warning { border-top-color: #f39c12; }
+      .hr-quick-status-error   { border-top-color: #c0392b; }
+      .hr-quick-emoji {
         font-size: 3em;
         margin-bottom: 0.2em;
       }
-      .hm-quick-status-success .hm-quick-emoji { color: #27ae60; }
-      .hm-quick-status-info    .hm-quick-emoji { color: #2980b9; }
-      .hm-quick-status-warning .hm-quick-emoji { color: #f39c12; }
-      .hm-quick-status-error   .hm-quick-emoji { color: #c0392b; }
-      .hm-quick-title {
+      .hr-quick-status-success .hr-quick-emoji { color: #27ae60; }
+      .hr-quick-status-info    .hr-quick-emoji { color: #2980b9; }
+      .hr-quick-status-warning .hr-quick-emoji { color: #f39c12; }
+      .hr-quick-status-error   .hr-quick-emoji { color: #c0392b; }
+      .hr-quick-title {
         margin: 0 0 0.3em;
         font-size: 1.6em;
         font-weight: 600;
       }
-      .hm-quick-user {
+      .hr-quick-user {
         margin: 0.1em 0 0.8em;
         color: #666;
         font-size: 1em;
       }
-      .hm-quick-details {
+      .hr-quick-details {
         font-size: 1.05em;
         margin: 0.4em 0 1.4em;
         color: #2c3e50;
       }
-      .hm-quick-snapshot {
+      .hr-quick-snapshot {
         display: grid;
         grid-template-columns: 1fr 1fr;
         gap: 0.3em 0.8em;
@@ -61,14 +61,14 @@
         border-radius: 8px;
         font-variant-numeric: tabular-nums;
       }
-      .hm-quick-snapshot dt { color: #6b7280; font-size: 0.9em; }
-      .hm-quick-snapshot dd { margin: 0; font-weight: 600; }
-      .hm-quick-back a {
+      .hr-quick-snapshot dt { color: #6b7280; font-size: 0.9em; }
+      .hr-quick-snapshot dd { margin: 0; font-weight: 600; }
+      .hr-quick-back a {
         color: #2980b9;
         text-decoration: none;
         font-size: 0.95em;
       }
-      .hm-quick-back a:hover { text-decoration: underline; }
+      .hr-quick-back a:hover { text-decoration: underline; }
     </style>
   </head>
   <body>

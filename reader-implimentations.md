@@ -17,13 +17,13 @@ The constraint that drives both designs:
 
 ## Shared backend additions
 
-Both options reuse the existing `HmTimeclockController` but add a new public
+Both options reuse the existing `HrTimeclockController` but add a new public
 endpoint that performs a **state toggle** based on a signed token instead of
 relying on the session cookie.
 
 ### New columns
 
-`hm_user_settings`:
+`hr_user_settings`:
 
 | column                | type     | notes                                          |
 |-----------------------|----------|------------------------------------------------|
@@ -37,7 +37,7 @@ rotate it on behalf of a user from the admin area.
 ### New route
 
 ```
-POST /hm_timeclock/reader_toggle
+POST /hr_timeclock/reader_toggle
      params: token (HMAC), nonce, action ("auto" | "in" | "out")
      returns: 200 JSON { user, state, worked_today_seconds, message }
 ```
@@ -80,7 +80,7 @@ has walked past the camera.
 
 ### Auditability
 
-Every reader-driven state transition writes a row to `hm_work_entries` with
+Every reader-driven state transition writes a row to `hr_work_entries` with
 `created_ip = wall device IP` and `notes = "via reader:<device_id>"` so the
 audit trail in the existing calendar / CSV export distinguishes wall-device
 taps from manual web-UI clicks.
@@ -96,7 +96,7 @@ taps from manual web-UI clicks.
 2. The phone screen shows a rotating QR code (refreshed every 10 s) containing
    the signed payload described above.
 3. The wall device's camera reads the QR, POSTs the payload to
-   `/hm_timeclock/reader_toggle`, then displays the response on its screen
+   `/hr_timeclock/reader_toggle`, then displays the response on its screen
    (name, new state, hours worked today, expected end of work).
 
 ### Hardware
@@ -120,7 +120,7 @@ to mount.
 import cv2, time, requests
 from pyzbar.pyzbar import decode
 
-SERVER = "https://redmine.example.com/hm_timeclock/reader_toggle"
+SERVER = "https://redmine.example.com/hr_timeclock/reader_toggle"
 DEVICE = "wall-eingang-1"
 DEVICE_SECRET = "..."  # mTLS or shared HMAC header for the device itself
 
@@ -267,7 +267,7 @@ cost moves into software (the app).
   (advertising) and the phone app the *central* (scanning). When the app
   detects the wall device in range, it makes a *direct* HTTPS POST to the
   Redmine server with its signed payload. The wall device then polls
-  `/hm_timeclock/reader_recent?device=...` (or receives a WebSocket /
+  `/hr_timeclock/reader_recent?device=...` (or receives a WebSocket /
   Action Cable push) to learn that "Anna just tapped me" and updates its
   TFT.
 - This sidesteps iOS's peripheral-from-background restrictions entirely:
@@ -283,11 +283,11 @@ Wall device advertises:
 Phone app behaviour:
   - Scan for service UUID, filter by RSSI ≥ -65 dBm (≈ within 1 m).
   - On detection, debounce 30 s per device_id.
-  - POST {token, device_id, action: "auto"} to /hm_timeclock/reader_toggle
+  - POST {token, device_id, action: "auto"} to /hr_timeclock/reader_toggle
     with the user's session cookie (or app-issued bearer token).
 
 Wall device behaviour:
-  - Polls /hm_timeclock/reader_recent?device=<device_id>&since=<ts>
+  - Polls /hr_timeclock/reader_recent?device=<device_id>&since=<ts>
     every 1 s, or subscribes via Action Cable.
   - On new event, render greeting + state + worked-today on TFT.
 ```
@@ -311,7 +311,7 @@ void setup() {
 
 void loop() {
   HTTPClient http;
-  http.begin("https://redmine.example.com/hm_timeclock/reader_recent?device=" DEVICE_ID
+  http.begin("https://redmine.example.com/hr_timeclock/reader_recent?device=" DEVICE_ID
              "&since=" + String(lastSeenTs));
   http.addHeader("X-HM-Device", DEVICE_ID);
   http.addHeader("X-HM-Device-Sig", signDeviceRequest());
@@ -325,7 +325,7 @@ void loop() {
 ### Server endpoint additions (beyond shared toggle)
 
 ```
-GET /hm_timeclock/reader_recent
+GET /hr_timeclock/reader_recent
     params: device_id, since (unix ts)
     auth:   X-HM-Device + X-HM-Device-Sig (device HMAC)
     returns: latest toggle event matching device, or 204 if none

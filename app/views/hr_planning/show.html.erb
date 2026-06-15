@@ -1,0 +1,75 @@
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag 'hr_timeclock', plugin: 'redmine_human_resources' %>
+<% end %>
+
+<h2><%= l(:label_hr_planning) %></h2>
+<p class="hr-tc-section-hint"><%= l(:label_hr_planning_intro) %></p>
+
+<h3><%= l(:label_hr_planning_new) %></h3>
+<%= form_with model: @new_absence, url: hr_absences_path, method: :post,
+              scope: :hr_absence, local: true, html: { class: 'hr-tc-absence-form' } do |f| %>
+  <div class="box tabular">
+    <p>
+      <%= f.label :kind, l(:label_hr_absence_kind) %>
+      <%= f.select :kind, @kinds.map { |k| [HrAbsence.kind_label(k), k] }, {}, { id: 'hr_planning_kind' } %>
+    </p>
+    <p>
+      <%= f.label :starts_on, l(:label_hr_absence_starts_on) %>
+      <%= f.date_field :starts_on, required: true %>
+    </p>
+    <p>
+      <%= f.label :ends_on, l(:label_hr_absence_ends_on) %>
+      <%= f.date_field :ends_on, required: true %>
+    </p>
+    <p>
+      <%= f.label :reason, l(:label_hr_absence_reason) %>
+      <%= f.text_field :reason, size: 50, placeholder: l(:label_hr_planning_reason_placeholder) %>
+    </p>
+    <p>
+      <%= f.label :recurrence, l(:label_hr_recurrence) %>
+      <%= f.select :recurrence,
+                   [[l(:label_hr_recurrence_none),        HrAbsence::RECURRENCE_NONE],
+                    [l(:label_hr_recurrence_weekly),      HrAbsence::RECURRENCE_WEEKLY],
+                    [l(:label_hr_recurrence_biweekly),    HrAbsence::RECURRENCE_BIWEEKLY],
+                    [l(:label_hr_recurrence_four_weekly), HrAbsence::RECURRENCE_4_WEEKLY],
+                    [l(:label_hr_recurrence_monthly),     HrAbsence::RECURRENCE_MONTHLY],
+                    [l(:label_hr_recurrence_quarterly),   HrAbsence::RECURRENCE_QUARTERLY],
+                    [l(:label_hr_recurrence_half_yearly), HrAbsence::RECURRENCE_HALFYEARLY],
+                    [l(:label_hr_recurrence_yearly),      HrAbsence::RECURRENCE_YEARLY]],
+                   {}, { id: 'hr_planning_recurrence' } %>
+    </p>
+    <p id="hr_planning_recurrence_until_row">
+      <%= f.label :recurrence_until, l(:label_hr_recurrence_until) %>
+      <%= f.date_field :recurrence_until %>
+      <em class="info"><%= l(:label_hr_recurrence_until_hint) %></em>
+    </p>
+  </div>
+  <p><%= submit_tag l(:button_hr_planning_create), class: 'button-positive' %></p>
+<% end %>
+
+<h3><%= l(:label_hr_timeclock_calendar) %></h3>
+<%= render partial: 'hr_timeclock/calendar', locals: {
+      month: @month, entries: [], user: User.current,
+      base_path: ->(m) { hr_planning_path(month: m.strftime('%Y-%m')) },
+      absences_by_day: @absences_by_day,
+      lecture_periods: @lecture_periods,
+      monthly_plan: @monthly_plan,
+      holidays_by_day: @holidays_by_day
+    } %>
+
+<h3><%= l(:label_hr_planning_list) %></h3>
+<%= render partial: 'hr_timeclock/absence_list', locals: { absences: @absences } %>
+
+<%= render partial: 'hr_timeclock/absence_edit_modal' %>
+
+<script>
+  (function () {
+    var rec = document.getElementById('hr_planning_recurrence');
+    var untilRow = document.getElementById('hr_planning_recurrence_until_row');
+    function toggle() {
+      if (!rec || !untilRow) return;
+      untilRow.style.display = (rec.value && rec.value !== '<%= HrAbsence::RECURRENCE_NONE %>') ? '' : 'none';
+    }
+    if (rec) { rec.addEventListener('change', toggle); toggle(); }
+  })();
+</script>

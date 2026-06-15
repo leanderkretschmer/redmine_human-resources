@@ -1,0 +1,134 @@
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag 'hr_timeclock', plugin: 'redmine_human_resources' %>
+<% end %>
+
+<div class="contextual">
+  <%= link_to l(:label_hr_admin_import), hr_admin_import_path, class: 'icon icon-import' %>
+  <%= link_to l(:label_hr_admin_employment_types), hr_admin_employment_types_path, class: 'icon icon-settings' %>
+</div>
+
+<h2><%= l(:label_hr_admin) %></h2>
+
+<div class="hr-tc-kpis">
+  <div class="hr-tc-kpi">
+    <span class="hr-tc-kpi-value">
+      <%= hr_format_seconds(@kpi[:worked_today]) %><%
+        if @kpi[:planned_today_secs].to_i.positive? %><span class="hr-tc-kpi-target"> / <%= hr_format_seconds(@kpi[:planned_today_secs]) %></span><% end %>
+    </span>
+    <span class="hr-tc-kpi-label"><%= l(:label_hr_admin_kpi_worked_today) %></span>
+  </div>
+  <div class="hr-tc-kpi">
+    <span class="hr-tc-kpi-value"><%= hr_format_seconds(@kpi[:worked_month]) %></span>
+    <span class="hr-tc-kpi-label"><%= l(:label_hr_admin_kpi_worked_month) %></span>
+  </div>
+  <div class="hr-tc-kpi <%= 'hr-tc-kpi-alert' if @kpi[:pending].positive? %>">
+    <span class="hr-tc-kpi-value"><%= @kpi[:pending] %></span>
+    <span class="hr-tc-kpi-label"><%= l(:label_hr_admin_kpi_pending) %></span>
+  </div>
+  <div class="hr-tc-kpi">
+    <span class="hr-tc-kpi-value"><%= @kpi[:absent_today] %></span>
+    <span class="hr-tc-kpi-label"><%= l(:label_hr_admin_kpi_absent_today) %></span>
+  </div>
+</div>
+
+<h3><%= l(:label_hr_admin_users) %></h3>
+
+<%= form_with url: hr_admin_path, method: :get, local: true, html: { class: 'hr-admin-filters' } do %>
+  <%= hidden_field_tag :month, @month.strftime('%Y-%m') %>
+  <p>
+    <label for="filter_name"><%= l(:label_hr_admin_search_name) %></label>
+    <%= text_field_tag :filter_name, @filter_name, size: 28, id: 'filter_name',
+                       placeholder: l(:label_hr_admin_search_placeholder) %>
+    <%= submit_tag l(:button_apply), name: nil %>
+    <% if @filter_name.present? %>
+      <%= link_to l(:button_clear), hr_admin_path(month: @month.strftime('%Y-%m')), class: 'icon icon-reload' %>
+    <% end %>
+  </p>
+<% end %>
+
+<% if @chart_rows.any? %>
+  <%= form_with url: hr_admin_path, method: :get, local: true, html: { class: 'hr-tc-barchart-toggle' } do %>
+    <%= hidden_field_tag :month, @month.strftime('%Y-%m') %>
+    <%= hidden_field_tag :filter_name, @filter_name if @filter_name.present? %>
+    <strong><%= l(:label_hr_admin_chart_view) %>:</strong>
+    <% %w[today week month].each do |mode| %>
+      <label class="hr-tc-chart-view-option">
+        <%= radio_button_tag :chart_view, mode, @chart_view == mode, onchange: 'this.form.submit()' %>
+        <%= l("label_hr_admin_chart_view_#{mode}") %>
+      </label>
+    <% end %>
+  <% end %>
+  <div class="hr-tc-barchart">
+    <% @chart_rows.each do |row| %>
+      <%
+        work_s   = row[:work].to_i
+        break_s  = row[:break_secs].to_i
+        cover_s  = row[:coverage].to_i
+        scale    = @chart_max.positive? ? @chart_max : 1
+        work_pct = (work_s.to_f / scale * 100).round(2)
+        brk_pct  = (break_s.to_f / scale * 100).round(2)
+        cov_pct  = ([cover_s, work_s].min.to_f / scale * 100).round(2)
+        work_title    = "#{l(:label_hr_admin_bar_work)}: #{hr_format_seconds(work_s)}"
+        break_title   = "#{l(:label_hr_admin_bar_break)}: #{hr_format_seconds(break_s)}"
+        coverage_title = "#{l(:label_hr_admin_bar_coverage)}: #{hr_format_seconds(cover_s)}"
+      %>
+      <div class="hr-tc-bar-row">
+        <span class="hr-tc-bar-name"><%= link_to h(row[:user].name), hr_admin_user_path(user_id: row[:user].id) %></span>
+        <span class="hr-tc-bar-track hr-tc-bar-track-stacked">
+          <span class="hr-tc-bar-seg hr-tc-bar-seg-work"
+                style="width: <%= [work_pct, 0.5].max %>%"
+                title="<%= h work_title %>"></span>
+          <% if break_s.positive? %>
+            <span class="hr-tc-bar-seg hr-tc-bar-seg-break"
+                  style="width: <%= [brk_pct, 0.5].max %>%"
+                  title="<%= h break_title %>"></span>
+          <% end %>
+          <% if cover_s.positive? && work_s.positive? %>
+            <span class="hr-tc-bar-seg hr-tc-bar-seg-coverage"
+                  style="left: 0; width: <%= [cov_pct, 0.5].max %>%"
+                  title="<%= h coverage_title %>"></span>
+          <% end %>
+        </span>
+        <span class="hr-tc-bar-value" title="<%= h work_title %>"><%= hr_format_seconds(work_s) %></span>
+        <span class="hr-tc-bar-meta"><%= row[:last_entry] ? format_time(row[:last_entry].started_at) : '—' %></span>
+      </div>
+    <% end %>
+  </div>
+  <span class="pagination"><%= pagination_links_full @paginator %></span>
+<% else %>
+  <p class="nodata"><%= l(:label_hr_admin_no_users) %></p>
+<% end %>
+
+<h3><%= l(:label_hr_admin_global_calendar) %></h3>
+<%= render partial: 'hr_timeclock/calendar', locals: {
+      month: @month,
+      entries: @week_entries || [],
+      user: nil,
+      base_path: ->(m) { hr_admin_path(month: m.strftime('%Y-%m'),
+                                       filter_name:  @filter_name) },
+      week_path: ->(d) { hr_admin_path(view: 'week', focus: d.iso8601,
+                                       filter_name: @filter_name) },
+      view_mode: @cal_view, focus_date: @focus_date,
+      absences_by_day: @absences_by_day,
+      holidays_by_day: @holidays_by_day,
+      lecture_periods: @lecture_periods,
+      day_link: ->(d) { hr_admin_day_path(date: d.strftime('%Y-%m-%d')) },
+      show_users_in_absence: true,
+      clickable_for_absence: true
+    } %>
+
+<%= render partial: 'hr_timeclock/absence_modal' %>
+
+<div id="hr-tc-holiday-popover" class="hr-tc-holiday-popover" hidden
+     data-affected-label="<%= l(:label_hr_cal_holiday_affected) %>"
+     data-unaffected-label="<%= l(:label_hr_cal_holiday_unaffected) %>"></div>
+
+<% if @pending_absences.any? %>
+  <h3><%= l(:label_hr_admin_pending_approvals) %></h3>
+  <%= render partial: 'hr_timeclock/absence_list', locals: {
+        absences: @pending_absences,
+        show_user: true
+      } %>
+<% end %>
+
+<%= render partial: 'hr_timeclock/absence_edit_modal' %>

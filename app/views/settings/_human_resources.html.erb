@@ -1,148 +1,148 @@
 <%
-  def hm_minutes_to_hours(minutes)
+  def hr_minutes_to_hours(minutes)
     minutes.to_i.zero? ? '' : (minutes.to_i / 60.0)
   end
 %>
 
-<div class="hm-settings">
-  <div class="hm-settings-tabs">
-    <button type="button" class="hm-settings-tab-btn active" data-tab="general"><%= l(:hm_settings_tab_general) %></button>
-    <button type="button" class="hm-settings-tab-btn" data-tab="notify"><%= l(:hm_settings_tab_notify) %></button>
-    <button type="button" class="hm-settings-tab-btn" data-tab="nfc"><%= l(:hm_settings_tab_nfc) %></button>
-    <button type="button" class="hm-settings-tab-btn" data-tab="import"><%= l(:hm_settings_tab_import) %></button>
-    <button type="button" class="hm-settings-tab-btn" data-tab="experimental"><%= l(:hm_settings_tab_experimental) %></button>
+<div class="hr-settings">
+  <div class="hr-settings-tabs">
+    <button type="button" class="hr-settings-tab-btn active" data-tab="general"><%= l(:hr_settings_tab_general) %></button>
+    <button type="button" class="hr-settings-tab-btn" data-tab="notify"><%= l(:hr_settings_tab_notify) %></button>
+    <button type="button" class="hr-settings-tab-btn" data-tab="nfc"><%= l(:hr_settings_tab_nfc) %></button>
+    <button type="button" class="hr-settings-tab-btn" data-tab="import"><%= l(:hr_settings_tab_import) %></button>
+    <button type="button" class="hr-settings-tab-btn" data-tab="experimental"><%= l(:hr_settings_tab_experimental) %></button>
   </div>
 
   <%# ---------------- General ---------------- %>
-  <div class="hm-settings-panel" data-panel="general">
+  <div class="hr-settings-panel" data-panel="general">
     <div class="box tabular settings">
       <p>
-        <label for="settings_default_daily_target_minutes"><%= l(:hm_settings_default_daily) %></label>
+        <label for="settings_default_daily_target_minutes"><%= l(:hr_settings_default_daily) %></label>
         <%= number_field_tag 'settings[default_daily_target_minutes_hours]',
-                             hm_minutes_to_hours(@settings['default_daily_target_minutes']),
+                             hr_minutes_to_hours(@settings['default_daily_target_minutes']),
                              min: 0, step: 0.5, size: 6 %>
-        <em class="info"><%= l(:hm_settings_in_hours_note) %></em>
+        <em class="info"><%= l(:hr_settings_in_hours_note) %></em>
         <%= hidden_field_tag 'settings[default_daily_target_minutes]', @settings['default_daily_target_minutes'] %>
       </p>
       <p>
-        <label for="settings_default_weekly_target_minutes"><%= l(:hm_settings_default_weekly) %></label>
+        <label for="settings_default_weekly_target_minutes"><%= l(:hr_settings_default_weekly) %></label>
         <%= number_field_tag 'settings[default_weekly_target_minutes_hours]',
-                             hm_minutes_to_hours(@settings['default_weekly_target_minutes']),
+                             hr_minutes_to_hours(@settings['default_weekly_target_minutes']),
                              min: 0, step: 0.5, size: 6 %>
-        <em class="info"><%= l(:hm_settings_in_hours_note) %></em>
+        <em class="info"><%= l(:hr_settings_in_hours_note) %></em>
         <%= hidden_field_tag 'settings[default_weekly_target_minutes]', @settings['default_weekly_target_minutes'] %>
       </p>
       <p>
-        <label for="settings_default_max_break_minutes"><%= l(:hm_settings_default_break) %></label>
+        <label for="settings_default_max_break_minutes"><%= l(:hr_settings_default_break) %></label>
         <%= number_field_tag 'settings[default_max_break_minutes_hours]',
-                             hm_minutes_to_hours(@settings['default_max_break_minutes']),
+                             hr_minutes_to_hours(@settings['default_max_break_minutes']),
                              min: 0, step: 0.5, size: 6 %>
-        <em class="info"><%= l(:hm_settings_in_hours_note) %></em>
+        <em class="info"><%= l(:hr_settings_in_hours_note) %></em>
         <%= hidden_field_tag 'settings[default_max_break_minutes]', @settings['default_max_break_minutes'] %>
       </p>
       <p>
-        <label for="settings_overtime_threshold_minutes"><%= l(:hm_settings_overtime_threshold) %></label>
+        <label for="settings_overtime_threshold_minutes"><%= l(:hr_settings_overtime_threshold) %></label>
         <%= number_field_tag 'settings[overtime_threshold_minutes_hours]',
-                             hm_minutes_to_hours(@settings['overtime_threshold_minutes']),
+                             hr_minutes_to_hours(@settings['overtime_threshold_minutes']),
                              min: 0, step: 0.5, size: 6 %>
-        <em class="info"><%= l(:hm_settings_in_hours_note) %></em>
+        <em class="info"><%= l(:hr_settings_in_hours_note) %></em>
         <%= hidden_field_tag 'settings[overtime_threshold_minutes]', @settings['overtime_threshold_minutes'] %>
       </p>
       <p>
-        <label for="settings_long_shift_threshold_hours"><%= l(:hm_settings_long_shift_threshold) %></label>
+        <label for="settings_long_shift_threshold_hours"><%= l(:hr_settings_long_shift_threshold) %></label>
         <%= number_field_tag 'settings[long_shift_threshold_hours]',
                              (@settings['long_shift_threshold_hours'].presence || 12),
                              min: 1, max: 24, step: 1, size: 4 %>
-        <em class="info"><%= l(:hm_settings_long_shift_threshold_hint) %></em>
+        <em class="info"><%= l(:hr_settings_long_shift_threshold_hint) %></em>
       </p>
       <p>
-        <label for="settings_poll_interval_seconds"><%= l(:hm_settings_poll_interval) %></label>
+        <label for="settings_poll_interval_seconds"><%= l(:hr_settings_poll_interval) %></label>
         <%= text_field_tag 'settings[poll_interval_seconds]', @settings['poll_interval_seconds'], size: 4 %>
       </p>
     </div>
   </div>
 
   <%# ---------------- Notifications ---------------- %>
-  <div class="hm-settings-panel" data-panel="notify" style="display:none">
+  <div class="hr-settings-panel" data-panel="notify" style="display:none">
     <div class="box tabular settings">
       <p>
-        <label for="settings_enable_target_notifications"><%= l(:hm_settings_enable_target_notifications) %></label>
+        <label for="settings_enable_target_notifications"><%= l(:hr_settings_enable_target_notifications) %></label>
         <%= hidden_field_tag 'settings[enable_target_notifications]', '0' %>
         <%= check_box_tag 'settings[enable_target_notifications]', '1',
                           ['1', 1, true, 'true'].include?(@settings['enable_target_notifications']) %>
       </p>
       <p>
-        <label for="settings_enable_break_notifications"><%= l(:hm_settings_enable_break_notifications) %></label>
+        <label for="settings_enable_break_notifications"><%= l(:hr_settings_enable_break_notifications) %></label>
         <%= hidden_field_tag 'settings[enable_break_notifications]', '0' %>
         <%= check_box_tag 'settings[enable_break_notifications]', '1',
                           ['1', 1, true, 'true'].include?(@settings['enable_break_notifications']) %>
       </p>
       <p>
-        <label for="settings_notification_emails"><%= l(:hm_settings_notification_emails) %></label>
+        <label for="settings_notification_emails"><%= l(:hr_settings_notification_emails) %></label>
         <%= text_area_tag 'settings[notification_emails]', @settings['notification_emails'],
                           rows: 3, cols: 50, placeholder: 'hr@example.com, lead@example.com' %>
-        <em class="info"><%= l(:hm_settings_notification_emails_hint) %></em>
+        <em class="info"><%= l(:hr_settings_notification_emails_hint) %></em>
       </p>
       <p>
-        <label for="settings_conflict_padding_days"><%= l(:hm_settings_conflict_padding_days) %></label>
+        <label for="settings_conflict_padding_days"><%= l(:hr_settings_conflict_padding_days) %></label>
         <%= text_field_tag 'settings[conflict_padding_days]', @settings['conflict_padding_days'], size: 4 %>
       </p>
     </div>
   </div>
 
   <%# ---------------- NFC / Quick links ---------------- %>
-  <div class="hm-settings-panel" data-panel="nfc" style="display:none">
+  <div class="hr-settings-panel" data-panel="nfc" style="display:none">
     <% api_key = User.current.api_key %>
     <% base    = request.base_url %>
-    <p><%= l(:hint_hm_quick_links) %></p>
-    <p class="hm-tc-quick-warning"><%= l(:warning_hm_quick_links) %></p>
-    <p><strong><%= l(:label_hm_quick_links_pattern) %>:</strong></p>
-    <dl class="hm-tc-quick-links">
-      <dt><%= l(:label_hm_quick_link_start) %></dt>
+    <p><%= l(:hint_hr_quick_links) %></p>
+    <p class="hr-tc-quick-warning"><%= l(:warning_hr_quick_links) %></p>
+    <p><strong><%= l(:label_hr_quick_links_pattern) %>:</strong></p>
+    <dl class="hr-tc-quick-links">
+      <dt><%= l(:label_hr_quick_link_start) %></dt>
       <dd><code><%= base %>/hr_timeclock/quick/start?key=&lt;API_KEY&gt;</code></dd>
-      <dt><%= l(:label_hm_quick_link_stop) %></dt>
+      <dt><%= l(:label_hr_quick_link_stop) %></dt>
       <dd><code><%= base %>/hr_timeclock/quick/stop?key=&lt;API_KEY&gt;</code></dd>
-      <dt><%= l(:label_hm_quick_link_toggle) %></dt>
+      <dt><%= l(:label_hr_quick_link_toggle) %></dt>
       <dd><code><%= base %>/hr_timeclock/quick/toggle?key=&lt;API_KEY&gt;</code></dd>
     </dl>
-    <p><strong><%= l(:label_hm_quick_links_own_example) %>:</strong></p>
-    <dl class="hm-tc-quick-links">
-      <dt><%= l(:label_hm_quick_link_start) %></dt>
+    <p><strong><%= l(:label_hr_quick_links_own_example) %>:</strong></p>
+    <dl class="hr-tc-quick-links">
+      <dt><%= l(:label_hr_quick_link_start) %></dt>
       <dd><code><%= base %><%= hr_quick_path(do: 'start',  key: api_key) %></code></dd>
-      <dt><%= l(:label_hm_quick_link_stop) %></dt>
+      <dt><%= l(:label_hr_quick_link_stop) %></dt>
       <dd><code><%= base %><%= hr_quick_path(do: 'stop',   key: api_key) %></code></dd>
-      <dt><%= l(:label_hm_quick_link_toggle) %></dt>
+      <dt><%= l(:label_hr_quick_link_toggle) %></dt>
       <dd><code><%= base %><%= hr_quick_path(do: 'toggle', key: api_key) %></code></dd>
     </dl>
-    <p><%= link_to l(:label_hm_quick_rotate_key), '/my/account', class: 'icon icon-key' %></p>
+    <p><%= link_to l(:label_hr_quick_rotate_key), '/my/account', class: 'icon icon-key' %></p>
   </div>
 
   <%# ---------------- CSV import ---------------- %>
-  <div class="hm-settings-panel" data-panel="import" style="display:none">
-    <p><%= l(:label_hm_admin_import_intro) %></p>
+  <div class="hr-settings-panel" data-panel="import" style="display:none">
+    <p><%= l(:label_hr_admin_import_intro) %></p>
     <p>
-      <%= link_to l(:label_hm_admin_import), hr_admin_import_path, class: 'icon icon-import' %>
+      <%= link_to l(:label_hr_admin_import), hr_admin_import_path, class: 'icon icon-import' %>
     </p>
-    <p class="info"><%= l(:hm_settings_import_note) %></p>
+    <p class="info"><%= l(:hr_settings_import_note) %></p>
   </div>
 
   <%# ---------------- Experimental ---------------- %>
-  <div class="hm-settings-panel" data-panel="experimental" style="display:none">
-    <p class="hm-tc-quick-warning"><%= l(:hm_settings_experimental_note) %></p>
+  <div class="hr-settings-panel" data-panel="experimental" style="display:none">
+    <p class="hr-tc-quick-warning"><%= l(:hr_settings_experimental_note) %></p>
     <div class="box tabular settings">
       <p>
-        <label for="settings_enable_break_reminder"><%= l(:hm_settings_enable_break_reminder) %></label>
+        <label for="settings_enable_break_reminder"><%= l(:hr_settings_enable_break_reminder) %></label>
         <%= hidden_field_tag 'settings[enable_break_reminder]', '0' %>
         <%= check_box_tag 'settings[enable_break_reminder]', '1',
                           ['1', 1, true, 'true'].include?(@settings['enable_break_reminder']) %>
-        <em class="info"><%= l(:hm_settings_enable_break_reminder_hint) %></em>
+        <em class="info"><%= l(:hr_settings_enable_break_reminder_hint) %></em>
       </p>
       <p>
-        <label for="settings_break_reminder_minutes"><%= l(:hm_settings_break_reminder_after) %></label>
+        <label for="settings_break_reminder_minutes"><%= l(:hr_settings_break_reminder_after) %></label>
         <%= number_field_tag 'settings[break_reminder_minutes_hours]',
-                             hm_minutes_to_hours(@settings['break_reminder_minutes']),
+                             hr_minutes_to_hours(@settings['break_reminder_minutes']),
                              min: 0, step: 0.5, size: 6 %>
-        <em class="info"><%= l(:hm_settings_in_hours_note) %></em>
+        <em class="info"><%= l(:hr_settings_in_hours_note) %></em>
         <%= hidden_field_tag 'settings[break_reminder_minutes]', @settings['break_reminder_minutes'] %>
       </p>
     </div>
@@ -152,10 +152,10 @@
 <script>
   (function () {
     var root = document.currentScript.previousElementSibling;
-    while (root && !root.classList.contains('hm-settings')) root = root.previousElementSibling;
+    while (root && !root.classList.contains('hr-settings')) root = root.previousElementSibling;
     if (!root) return;
-    var btns = root.querySelectorAll('.hm-settings-tab-btn');
-    var panels = root.querySelectorAll('.hm-settings-panel');
+    var btns = root.querySelectorAll('.hr-settings-tab-btn');
+    var panels = root.querySelectorAll('.hr-settings-panel');
     btns.forEach(function (btn) {
       btn.addEventListener('click', function () {
         btns.forEach(function (b) { b.classList.remove('active'); });

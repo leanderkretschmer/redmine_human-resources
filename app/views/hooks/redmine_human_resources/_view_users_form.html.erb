@@ -1,26 +1,26 @@
 <%
-  hm_user_setting = user&.id ? HmUserSetting.for(user) : nil
-  hm_types = HmEmploymentType.active.ordered.to_a
+  hr_user_setting = user&.id ? HrUserSetting.for(user) : nil
+  hr_types = HrEmploymentType.active.ordered.to_a
 %>
-<% if hm_types.any? %>
+<% if hr_types.any? %>
   <p>
-    <label for="hm_user_setting_hm_employment_type_id"><%= l(:label_hm_employment_type) %></label>
-    <%= select_tag 'hm_user_setting[hm_employment_type_id]',
+    <label for="hr_user_setting_hr_employment_type_id"><%= l(:label_hr_employment_type) %></label>
+    <%= select_tag 'hr_user_setting[hr_employment_type_id]',
                    options_for_select(
-                     [[l(:label_hm_inherit_default), '']] +
-                       hm_types.map { |t| [t.name, t.id] },
-                     hm_user_setting&.hm_employment_type_id),
-                   id: 'hm_user_setting_hm_employment_type_id' %>
-    <em class="info"><%= l(:label_hm_employment_type_user_form_hint) %></em>
+                     [[l(:label_hr_inherit_default), '']] +
+                       hr_types.map { |t| [t.name, t.id] },
+                     hr_user_setting&.hr_employment_type_id),
+                   id: 'hr_user_setting_hr_employment_type_id' %>
+    <em class="info"><%= l(:label_hr_employment_type_user_form_hint) %></em>
   </p>
 <% end %>
 <p>
-  <label for="hm_user_setting_region_code"><%= l(:label_hm_region) %></label>
-  <%= select_tag 'hm_user_setting[region_code]',
+  <label for="hr_user_setting_region_code"><%= l(:label_hr_region) %></label>
+  <%= select_tag 'hr_user_setting[region_code]',
                  options_for_select(
-                   [[l(:label_hm_region_blank), '']] +
+                   [[l(:label_hr_region_blank), '']] +
                      RedmineHumanResources::OpenHolidays::GERMAN_STATES.map { |code, name| ["#{name} (#{code})", code] },
-                   hm_user_setting&.region_code),
-                 id: 'hm_user_setting_region_code' %>
-  <em class="info"><%= l(:label_hm_region_hint) %></em>
+                   hr_user_setting&.region_code),
+                 id: 'hr_user_setting_region_code' %>
+  <em class="info"><%= l(:label_hr_region_hint) %></em>
 </p>

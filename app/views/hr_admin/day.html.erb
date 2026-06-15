@@ -1,0 +1,109 @@
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag 'hr_timeclock', plugin: 'redmine_human_resources' %>
+<% end %>
+
+<div class="contextual">
+  <%= link_to l(:label_hr_admin_back), hr_admin_path(month: @date.strftime('%Y-%m')), class: 'icon icon-back' %>
+</div>
+
+<h2><%= l(:label_hr_admin_day_title, date: I18n.l(@date)) %></h2>
+
+<h3><%= l(:label_hr_admin_day_worktime) %></h3>
+<% if @entry_rows.empty? %>
+  <p class="nodata"><%= l(:label_hr_admin_day_no_worktime) %></p>
+<% else %>
+  <table class="list">
+    <thead>
+      <tr>
+        <th><%= l(:label_hr_admin_user) %></th>
+        <th><%= l(:label_hr_timeclock_session_started_at) %></th>
+        <th><%= l(:label_hr_timeclock_session_ended_at) %></th>
+        <th><%= l(:label_hr_timeclock_break_col) %></th>
+        <th><%= l(:label_hr_timeclock_worked_col) %></th>
+        <th><%= l(:label_hr_timeclock_state) %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @entry_rows.each do |row| %>
+        <tr>
+          <td>
+            <%= link_to h(row[:user].name), hr_admin_user_path(user_id: row[:user].id) %>
+            <% if row[:entry_count] > 1 %>
+              <span class="hr-tc-segments" title="<%= row[:entry_count] %> Segmente">×<%= row[:entry_count] %></span>
+            <% end %>
+          </td>
+          <td><%= format_time(row[:started_at]) %></td>
+          <td><%= row[:ended_at] ? format_time(row[:ended_at]) : '—' %></td>
+          <td><%= hr_format_seconds(row[:break_seconds]) %></td>
+          <td><%= hr_format_seconds(row[:net_seconds]) %></td>
+          <td><%= hr_state_label(row[:state]) %></td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<% if @ticket_coverage && @ticket_coverage.any? %>
+  <h3><%= l(:label_hr_admin_ticket_coverage) %></h3>
+  <p class="hr-tc-coverage-hint"><%= l(:hint_hr_admin_ticket_coverage) %></p>
+  <table class="list hr-tc-coverage-table">
+    <thead>
+      <tr>
+        <th><%= l(:label_hr_admin_user) %></th>
+        <th><%= l(:label_hr_admin_worked) %></th>
+        <th><%= l(:label_hr_admin_logged_on_tickets) %></th>
+        <th><%= l(:label_hr_admin_coverage) %></th>
+        <th><%= l(:label_hr_admin_tickets_breakdown) %></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @ticket_coverage.each do |uid, row| %>
+        <% next unless row[:user] %>
+        <tr>
+          <td><%= link_to h(row[:user].name), hr_admin_user_path(user_id: uid) %></td>
+          <td><%= hr_format_seconds(row[:worked_seconds]) %></td>
+          <td><%= hr_format_seconds(row[:logged_seconds]) %></td>
+          <td>
+            <% if row[:coverage].nil? %>
+              —
+            <% else %>
+              <div class="hr-tc-coverage-bar">
+                <div class="hr-tc-coverage-bar-fill" style="width: <%= [row[:coverage], 100].min %>%"></div>
+                <span class="hr-tc-coverage-bar-label"><%= row[:coverage] %> %</span>
+              </div>
+            <% end %>
+          </td>
+          <td>
+            <% if row[:per_issue].empty? %>
+              <em><%= l(:label_hr_admin_no_ticket_log) %></em>
+            <% else %>
+              <ul class="hr-tc-coverage-tickets">
+                <% row[:per_issue].each do |ti| %>
+                  <li>
+                    <strong><%= h ti[:issue_subject] %></strong>
+                    <% if ti[:project_name] %>
+                      <span class="hr-tc-coverage-project">(<%= h ti[:project_name] %>)</span>
+                    <% end %>
+                    — <%= hr_format_seconds(ti[:seconds]) %>
+                    <% if ti[:comments].present? %>
+                      <em class="hr-tc-coverage-comments">— <%= h ti[:comments] %></em>
+                    <% end %>
+                  </li>
+                <% end %>
+              </ul>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
+<h3><%= l(:label_hr_admin_day_absences) %></h3>
+<% if @absences.empty? %>
+  <p class="nodata"><%= l(:label_hr_admin_day_no_absences) %></p>
+<% else %>
+  <%= render partial: 'hr_timeclock/absence_list', locals: { absences: @absences, show_user: true } %>
+<% end %>
+
+<%= render partial: 'hr_timeclock/absence_edit_modal' %>

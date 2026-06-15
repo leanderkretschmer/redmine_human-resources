@@ -9,28 +9,28 @@ module RedmineHumanResources
 
   class ControllerHooks < Redmine::Hook::Listener
     def controller_users_new_before_save(context = {})
-      apply_hm_settings(context)
+      apply_hr_settings(context)
     end
 
     def controller_users_update_before_save(context = {})
-      apply_hm_settings(context)
+      apply_hr_settings(context)
     end
 
     private
 
-    def apply_hm_settings(context)
+    def apply_hr_settings(context)
       params  = context[:params] || context[:request]&.params
       user    = context[:user]
       return unless params && user
 
-      attrs = params[:hm_user_setting]
+      attrs = params[:hr_user_setting]
       return if attrs.nil?
       raw = attrs.respond_to?(:to_unsafe_h) ? attrs.to_unsafe_h : attrs.to_h
 
       changes = {}
-      if raw.key?('hm_employment_type_id') || raw.key?(:hm_employment_type_id)
-        v = raw['hm_employment_type_id'] || raw[:hm_employment_type_id]
-        changes[:hm_employment_type_id] = v.to_s.strip.empty? ? nil : v
+      if raw.key?('hr_employment_type_id') || raw.key?(:hr_employment_type_id)
+        v = raw['hr_employment_type_id'] || raw[:hr_employment_type_id]
+        changes[:hr_employment_type_id] = v.to_s.strip.empty? ? nil : v
       end
       if raw.key?('region_code') || raw.key?(:region_code)
         v = raw['region_code'] || raw[:region_code]
@@ -39,21 +39,21 @@ module RedmineHumanResources
       return if changes.empty?
 
       if user.persisted?
-        HmUserSetting.for(user).update(changes)
+        HrUserSetting.for(user).update(changes)
       else
-        user.instance_variable_set(:@hm_pending_settings, changes)
+        user.instance_variable_set(:@hr_pending_settings, changes)
       end
     end
   end
 
   # When a brand-new user has been saved (controller_users_new_after_save),
-  # flush the deferred settings onto its freshly created HmUserSetting.
+  # flush the deferred settings onto its freshly created HrUserSetting.
   class CreateUserHooks < Redmine::Hook::Listener
     def controller_users_new_after_save(context = {})
       user    = context[:user]
-      pending = user&.instance_variable_get(:@hm_pending_settings)
+      pending = user&.instance_variable_get(:@hr_pending_settings)
       return unless user&.persisted? && pending.present?
-      HmUserSetting.for(user).update(pending)
+      HrUserSetting.for(user).update(pending)
     end
   end
 end

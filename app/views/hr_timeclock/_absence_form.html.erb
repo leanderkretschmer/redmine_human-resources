@@ -1,0 +1,44 @@
+<%= form_with model: absence,
+              url: form_url,
+              method: form_method,
+              scope: :hr_absence,
+              local: true,
+              html: { class: 'hr-tc-absence-form' } do |f| %>
+  <% if absence.errors.any? %>
+    <div id="errorExplanation">
+      <ul>
+        <% absence.errors.full_messages.each do |msg| %>
+          <li><%= msg %></li>
+        <% end %>
+      </ul>
+    </div>
+  <% end %>
+
+  <div class="box tabular">
+    <p>
+      <%= f.label :starts_on, l(:label_hr_absence_starts_on) %>
+      <%= f.date_field :starts_on, required: true %>
+    </p>
+    <p>
+      <%= f.label :ends_on, l(:label_hr_absence_ends_on) %>
+      <%= f.date_field :ends_on, required: true %>
+    </p>
+    <p>
+      <%= f.label :reason, l(:label_hr_absence_reason) %>
+      <%= f.text_area :reason, rows: 3, cols: 60 %>
+    </p>
+    <% if absence.vacation? %>
+      <p>
+        <%= f.label :first_day_half, l(:label_hr_absence_first_day_half) %>
+        <%= f.check_box :first_day_half %>
+        <em class="info"><%= l(:label_hr_absence_first_day_half_hint) %></em>
+      </p>
+      <p>
+        <%= f.label :last_day_half, l(:label_hr_absence_last_day_half) %>
+        <%= f.check_box :last_day_half %>
+        <em class="info"><%= l(:label_hr_absence_last_day_half_hint) %></em>
+      </p>
+    <% end %>
+  </div>
+  <p><%= submit_tag submit_label, class: 'button-positive' %></p>
+<% end %>

@@ -4,7 +4,7 @@ module RedmineHumanResources
 
     def self.touch(user)
       return unless user&.logged?
-      setting = HmUserSetting.find_or_initialize_by(user_id: user.id)
+      setting = HrUserSetting.find_or_initialize_by(user_id: user.id)
       now = Time.current
       if setting.new_record?
         setting.last_seen_at = now

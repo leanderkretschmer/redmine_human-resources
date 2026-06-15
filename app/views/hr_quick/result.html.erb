@@ -1,0 +1,39 @@
+<div class="hr-quick-card hr-quick-status-<%= @status %>">
+  <div class="hr-quick-emoji">
+    <%= case @status
+        when :success then '✓'
+        when :info    then 'ℹ'
+        when :warning then '⚠'
+        else '✕'
+        end %>
+  </div>
+  <h1 class="hr-quick-title"><%= h @title %></h1>
+  <% if @user %>
+    <p class="hr-quick-user"><%= h @user.name %></p>
+  <% end %>
+  <% if @details %>
+    <p class="hr-quick-details"><%= h @details %></p>
+  <% end %>
+  <% if @snapshot %>
+    <dl class="hr-quick-snapshot">
+      <% worked = @snapshot[:worked_seconds_today].to_i %>
+      <% target = @snapshot[:daily_target_seconds].to_i %>
+      <dt><%= l(:label_hr_timeclock_worked_today) %></dt>
+      <dd><%= hr_quick_format_hm(worked) %></dd>
+      <% if target.positive? %>
+        <dt><%= l(:label_hr_timeclock_target_today) %></dt>
+        <dd><%= hr_quick_format_hm(target) %></dd>
+        <% if worked >= target %>
+          <dt><%= l(:label_hr_timeclock_overtime) %></dt>
+          <dd>+<%= hr_quick_format_hm(worked - target) %></dd>
+        <% elsif @snapshot[:expected_end_unix] %>
+          <dt><%= l(:label_hr_timeclock_expected_end) %></dt>
+          <dd><%= Time.at(@snapshot[:expected_end_unix]).in_time_zone(@user.time_zone || Time.zone).strftime('%H:%M') %></dd>
+        <% end %>
+      <% end %>
+    </dl>
+  <% end %>
+  <p class="hr-quick-back">
+    <a href="<%= hr_timeclock_path %>"><%= l(:hr_quick_open_full) %></a>
+  </p>
+</div>

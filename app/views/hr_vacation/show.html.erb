@@ -1,0 +1,28 @@
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag 'hr_timeclock', plugin: 'redmine_human_resources' %>
+<% end %>
+
+<h2><%= l(:label_hr_vacation) %></h2>
+
+<h3><%= l(:label_hr_absence_request_new_vacation) %></h3>
+<%= render partial: 'hr_timeclock/absence_form', locals: {
+      absence: @new_absence,
+      form_url: hr_vacation_path,
+      form_method: :post,
+      submit_label: l(:button_hr_absence_request_vacation)
+    } %>
+
+<h3><%= l(:label_hr_absence_my_vacations) %></h3>
+<%= render partial: 'hr_timeclock/absence_list', locals: { absences: @absences } %>
+
+<h3><%= l(:label_hr_timeclock_calendar) %></h3>
+<%= render partial: 'hr_timeclock/calendar', locals: {
+      month: @month, entries: [], user: User.current,
+      base_path: ->(m) { hr_vacation_path(month: m.strftime('%Y-%m')) },
+      absences_by_day: @absences_by_day,
+      clickable_for_absence: true,
+      default_absence_kind: HrAbsence::KIND_VACATION
+    } %>
+
+<%= render partial: 'hr_timeclock/absence_modal' %>
+<%= render partial: 'hr_timeclock/absence_edit_modal' %>

@@ -1,0 +1,72 @@
+<div id="hr-absence-modal" class="hr-tc-popup" role="dialog" aria-modal="true" aria-hidden="true"
+     data-admin="<%= User.current.admin? ? '1' : '0' %>">
+  <div class="hr-tc-popup-inner hr-tc-absence-modal-inner">
+    <h3 class="hr-tc-absence-modal-title"><%= l(:label_hr_absence_modal_title) %></h3>
+    <%= form_with url: hr_absences_path, method: :post, scope: :hr_absence, local: true,
+                  html: { id: 'hr-absence-modal-form' } do |f| %>
+      <% if User.current.admin? %>
+        <div class="hr-tc-absence-modal-row" id="hr_absence_user_row">
+          <%= f.label :user_id, l(:label_hr_absence_for_user) %>
+          <%= f.select :user_id,
+                       ([[l(:label_hr_absence_for_self), User.current.id],
+                         [l(:label_hr_absence_for_company), 'all']] +
+                        User.active.where.not(type: 'AnonymousUser').where.not(id: User.current.id)
+                            .sorted.pluck(:firstname, :lastname, :login, :id)
+                            .map { |fn, ln, lg, id| ["#{fn} #{ln} (#{lg})", id] }),
+                       { include_blank: false },
+                       { id: 'hr_absence_user_id', selected: User.current.id } %>
+          <em class="info"><%= l(:label_hr_absence_admin_auto_approved) %></em>
+        </div>
+      <% end %>
+      <div class="hr-tc-absence-modal-row">
+        <%= f.label :kind, l(:label_hr_absence_kind) %>
+        <%= f.select :kind,
+                     (User.current.admin? ?
+                       [[l(:label_hr_vacation),   HrAbsence::KIND_VACATION],
+                        [l(:label_hr_sickness),   HrAbsence::KIND_SICKNESS],
+                        [l(:label_hr_offsite),    HrAbsence::KIND_OFFSITE],
+                        [l(:label_hr_homeoffice), HrAbsence::KIND_HOMEOFFICE],
+                        [l(:label_hr_care),       HrAbsence::KIND_CARE],
+                        [l(:label_hr_school),     HrAbsence::KIND_SCHOOL],
+                        [l(:label_hr_block),      HrAbsence::KIND_BLOCK]] :
+                       [[l(:label_hr_vacation), HrAbsence::KIND_VACATION],
+                        [l(:label_hr_sickness), HrAbsence::KIND_SICKNESS],
+                        [l(:label_hr_offsite),  HrAbsence::KIND_OFFSITE]]),
+                     {}, { id: 'hr_absence_kind' } %>
+      </div>
+      <div class="hr-tc-absence-modal-row">
+        <%= f.label :starts_on, l(:label_hr_absence_starts_on) %>
+        <%= f.date_field :starts_on, required: true, id: 'hr_absence_starts_on' %>
+      </div>
+      <div class="hr-tc-absence-modal-row">
+        <%= f.label :ends_on, l(:label_hr_absence_ends_on) %>
+        <%= f.date_field :ends_on, required: true, id: 'hr_absence_ends_on' %>
+      </div>
+      <div class="hr-tc-absence-modal-row">
+        <%= f.label :reason, l(:label_hr_absence_reason) %>
+        <%= f.text_area :reason, rows: 3, id: 'hr_absence_reason' %>
+      </div>
+      <div class="hr-tc-absence-modal-row hr-tc-offsite-only" id="hr_absence_recurrence_row" hidden>
+        <%= f.label :recurrence, l(:label_hr_recurrence) %>
+        <%= f.select :recurrence,
+                     [[l(:label_hr_recurrence_none),        HrAbsence::RECURRENCE_NONE],
+                      [l(:label_hr_recurrence_weekly),      HrAbsence::RECURRENCE_WEEKLY],
+                      [l(:label_hr_recurrence_biweekly),    HrAbsence::RECURRENCE_BIWEEKLY],
+                      [l(:label_hr_recurrence_four_weekly), HrAbsence::RECURRENCE_4_WEEKLY],
+                      [l(:label_hr_recurrence_monthly),     HrAbsence::RECURRENCE_MONTHLY],
+                      [l(:label_hr_recurrence_quarterly),   HrAbsence::RECURRENCE_QUARTERLY],
+                      [l(:label_hr_recurrence_half_yearly), HrAbsence::RECURRENCE_HALFYEARLY],
+                      [l(:label_hr_recurrence_yearly),      HrAbsence::RECURRENCE_YEARLY]],
+                     {}, { id: 'hr_absence_recurrence' } %>
+      </div>
+      <div class="hr-tc-absence-modal-row hr-tc-offsite-only" id="hr_absence_recurrence_until_row" hidden>
+        <%= f.label :recurrence_until, l(:label_hr_recurrence_until) %>
+        <%= f.date_field :recurrence_until, id: 'hr_absence_recurrence_until' %>
+      </div>
+      <div class="hr-tc-absence-modal-actions">
+        <%= submit_tag l(:button_hr_absence_request), class: 'button-positive' %>
+        <button type="button" class="hr-tc-absence-modal-cancel"><%= l(:button_cancel) %></button>
+      </div>
+    <% end %>
+  </div>
+</div>

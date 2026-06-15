@@ -38,8 +38,8 @@ module RedmineHumanResources
     # state-specific set comes from OpenHolidays (cached); otherwise we use the
     # federal set. Falls back to federal if the API/cache yields nothing.
     def holidays_for(year, region_code: nil)
-      if region_code.present? && defined?(HmHolidayCache)
-        cached = HmHolidayCache.holidays(region_code, year)
+      if region_code.present? && defined?(HrHolidayCache)
+        cached = HrHolidayCache.holidays(region_code, year)
         return cached if cached && cached.any?
       end
       federal_holidays_for(year)

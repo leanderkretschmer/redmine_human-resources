@@ -1,0 +1,96 @@
+<div id="hr-day-detail-modal" class="hr-tc-popup" role="dialog" aria-modal="true" aria-hidden="true"
+     data-url-base="<%= day_hr_timeclock_path(date: '1970-01-01') %>"
+     data-url-placeholder="1970-01-01"
+     data-new-url="<%= hr_absences_path %>"
+     data-edit-label="<%= l(:button_hr_absence_edit) %>"
+     data-delete-label="<%= l(:button_hr_absence_delete) %>"
+     data-save-label="<%= l(:button_hr_absence_save) %>"
+     data-cancel-label="<%= l(:button_cancel) %>"
+     data-confirm-delete="<%= l(:text_are_you_sure) %>"
+     data-label-from="<%= l(:label_hr_absence_starts_on) %>"
+     data-label-to="<%= l(:label_hr_absence_ends_on) %>"
+     data-label-reason="<%= l(:label_hr_absence_reason) %>"
+     data-label-not-found="<%= l(:notice_hr_absence_not_found) %>">
+  <div class="hr-tc-popup-inner hr-tc-day-detail-inner">
+    <h3 class="hr-tc-day-detail-title">—</h3>
+    <div class="hr-tc-day-detail-loading"><%= l(:label_hr_day_detail_loading) %></div>
+    <div class="hr-tc-day-detail-events" hidden>
+      <section class="hr-tc-day-detail-section hr-tc-day-detail-timeline-section">
+        <h4><%= l(:label_hr_day_detail_timeline) %></h4>
+        <p class="hr-tc-day-detail-hint"><%= l(:label_hr_day_detail_timeline_hint) %></p>
+        <div class="hr-tc-day-timeline" data-bind="timeline" data-start-hour="0" data-end-hour="24">
+          <div class="hr-tc-day-timeline-axis" data-bind="timeline-axis"></div>
+          <div class="hr-tc-day-timeline-track">
+            <div class="hr-tc-day-timeline-bands" data-bind="timeline-bands"></div>
+            <div class="hr-tc-day-timeline-selection" data-bind="timeline-selection" hidden></div>
+          </div>
+        </div>
+        <div class="hr-tc-day-timeline-popover" data-bind="timeline-popover" hidden>
+          <div class="hr-tc-day-timeline-popover-row">
+            <label><%= l(:label_hr_absence_kind) %></label>
+            <select data-bind="popover-kind">
+              <option value="<%= HrAbsence::KIND_SICKNESS %>"><%= HrAbsence.kind_label(HrAbsence::KIND_SICKNESS) %></option>
+              <option value="<%= HrAbsence::KIND_BLOCK %>"><%= HrAbsence.kind_label(HrAbsence::KIND_BLOCK) %></option>
+              <option value="<%= HrAbsence::KIND_SCHOOL %>"><%= HrAbsence.kind_label(HrAbsence::KIND_SCHOOL) %></option>
+              <option value="<%= HrAbsence::KIND_OFFSITE %>"><%= HrAbsence.kind_label(HrAbsence::KIND_OFFSITE) %></option>
+            </select>
+          </div>
+          <div class="hr-tc-day-timeline-popover-row">
+            <label data-bind="popover-from-label"><%= l(:label_hr_absence_starts_on) %></label>
+            <input type="time" data-bind="popover-from" step="60">
+            <label data-bind="popover-to-label"><%= l(:label_hr_absence_ends_on) %></label>
+            <input type="time" data-bind="popover-to" step="60">
+          </div>
+          <div class="hr-tc-day-timeline-popover-row">
+            <label><%= l(:label_hr_absence_reason) %></label>
+            <input type="text" data-bind="popover-reason" maxlength="200">
+          </div>
+          <div class="hr-tc-day-timeline-popover-row" data-bind="popover-recurrence-row" hidden>
+            <label><%= l(:label_hr_recurrence) %></label>
+            <select data-bind="popover-recurrence">
+              <option value="<%= HrAbsence::RECURRENCE_NONE %>"><%= l(:label_hr_recurrence_none) %></option>
+              <option value="<%= HrAbsence::RECURRENCE_WEEKLY %>"><%= l(:label_hr_recurrence_weekly) %></option>
+              <option value="<%= HrAbsence::RECURRENCE_BIWEEKLY %>"><%= l(:label_hr_recurrence_biweekly) %></option>
+              <option value="<%= HrAbsence::RECURRENCE_4_WEEKLY %>"><%= l(:label_hr_recurrence_four_weekly) %></option>
+              <option value="<%= HrAbsence::RECURRENCE_MONTHLY %>"><%= l(:label_hr_recurrence_monthly) %></option>
+              <option value="<%= HrAbsence::RECURRENCE_QUARTERLY %>"><%= l(:label_hr_recurrence_quarterly) %></option>
+              <option value="<%= HrAbsence::RECURRENCE_HALFYEARLY %>"><%= l(:label_hr_recurrence_half_yearly) %></option>
+              <option value="<%= HrAbsence::RECURRENCE_YEARLY %>"><%= l(:label_hr_recurrence_yearly) %></option>
+            </select>
+          </div>
+          <div class="hr-tc-day-timeline-popover-row" data-bind="popover-recurrence-until-row" hidden>
+            <label><%= l(:label_hr_recurrence_until) %></label>
+            <input type="date" data-bind="popover-recurrence-until">
+          </div>
+          <div class="hr-tc-day-timeline-popover-actions">
+            <button type="button" class="button-positive" data-bind="popover-save"><%= l(:button_hr_absence_save) %></button>
+            <button type="button" data-bind="popover-cancel"><%= l(:button_cancel) %></button>
+          </div>
+        </div>
+      </section>
+      <section class="hr-tc-day-detail-section hr-tc-day-detail-work">
+        <h4><%= l(:label_hr_day_detail_work) %></h4>
+        <ul class="hr-tc-day-detail-list" data-bind="work"></ul>
+        <p class="hr-tc-day-detail-empty" data-bind="work-empty" hidden><%= l(:label_hr_day_detail_no_work) %></p>
+      </section>
+      <section class="hr-tc-day-detail-section hr-tc-day-detail-absences">
+        <h4><%= l(:label_hr_day_detail_absences) %></h4>
+        <ul class="hr-tc-day-detail-list" data-bind="absences"></ul>
+        <p class="hr-tc-day-detail-empty" data-bind="absences-empty" hidden><%= l(:label_hr_day_detail_no_absences) %></p>
+      </section>
+    </div>
+    <div class="hr-tc-day-detail-actions">
+      <button type="button" class="hr-tc-day-detail-new" data-default-kind="<%= HrAbsence::KIND_VACATION %>"><%= l(:button_hr_day_detail_new_vacation) %></button>
+      <button type="button" class="hr-tc-day-detail-new" data-default-kind="<%= HrAbsence::KIND_SICKNESS %>"><%= l(:button_hr_day_detail_new_sickness) %></button>
+      <button type="button" class="hr-tc-day-detail-new" data-default-kind="<%= HrAbsence::KIND_OFFSITE %>"><%= l(:button_hr_day_detail_new_offsite) %></button>
+      <button type="button" class="hr-tc-popup-close hr-tc-day-detail-close"><%= l(:button_close) %></button>
+    </div>
+  </div>
+</div>
+
+<ul id="hr-tc-context-menu" class="hr-tc-context-menu" hidden>
+  <li data-action="new-vacation"><%= l(:button_hr_day_detail_new_vacation) %></li>
+  <li data-action="new-sickness"><%= l(:button_hr_day_detail_new_sickness) %></li>
+  <li data-action="new-offsite"><%= l(:button_hr_day_detail_new_offsite) %></li>
+  <li data-action="detail"><%= l(:button_hr_day_detail_show) %></li>
+</ul>

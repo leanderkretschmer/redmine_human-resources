@@ -2,7 +2,7 @@ module RedmineHumanResources
   class Snapshot
     def initialize(user, user_setting = nil, now: Time.current)
       @user    = user
-      @setting = user_setting || HmUserSetting.for(user)
+      @setting = user_setting || HrUserSetting.for(user)
       @tz      = user.time_zone || Time.zone
       @now     = now
     end
@@ -16,15 +16,15 @@ module RedmineHumanResources
       poll_interval        = positive_int(settings['poll_interval_seconds']) || 30
       break_reminder_secs  = (positive_int(settings['break_reminder_minutes']) || 330) * 60
 
-      open_entry = HmWorkEntry.for_user(@user).open.order(started_at: :desc).first
+      open_entry = HrWorkEntry.for_user(@user).open.order(started_at: :desc).first
       if open_entry &&
          !open_entry.overdue?(as_of: @now) &&
          open_entry.auto_close_overlong_break!(max_break_seconds, as_of: @now)
-        open_entry = HmWorkEntry.for_user(@user).open.order(started_at: :desc).first
+        open_entry = HrWorkEntry.for_user(@user).open.order(started_at: :desc).first
       end
 
       overdue          = open_entry && open_entry.overdue?(as_of: @now)
-      todays_completed = HmWorkEntry.for_user(@user).completed.on_day(@tz, today).to_a
+      todays_completed = HrWorkEntry.for_user(@user).completed.on_day(@tz, today).to_a
       worked_completed  = todays_completed.sum { |e| e.net_seconds(as_of: @now) }
       break_total_today = todays_completed.sum { |e| e.total_break_seconds(as_of: @now) }
 
@@ -80,12 +80,12 @@ module RedmineHumanResources
         poll_interval_seconds: poll_interval,
         monthly_plan: monthly_plan_payload(today),
         labels: {
-          target_reached:   I18n.t(:hm_timeclock_notify_target_reached),
-          break_over:       I18n.t(:hm_timeclock_notify_break_over),
-          break_reminder:   I18n.t(:hm_timeclock_notify_break_reminder),
-          needs_correction: I18n.t(:label_hm_timeclock_needs_correction),
-          target_done:      I18n.t(:label_hm_timeclock_target_done),
-          overtime_prefix:  I18n.t(:label_hm_timeclock_overtime_prefix)
+          target_reached:   I18n.t(:hr_timeclock_notify_target_reached),
+          break_over:       I18n.t(:hr_timeclock_notify_break_over),
+          break_reminder:   I18n.t(:hr_timeclock_notify_break_reminder),
+          needs_correction: I18n.t(:label_hr_timeclock_needs_correction),
+          target_done:      I18n.t(:label_hr_timeclock_target_done),
+          overtime_prefix:  I18n.t(:label_hr_timeclock_overtime_prefix)
         }
       }
     end

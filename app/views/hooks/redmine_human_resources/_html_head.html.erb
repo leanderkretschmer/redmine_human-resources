@@ -1,30 +1,30 @@
 <% if User.current.logged? %>
-  <%= stylesheet_link_tag 'hm_timeclock', plugin: 'redmine_human_resources' %>
-  <%= javascript_include_tag 'hm_timeclock', plugin: 'redmine_human_resources' %>
+  <%= stylesheet_link_tag 'hr_timeclock', plugin: 'redmine_human_resources' %>
+  <%= javascript_include_tag 'hr_timeclock', plugin: 'redmine_human_resources' %>
   <%
     poll = (Setting.plugin_redmine_human_resources || {})['poll_interval_seconds'].to_i
     poll = 30 unless poll.positive?
     snapshot = (RedmineHumanResources::Snapshot.new(User.current).to_h rescue nil)
-    user_setting = (HmUserSetting.for(User.current) rescue nil)
+    user_setting = (HrUserSetting.for(User.current) rescue nil)
     menu_items = [
-      { url: hr_timeclock_path,   label: I18n.t(:label_hm_hr_timeclock) },
-      { url: hr_vacation_path,    label: I18n.t(:label_hm_hr_vacation) },
-      { url: hr_sickness_path,    label: I18n.t(:label_hm_hr_sickness) },
-      { url: hr_homeoffice_path,  label: I18n.t(:label_hm_hr_homeoffice) }
+      { url: hr_timeclock_path,   label: I18n.t(:label_hr_timeclock) },
+      { url: hr_vacation_path,    label: I18n.t(:label_hr_vacation) },
+      { url: hr_sickness_path,    label: I18n.t(:label_hr_sickness) },
+      { url: hr_homeoffice_path,  label: I18n.t(:label_hr_homeoffice) }
     ]
     if user_setting && user_setting.care_visible?
-      menu_items << { url: hr_care_path, label: I18n.t(:label_hm_hr_care) }
+      menu_items << { url: hr_care_path, label: I18n.t(:label_hr_care) }
     end
     if (user_setting && user_setting.planning_eligible? rescue false)
-      menu_items << { url: hr_planning_path, label: I18n.t(:label_hm_hr_planning) }
+      menu_items << { url: hr_planning_path, label: I18n.t(:label_hr_planning) }
     end
     if User.current.admin?
-      menu_items << { url: hr_admin_path, label: I18n.t(:label_hm_hr_admin) }
+      menu_items << { url: hr_admin_path, label: I18n.t(:label_hr_admin) }
     end
   %>
   <%= javascript_tag(
-        "window.HmTimeclock = window.HmTimeclock || {};\n" \
-        "window.HmTimeclock.bootstrap = {\n" \
+        "window.HrTimeclock = window.HrTimeclock || {};\n" \
+        "window.HrTimeclock.bootstrap = {\n" \
         "  statusUrl: '#{j hr_timeclock_status_path(format: :json)}',\n" \
         "  pollIntervalSeconds: #{poll},\n" \
         "  snapshot: #{snapshot ? snapshot.to_json : 'null'},\n" \

@@ -1,0 +1,16 @@
+<%= l(:mail_body_hr_absence_edited_intro,
+       user: @user.name,
+       editor: @editor.name,
+       kind: HrAbsence.kind_label(@absence.kind)) %>
+
+<%= l(:label_hr_absence_period) %>: <%= I18n.l(@absence.starts_on) %> – <%= I18n.l(@absence.ends_on) %>
+<%= l(:label_hr_absence_status) %>: <%= HrAbsence.status_label(@absence.status) %>
+<%= l(:mail_label_working_days, count: @breakdown[:working]) %>
+
+<% if @absence.reason.present? %>
+<%= l(:label_hr_absence_reason) %>:
+<%= @absence.reason %>
+<% end %>
+
+---
+<%= l(:mail_link_view_in_redmine) %>: <%= url_for(controller: 'hr_vacation', action: 'show', only_path: false) %>

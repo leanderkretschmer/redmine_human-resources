@@ -1,0 +1,90 @@
+<% if absences.empty? %>
+  <p class="nodata"><%= l(:label_hr_absence_none) %></p>
+<% else %>
+  <table class="list">
+    <thead>
+      <tr>
+        <th><%= l(:label_hr_absence_period) %></th>
+        <th><%= l(:label_hr_absence_days) %></th>
+        <th><%= l(:label_hr_absence_status) %></th>
+        <th><%= l(:label_hr_absence_reason) %></th>
+        <th><%= l(:label_hr_absence_history) %></th>
+        <% if local_assigns[:show_user] %>
+          <th><%= l(:label_hr_admin_user) %></th>
+        <% end %>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% absences.each do |a| %>
+        <tr class="hr-tc-abs-row hr-tc-abs-<%= a.status %>">
+          <td>
+            <%= I18n.l(a.starts_on) %><% if a.starts_on != a.ends_on %> — <%= I18n.l(a.ends_on) %><% end %>
+            <% if a.partial? %>
+              <span class="hr-tc-partial-time">· <%= h a.start_time %> – <%= h a.end_time %></span>
+            <% end %>
+          </td>
+          <td>
+            <% if a.vacation? %>
+              <%= l(:label_hr_absence_working_days_value, days: hr_format_days(a.working_days_value)) %>
+              <% if a.first_day_half? || a.last_day_half? %>
+                <span class="hr-tc-half-marker" title="<%= l(:label_hr_absence_first_day_half) %>"><%= l(:label_hr_absence_half_day_marker) %></span>
+              <% end %>
+              <% rem = HrAbsence.vacation_remaining(a.user, a.starts_on.year) %>
+              <span class="hr-tc-vacation-remaining" title="<%= l(:label_hr_vacation_remaining_full, used: hr_format_days(rem[:used]), allowed: rem[:allowed], year: a.starts_on.year) %>">
+                · <%= l(:label_hr_vacation_remaining_short, remaining: hr_format_days(rem[:remaining]), allowed: rem[:allowed]) %>
+              </span>
+            <% else %>
+              <%= a.days %>
+            <% end %>
+          </td>
+          <td>
+            <span class="hr-tc-abs-pill hr-tc-abs-pill-<%= a.kind %><%= ' hr-tc-abs-pill-pending' if a.requested? %>">
+              <%= HrAbsence.kind_label(a.kind) %><% unless a.approved? %> · <%= HrAbsence.status_label(a.status) %><% end %>
+            </span>
+          </td>
+          <td><%= h a.reason %></td>
+          <td class="hr-tc-abs-audit-cell">
+            <% audits = a.audits.includes(:actor).to_a %>
+            <% if audits.empty? && a.approver %>
+              <div class="hr-tc-abs-audit-entry">
+                <strong><%= HrAbsenceAudit.action_label(a.approved? ? 'approved' : 'rejected') %>:</strong>
+                <%= h(a.approver.name) %>
+                <small>(<%= format_time(a.approved_at) if a.approved_at %>)</small>
+              </div>
+            <% end %>
+            <% audits.each do |audit| %>
+              <div class="hr-tc-abs-audit-entry hr-tc-abs-audit-<%= audit.action %>">
+                <strong><%= HrAbsenceAudit.action_label(audit.action) %>:</strong>
+                <%= h(audit.actor&.name || '?') %>
+                <small>(<%= format_time(audit.created_at) %>)</small>
+              </div>
+            <% end %>
+          </td>
+          <% if local_assigns[:show_user] %>
+            <td><%= link_to h(a.user.name), hr_admin_user_path(user_id: a.user.id) %></td>
+          <% end %>
+          <td class="hr-tc-abs-actions">
+            <% if User.current.admin? && a.requested? %>
+              <%= button_to l(:button_hr_absence_approve), approve_hr_absence_path(id: a.id), method: :post, class: 'button-positive' %>
+              <%= button_to l(:button_hr_absence_reject),  reject_hr_absence_path(id: a.id),  method: :post, class: 'button-negative' %>
+            <% end %>
+            <% if (a.user_id == User.current.id && (a.requested? || a.sickness? || a.offsite?)) || User.current.admin? %>
+              <a href="#" class="icon icon-edit hr-tc-edit-absence-btn"
+                 data-absence-id="<%= a.id %>"
+                 data-update-url="<%= hr_absence_path(id: a.id) %>"
+                 data-starts-on="<%= a.starts_on.iso8601 %>"
+                 data-ends-on="<%= a.ends_on.iso8601 %>"
+                 data-reason="<%= h a.reason %>"
+                 data-status="<%= a.status %>"
+                 data-kind="<%= a.kind %>"
+                 data-kind-label="<%= h HrAbsence.kind_label(a.kind) %>"><%= l(:button_hr_absence_edit) %></a>
+              <%= button_to l(:button_hr_absence_delete), hr_absence_path(id: a.id), method: :delete, class: 'icon icon-del',
+                            data: { confirm: l(:text_are_you_sure) } %>
+            <% end %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>

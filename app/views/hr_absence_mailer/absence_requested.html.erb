@@ -1,0 +1,52 @@
+<p><%= l(:mail_body_hr_absence_requested_intro,
+        user: h(@user.name),
+        kind: h(HrAbsence.kind_label(@absence.kind))).html_safe %></p>
+
+<p>
+  <strong><%= l(:label_hr_absence_period) %>:</strong>
+  <%= I18n.l(@absence.starts_on) %> – <%= I18n.l(@absence.ends_on) %>
+</p>
+
+<h3><%= l(:mail_label_breakdown) %></h3>
+<ul>
+  <li><%= l(:mail_label_working_days, count: @breakdown[:working]) %></li>
+  <li><%= l(:mail_label_weekend_days, count: @breakdown[:weekend]) %></li>
+  <li>
+    <%= l(:mail_label_holiday_days, count: @breakdown[:holidays].size) %>
+    <% if @breakdown[:holidays].any? %>
+      <ul>
+        <% @breakdown[:holidays].each do |h| %>
+          <li><%= I18n.l(h[:date]) %>: <%= h h[:name] %></li>
+        <% end %>
+      </ul>
+    <% end %>
+  </li>
+  <li><strong><%= l(:mail_label_total_days, count: @breakdown[:total]) %></strong></li>
+</ul>
+
+<% if @absence.reason.present? %>
+  <h3><%= l(:label_hr_absence_reason) %></h3>
+  <p style="white-space: pre-wrap;"><%= h @absence.reason %></p>
+<% end %>
+
+<h3><%= l(:mail_label_conflicts_heading) %></h3>
+<% if @conflicts.any? %>
+  <p><%= l(:mail_label_conflicts, padding: ::RedmineHumanResources::Notifications.conflict_padding_days) %></p>
+  <ul>
+    <% @conflicts.each do |c| %>
+      <li>
+        <strong><%= h c.user.name %></strong>:
+        <%= I18n.l(c.starts_on) %> – <%= I18n.l(c.ends_on) %>
+        (<%= c.days %> <%= l(:label_hr_absence_days) %>)
+      </li>
+    <% end %>
+  </ul>
+<% else %>
+  <p><%= l(:mail_label_no_conflicts, padding: ::RedmineHumanResources::Notifications.conflict_padding_days) %></p>
+<% end %>
+
+<hr>
+<p>
+  <%= link_to l(:mail_link_view_in_redmine),
+              url_for(controller: 'hr_admin', action: 'index', only_path: false) %>
+</p>

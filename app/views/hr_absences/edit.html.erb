@@ -1,0 +1,12 @@
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag 'hr_timeclock', plugin: 'redmine_human_resources' %>
+<% end %>
+
+<h2><%= l(:label_hr_absence_edit_title, kind: HrAbsence.kind_label(@absence.kind)) %></h2>
+
+<%= render partial: 'hr_timeclock/absence_form', locals: {
+      absence: @absence,
+      form_url: hr_absence_path(id: @absence.id),
+      form_method: :patch,
+      submit_label: l(:button_hr_absence_save)
+    } %>

@@ -1,0 +1,45 @@
+<% content_for :header_tags do %>
+  <%= stylesheet_link_tag 'hr_timeclock', plugin: 'redmine_human_resources' %>
+<% end %>
+
+<h2><%= l(:label_hr_care) %></h2>
+
+<p class="hr-tc-section-hint"><%= l(:hint_hr_care_legal_basis) %></p>
+
+<div class="hr-tc-meta">
+  <div>
+    <strong><%= l(:label_hr_care_allowed_hours) %>:</strong>
+    <%= (@remaining[:allowed_minutes] / 60.0).round(1) %>
+  </div>
+  <div>
+    <strong><%= l(:label_hr_care_used_hours) %>:</strong>
+    <%= (@remaining[:used_minutes] / 60.0).round(1) %>
+  </div>
+  <div>
+    <strong><%= l(:label_hr_care_remaining_hours) %>:</strong>
+    <%= (@remaining[:remaining_minutes] / 60.0).round(1) %>
+  </div>
+</div>
+
+<h3><%= l(:label_hr_absence_request_new_care) %></h3>
+<%= render partial: 'hr_timeclock/absence_form', locals: {
+      absence: @new_absence,
+      form_url: hr_care_path,
+      form_method: :post,
+      submit_label: l(:button_hr_absence_request_care)
+    } %>
+
+<h3><%= l(:label_hr_absence_my_care) %></h3>
+<%= render partial: 'hr_timeclock/absence_list', locals: { absences: @absences } %>
+
+<h3><%= l(:label_hr_timeclock_calendar) %></h3>
+<%= render partial: 'hr_timeclock/calendar', locals: {
+      month: @month, entries: [], user: User.current,
+      base_path: ->(m) { hr_care_path(month: m.strftime('%Y-%m')) },
+      absences_by_day: @absences_by_day,
+      clickable_for_absence: true,
+      default_absence_kind: HrAbsence::KIND_CARE
+    } %>
+
+<%= render partial: 'hr_timeclock/absence_modal' %>
+<%= render partial: 'hr_timeclock/absence_edit_modal' %>
