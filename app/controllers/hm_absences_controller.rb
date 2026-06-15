@@ -189,21 +189,31 @@ class HmAbsencesController < ApplicationController
 
   # Translate the modal's user_id selection into the list of users we'll book
   # against. Non-admins are pinned to themselves; admins target a specific
-  # user (numeric id) or the entire active roster (explicit "all" sentinel).
-  # Anything else — including a missing field, which is the case for the
-  # day-detail timeline popover that has no user picker — falls back to the
-  # current actor so admins booking their own time aren't accidentally
-  # spamming every employee.
+  # user (numeric id) or the HR roster (explicit "all" sentinel — same set
+  # the admin dashboard's chart rows are drawn from: anyone with a work
+  # entry or absence on record). Anything else — including a missing field,
+  # which is the case for the day-detail timeline popover that has no user
+  # picker — falls back to the current actor so admins booking their own
+  # time aren't accidentally spamming every employee.
   def resolve_target_user_ids(raw_value)
     return [User.current.id] unless User.current.admin?
     s = raw_value.to_s.strip
     return [User.current.id] if s.empty?
-    return User.active.where.not(type: 'AnonymousUser').pluck(:id) if s == 'all'
+    return hr_user_ids if s == 'all'
     id = s.to_i
     return [] unless id.positive?
     User.where(id: id).pluck(:id)
   rescue StandardError
     []
+  end
+
+  # The set of HR users — same definition as HmAdminController#index uses to
+  # populate the bar-graph rows: every active, non-anonymous user that has
+  # at least one HmWorkEntry or HmAbsence on record.
+  def hr_user_ids
+    ids = (HmWorkEntry.distinct.pluck(:user_id) + HmAbsence.distinct.pluck(:user_id)).uniq
+    return [] if ids.empty?
+    User.active.where(id: ids).where.not(type: 'AnonymousUser').pluck(:id)
   end
 
   def find_absence
