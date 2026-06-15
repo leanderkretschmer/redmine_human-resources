@@ -8,19 +8,28 @@ class HmTimeclockController < ApplicationController
     tz = User.current.time_zone || Time.zone
     today = Time.use_zone(tz) { Time.zone.today }
     @today = today
-    @month = parse_month_param || today.beginning_of_month
+    @cal_view = %w[month week].include?(params[:view]) ? params[:view] : 'month'
+    @focus_date = parse_focus_param || today
+    @month = parse_month_param || (@cal_view == 'week' ? @focus_date.beginning_of_month : today.beginning_of_month)
+    if @cal_view == 'week'
+      cal_from = @focus_date.beginning_of_week
+      cal_to   = @focus_date.end_of_week
+    else
+      cal_from = @month
+      cal_to   = @month.end_of_month
+    end
     @entries_today = HmWorkEntry.for_user(User.current).on_day(tz, today).order(:started_at).to_a
     @entries_month = HmWorkEntry.for_user(User.current)
-                                .in_range(@month.in_time_zone(tz).beginning_of_day,
-                                          @month.end_of_month.in_time_zone(tz).end_of_day)
+                                .in_range(cal_from.in_time_zone(tz).beginning_of_day,
+                                          cal_to.in_time_zone(tz).end_of_day)
                                 .order(:started_at).to_a
-    overlay = HmAbsence.for_user(User.current).active.overlapping(@month, @month.end_of_month).to_a
-    @absences_by_day = HmAbsence.build_by_day(overlay, @month, @month.end_of_month)
+    overlay = HmAbsence.for_user(User.current).active.overlapping(cal_from, cal_to).to_a
+    @absences_by_day = HmAbsence.build_by_day(overlay, cal_from, cal_to)
     @lecture_periods = HmLecturePeriod.for_user(User.current)
-                                      .where('starts_on <= ? AND ends_on >= ?', @month.end_of_month, @month)
+                                      .where('starts_on <= ? AND ends_on >= ?', cal_to, cal_from)
                                       .to_a
     @monthly_plan    = HmMonthlyPlan.for_user(User.current).for_period(@month.year, @month.month).first
-    @holidays_by_day = compute_personal_holidays(User.current, @month)
+    @holidays_by_day = compute_personal_holidays_range(User.current, cal_from, cal_to)
     @snapshot = build_snapshot
 
     @chart_view = %w[today week month].include?(params[:chart_view]) ? params[:chart_view] : 'today'
@@ -219,11 +228,9 @@ class HmTimeclockController < ApplicationController
   # { Date => [{ name:, regions: }, …] }. When the user has no region set we
   # still show the federal (bundesweit) holidays — better than a silently
   # empty calendar.
-  def compute_personal_holidays(user, month_start)
+  def compute_personal_holidays_range(user, range_from, range_to)
     setting = HmUserSetting.for(user)
     region  = setting.effective_region_code.presence
-    range_from = month_start
-    range_to   = month_start.end_of_month
     year_maps = {}
     out = {}
     (range_from..range_to).each do |d|
@@ -235,6 +242,13 @@ class HmTimeclockController < ApplicationController
   rescue StandardError => e
     Rails.logger.warn("[hr] personal holiday lookup failed: #{e.message}") if defined?(Rails)
     {}
+  end
+
+  def parse_focus_param
+    return nil unless params[:focus].present?
+    Date.parse(params[:focus].to_s)
+  rescue ArgumentError
+    nil
   end
 
   def compute_personal_chart_metrics(user, range_from, range_to, tz)

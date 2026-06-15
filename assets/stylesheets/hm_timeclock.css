@@ -288,6 +288,127 @@ table.hm-tc-calendar-grid {
 }
 .hm-tc-cal-plan-note { color: #5b6776; font-style: italic; margin-left: 0.3em; }
 
+/* ======= View-mode toggle (month / week) ======= */
+.hm-tc-cal-view-toggle {
+  display: inline-flex;
+  gap: 0.2em;
+  margin: 0 0 0.4em;
+  border: 1px solid #cdd6e0;
+  border-radius: 18px;
+  padding: 2px;
+  background: #fff;
+}
+.hm-tc-cal-view-toggle-btn {
+  display: inline-block;
+  padding: 0.25em 0.9em;
+  border-radius: 16px;
+  color: #44505f;
+  text-decoration: none;
+  font-size: 0.85em;
+}
+.hm-tc-cal-view-toggle-btn.active { background: #2980b9; color: #fff; }
+.hm-tc-cal-view-toggle-btn:not(.active):hover { background: #eef3f7; }
+
+/* ======= Week view (7-day timeline) ======= */
+.hm-tc-cal-week {
+  display: grid;
+  grid-template-columns: 3.2em repeat(7, 1fr);
+  gap: 1px;
+  background: #d5dbe0;
+  border: 1px solid #d5dbe0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 0.3em;
+}
+.hm-tc-cal-week-hours-axis {
+  position: relative;
+  background: #f7f8fa;
+  min-height: 480px;
+}
+.hm-tc-cal-week-hour-tick {
+  position: absolute;
+  left: 0;
+  right: 4px;
+  transform: translateY(-50%);
+  font-size: 0.7em;
+  color: #6c7a89;
+  text-align: right;
+  padding-right: 4px;
+}
+.hm-tc-cal-week-col {
+  background: #fff;
+  display: flex;
+  flex-direction: column;
+  min-height: 480px;
+  position: relative;
+}
+.hm-tc-cal-week-col.hm-tc-cal-clickable { cursor: pointer; }
+.hm-tc-cal-week-col.hm-tc-cal-today .hm-tc-cal-week-col-head { background: #fffbea; }
+.hm-tc-cal-week-col.hm-tc-cal-weekend { background: #f9fafb; }
+.hm-tc-cal-week-col.hm-tc-cal-holiday .hm-tc-cal-week-col-date { color: #c0392b; font-weight: 700; }
+.hm-tc-cal-week-col-head {
+  padding: 0.35em 0.5em;
+  border-bottom: 1px solid #e3e7eb;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.05em;
+  background: #fbfcfd;
+}
+.hm-tc-cal-week-col-day { font-size: 0.72em; color: #6c7a89; text-transform: uppercase; letter-spacing: 0.05em; }
+.hm-tc-cal-week-col-date { font-weight: 700; color: #2c3e50; font-size: 0.95em; text-decoration: none; }
+.hm-tc-cal-week-col-date:hover { text-decoration: underline; color: #1abc9c; }
+.hm-tc-cal-week-fullday {
+  padding: 0.25em 0.3em;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px;
+  border-bottom: 1px solid #eef0f3;
+  background: #fff;
+}
+.hm-tc-cal-week-fullday .hm-tc-abs-pill {
+  font-size: 0.7em;
+  padding: 1px 5px;
+}
+.hm-tc-cal-week-hours {
+  position: relative;
+  flex: 1 1 auto;
+}
+.hm-tc-cal-week-hour-rule {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 0;
+  border-top: 1px dashed #eef0f3;
+}
+.hm-tc-cal-week-band {
+  position: absolute;
+  left: 2px;
+  right: 2px;
+  border-radius: 3px;
+  padding: 1px 4px;
+  font-size: 0.7em;
+  color: #fff;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+}
+.hm-tc-cal-week-band-label { display: block; line-height: 1.1; }
+.hm-tc-cal-week-band-work       { background: #2980b9; }
+.hm-tc-cal-week-band-vacation   { background: #3498db; }
+.hm-tc-cal-week-band-sickness   { background: #e74c3c; }
+.hm-tc-cal-week-band-offsite    { background: #f1c40f; color: #2c3e50; }
+.hm-tc-cal-week-band-school     { background: #16a085; }
+.hm-tc-cal-week-band-blocked    { background: #e67e22; }
+.hm-tc-cal-week-band-homeoffice { background: #8e44ad; }
+.hm-tc-cal-week-band-workday    { background: #27ae60; }
+.hm-tc-cal-week-band-care       { background: #c0392b; }
+
+.hm-tc-abs-pill-holiday        { background: #c0392b; }
+.hm-tc-abs-pill-lecture        { background: #1abc9c; }
+.hm-tc-abs-pill-lecture-break  { background: #d8f3ec; color: #1abc9c; border: 1px dashed #1abc9c; }
+
 /* ======= Holiday click-through popover (admin global calendar) ======= */
 .hm-tc-holiday-popover {
   position: absolute;
@@ -382,6 +503,7 @@ table.hm-tc-calendar-grid {
 .hm-tc-cal-user-pill-blocked  { background: #e67e22; }
 .hm-tc-cal-user-pill-workday  { background: #27ae60; }
 .hm-tc-cal-user-pill-homeoffice { background: #8e44ad; }
+.hm-tc-cal-user-pill-overflow { background: #34495e; cursor: help; }
 .hm-tc-cal-user-pill-pending {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.45) 4px, rgba(255,255,255,0.45) 8px);
   border: 1px dashed rgba(255,255,255,0.85);

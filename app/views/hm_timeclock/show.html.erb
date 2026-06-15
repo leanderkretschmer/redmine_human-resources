@@ -143,6 +143,8 @@
 <%= render partial: 'calendar', locals: {
       month: @month, entries: @entries_month, user: User.current,
       base_path: ->(m) { hr_timeclock_path(month: m.strftime('%Y-%m')) },
+      week_path: ->(d) { hr_timeclock_path(view: 'week', focus: d.iso8601) },
+      view_mode: @cal_view, focus_date: @focus_date,
       absences_by_day: @absences_by_day,
       lecture_periods: @lecture_periods,
       monthly_plan: @monthly_plan,

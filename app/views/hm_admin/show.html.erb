@@ -219,7 +219,6 @@
 
 <% if @user_setting.allows_monthly_plan? %>
   <h3><%= l(:label_hm_admin_lecture_periods) %></h3>
-  <p class="hm-tc-section-hint"><%= l(:label_hm_admin_lecture_periods_hint) %></p>
   <% if @lecture_periods.any? %>
     <div class="hm-tc-edit-list hm-tc-lecture-list">
       <div class="hm-tc-edit-row hm-tc-edit-row-head">

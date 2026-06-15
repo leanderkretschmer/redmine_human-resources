@@ -101,13 +101,17 @@
 
 <h3><%= l(:label_hm_admin_global_calendar) %></h3>
 <%= render partial: 'hm_timeclock/calendar', locals: {
-      month: @month, entries: [], user: nil,
+      month: @month,
+      entries: @week_entries || [],
+      user: nil,
       base_path: ->(m) { hr_admin_path(month: m.strftime('%Y-%m'),
-                                       filter_login: @filter_login,
-                                       filter_mail:  @filter_mail,
                                        filter_name:  @filter_name) },
+      week_path: ->(d) { hr_admin_path(view: 'week', focus: d.iso8601,
+                                       filter_name: @filter_name) },
+      view_mode: @cal_view, focus_date: @focus_date,
       absences_by_day: @absences_by_day,
       holidays_by_day: @holidays_by_day,
+      lecture_periods: @lecture_periods,
       day_link: ->(d) { hr_admin_day_path(date: d.strftime('%Y-%m-%d')) },
       show_users_in_absence: true,
       clickable_for_absence: true

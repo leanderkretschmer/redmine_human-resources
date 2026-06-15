@@ -4,7 +4,10 @@ class HmAdminController < ApplicationController
   helper :hm_timeclock
 
   def index
-    @month = parse_month_param || Date.current.beginning_of_month
+    today = Date.current
+    @cal_view = %w[month week].include?(params[:view]) ? params[:view] : 'month'
+    @focus_date = parse_admin_focus_param || today
+    @month = parse_month_param || (@cal_view == 'week' ? @focus_date.beginning_of_month : today.beginning_of_month)
 
     base_user_ids = (HmWorkEntry.distinct.pluck(:user_id) + HmAbsence.distinct.pluck(:user_id)).uniq
     relation = User.where(id: base_user_ids)
@@ -18,11 +21,26 @@ class HmAdminController < ApplicationController
     @summaries = all_users.each_with_object({}) { |u, h| h[u.id] = compute_summary(u) }
     all_users.sort_by! { |u| -(@summaries[u.id][:month].to_i) }
 
-    range_from = @month
-    range_to   = @month.end_of_month
-    overlay = HmAbsence.active.overlapping(range_from, range_to).includes(:user).to_a
-    @absences_by_day = HmAbsence.build_by_day(overlay, range_from, range_to)
-    @holidays_by_day = compute_global_holidays(all_users, range_from, range_to)
+    if @cal_view == 'week'
+      cal_from = @focus_date.beginning_of_week
+      cal_to   = @focus_date.end_of_week
+    else
+      cal_from = @month
+      cal_to   = @month.end_of_month
+    end
+    overlay = HmAbsence.active.overlapping(cal_from, cal_to).includes(:user).to_a
+    @absences_by_day = HmAbsence.build_by_day(overlay, cal_from, cal_to)
+    @holidays_by_day = compute_global_holidays(all_users, cal_from, cal_to)
+    @lecture_periods = HmLecturePeriod.where(user_id: all_users.map(&:id))
+                                      .where('starts_on <= ? AND ends_on >= ?', cal_to, cal_from)
+                                      .includes(:user).to_a
+    @week_entries = if @cal_view == 'week'
+                      HmWorkEntry.where(user_id: all_users.map(&:id))
+                                 .in_range(cal_from.beginning_of_day, cal_to.end_of_day)
+                                 .includes(:user).to_a
+                    else
+                      []
+                    end
     @pending_absences = HmAbsence.pending.includes(:user, :approver).order(:starts_on).limit(100).to_a
 
     # ── Dashboard KPIs (across the full filtered set, all pages) ──
@@ -147,6 +165,13 @@ class HmAdminController < ApplicationController
   def parse_focus_param
     return nil unless params[:focus_date].present?
     Date.parse(params[:focus_date])
+  rescue ArgumentError
+    nil
+  end
+
+  def parse_admin_focus_param
+    return nil unless params[:focus].present?
+    Date.parse(params[:focus].to_s)
   rescue ArgumentError
     nil
   end
