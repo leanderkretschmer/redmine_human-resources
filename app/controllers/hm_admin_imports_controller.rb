@@ -78,10 +78,10 @@ class HmAdminImportsController < ApplicationController
 
     flash[:notice] = l(:notice_hm_import_done, created: created, skipped: skipped)
     flash[:error]  = errors.join(' · ') if errors.any?
-    redirect_to hm_admin_import_path
+    redirect_to hr_admin_import_path
   rescue StandardError => e
     flash[:error] = l(:notice_hm_import_commit_error, message: e.message)
-    redirect_to hm_admin_import_path
+    redirect_to hr_admin_import_path
   end
 
   private

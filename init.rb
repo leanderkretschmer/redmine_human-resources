@@ -74,14 +74,14 @@ Redmine::Plugin.register :redmine_human_resources do
     partial: 'settings/human_resources'
   )
 
-  menu :account_menu, :hm_timeclock,
+  menu :account_menu, :hr_timeclock,
        { controller: 'hm_timeclock', action: 'show' },
        caption: :label_hm_hr,
        before: :my_account,
-       html: { id: 'hm-timeclock-menu-link', class: 'hm-timeclock-menu-link' },
+       html: { id: 'hr-timeclock-menu-link', class: 'hr-timeclock-menu-link' },
        if: Proc.new { User.current.logged? }
 
-  menu :admin_menu, :hm_admin,
+  menu :admin_menu, :hr_admin,
        { controller: 'hm_admin', action: 'index' },
        caption: :label_hm_admin,
        html: { class: 'icon icon-time' }

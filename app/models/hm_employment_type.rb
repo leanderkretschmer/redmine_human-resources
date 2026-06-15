@@ -22,22 +22,13 @@ class HmEmploymentType < ActiveRecord::Base
       description: 'Vollzeitstelle 40h/Woche, 5-Tage-Woche. Pause 30 min nach ArbZG §4.'
     },
     {
-      slug: 'fulltime_40_school_1',
-      name: 'Ausbildung 32h + 1 Berufsschultag',
+      slug: 'auszubildender',
+      name: 'Auszubildender',
       weekly_target_minutes: 1920, daily_target_minutes: 480,
       max_break_minutes: 30, yearly_vacation_days: 20, weekly_school_days: 1,
       school_weekdays_pattern: '',
       allows_monthly_plan: false, position_order: 11,
-      description: 'Ausbildungsstelle: 4 Betriebs-Tage à 8h = 32h/Woche, ein Berufsschultag komplett frei (Wochentag wählbar).'
-    },
-    {
-      slug: 'fulltime_40_school_2',
-      name: 'Ausbildung 28h + 2 Berufsschultage',
-      weekly_target_minutes: 1680, daily_target_minutes: 480,
-      max_break_minutes: 30, yearly_vacation_days: 20, weekly_school_days: 2,
-      school_weekdays_pattern: '',
-      allows_monthly_plan: false, position_order: 12,
-      description: 'Ausbildungsstelle: 3 Betriebs-Tage à 8h + 1 halber Tag (4h) = 28h/Woche, zwei Berufsschultage (Wochentage wählbar).'
+      description: 'Ausbildungsstelle. Berufsschultage und Wochenstunden werden je Person eingestellt (Override pro Nutzer).'
     },
     {
       slug: 'parttime_30',
@@ -70,6 +61,14 @@ class HmEmploymentType < ActiveRecord::Base
       max_break_minutes: 30, yearly_vacation_days: 0, weekly_school_days: 0,
       allows_monthly_plan: true, position_order: 40,
       description: 'Praktikumsstelle ohne festes Wochenpensum. Soll wird monatlich geplant.'
+    },
+    {
+      slug: 'freelancer',
+      name: 'Freelancer',
+      weekly_target_minutes: nil, daily_target_minutes: nil,
+      max_break_minutes: 0, yearly_vacation_days: 0, weekly_school_days: 0,
+      allows_monthly_plan: false, position_order: 50,
+      description: 'Freelancer ohne festes Arbeitspensum. Keine Tages-/Wochensollwerte, keine Urlaubstage.'
     }
   ].freeze
 
@@ -84,5 +83,29 @@ class HmEmploymentType < ActiveRecord::Base
 
   def variable_hours?
     allows_monthly_plan?
+  end
+
+  def freelancer?
+    slug == 'freelancer'
+  end
+
+  def auszubildender?
+    slug == 'auszubildender'
+  end
+
+  # Whether the role mandates a fixed daily/weekly target. Variable-hours
+  # roles (Werkstudent/Praktikant via monthly plans) and freelancers do not.
+  def fixed_pensum?
+    !allows_monthly_plan? && !freelancer? &&
+      (weekly_target_minutes.to_i.positive? || daily_target_minutes.to_i.positive?)
+  end
+
+  # Whether the role normally has Berufsschule days (Azubi).
+  def supports_school_days?
+    weekly_school_days.to_i.positive?
+  end
+
+  def supports_vacation?
+    yearly_vacation_days.to_i.positive? && !freelancer?
   end
 end

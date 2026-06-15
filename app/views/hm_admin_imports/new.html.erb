@@ -3,7 +3,7 @@
 <% end %>
 
 <div class="contextual">
-  <%= link_to l(:label_hm_admin_back), hm_admin_path, class: 'icon icon-back' %>
+  <%= link_to l(:label_hm_admin_back), hr_admin_path, class: 'icon icon-back' %>
 </div>
 
 <h2><%= l(:label_hm_admin_import) %></h2>
@@ -11,10 +11,10 @@
 <p class="hm-tc-section-hint"><%= l(:label_hm_admin_import_intro) %></p>
 
 <p>
-  <%= link_to l(:button_hm_import_download_template), hm_admin_import_template_path, class: 'icon icon-download' %>
+  <%= link_to l(:button_hm_import_download_template), hr_admin_import_template_path, class: 'icon icon-download' %>
 </p>
 
-<%= form_with url: hm_admin_import_preview_path, method: :post, local: true,
+<%= form_with url: hr_admin_import_preview_path, method: :post, local: true,
               html: { multipart: true, class: 'hm-tc-settings-form' } do %>
   <div class="box tabular">
     <p>

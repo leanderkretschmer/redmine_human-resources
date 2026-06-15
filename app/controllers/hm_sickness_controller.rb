@@ -19,19 +19,19 @@ class HmSicknessController < ApplicationController
     hard_gate = HmAbsence.validate_kind_window(HmAbsence::KIND_SICKNESS, starts_on, ends_on)
     if hard_gate
       flash[:error] = error_message(hard_gate)
-      return redirect_to hm_sickness_path
+      return redirect_to hr_sickness_path
     end
     unless User.current.admin?
       user_gate = HmAbsence.validate_user_window(HmAbsence::KIND_SICKNESS, starts_on, ends_on)
       if user_gate
         flash[:error] = error_message(user_gate)
-        return redirect_to hm_sickness_path
+        return redirect_to hr_sickness_path
       end
     end
 
     if HmAbsence.overlapping_for(User.current.id, HmAbsence::KIND_SICKNESS, starts_on, ends_on).exists?
       flash[:error] = l(:notice_hm_absence_overlap, kind: HmAbsence.kind_label(HmAbsence::KIND_SICKNESS))
-      return redirect_to hm_sickness_path
+      return redirect_to hr_sickness_path
     end
 
     @new_absence = HmAbsence.new(attrs.merge(
@@ -44,7 +44,7 @@ class HmSicknessController < ApplicationController
     if @new_absence.save
       @new_absence.log_audit!(User.current, HmAbsenceAudit::ACTION_CREATED, to_status: @new_absence.status)
       flash[:notice] = l(:notice_hm_sickness_logged)
-      redirect_to hm_sickness_path
+      redirect_to hr_sickness_path
     else
       load_state
       render :show, status: :unprocessable_entity

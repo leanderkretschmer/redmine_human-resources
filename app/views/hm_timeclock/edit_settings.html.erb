@@ -3,7 +3,7 @@
 <% end %>
 
 <div class="contextual">
-  <%= link_to l(:label_hm_timeclock_navbar), hm_timeclock_path, class: 'icon icon-time' %>
+  <%= link_to l(:label_hm_timeclock_navbar), hr_timeclock_path, class: 'icon icon-time' %>
 </div>
 
 <h2><%= l(:label_hm_timeclock_settings) %></h2>
@@ -22,7 +22,7 @@
 <% end %>
 
 <%= form_with model: @user_setting,
-              url: edit_hm_timeclock_settings_path,
+              url: edit_hr_timeclock_settings_path,
               method: :patch,
               scope: :hm_user_setting,
               local: true,

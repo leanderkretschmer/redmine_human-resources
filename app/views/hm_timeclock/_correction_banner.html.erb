@@ -17,7 +17,7 @@
     <% end %>
   </p>
 
-  <%= form_with url: correct_hm_timeclock_path(id: pc[:id]),
+  <%= form_with url: correct_hr_timeclock_path(id: pc[:id]),
                 method: :post,
                 local: true,
                 html: { class: 'hm-tc-correction-form' } do %>

@@ -12,7 +12,7 @@
   var lastForcePollAt = 0;
   // Set to true once the server has signalled this client is no longer
   // authenticated (401/403). Stops all subsequent polling so an idle tab
-  // doesn't keep hammering /hm_timeclock/status.json with anonymous requests.
+  // doesn't keep hammering /hr_timeclock/status.json with anonymous requests.
   var pollingStopped = false;
   var NAV_END_KEY = 'hm_show_navbar_end';
 
@@ -99,12 +99,13 @@
   }
 
   function findNavLink() {
-    var el = document.getElementById('hm-timeclock-menu-link');
+    var el = document.getElementById('hr-timeclock-menu-link') ||
+             document.getElementById('hm-timeclock-menu-link');
     if (el) return el;
     var candidates = document.querySelectorAll('#account a, #top-menu a, .account a');
     for (var i = 0; i < candidates.length; i++) {
       var href = candidates[i].getAttribute('href') || '';
-      if (href.indexOf('/hm_timeclock') === 0) return candidates[i];
+      if (href.indexOf('/hr_timeclock') === 0) return candidates[i];
     }
     return null;
   }
@@ -686,8 +687,9 @@
     }
 
     // Sickness on the timeline is a one-off event; only "still working but
-    // off-site / school / planned block" kinds may repeat.
-    var TIMELINE_RECURRENCE_KINDS = ['offsite', 'school', 'block', 'homeoffice'];
+    // off-site / school / planned block" kinds may repeat. Values must match
+    // the HmAbsence::KIND_* constants exactly (note: KIND_BLOCK = 'blocked').
+    var TIMELINE_RECURRENCE_KINDS = ['offsite', 'school', 'blocked', 'homeoffice', 'workday'];
 
     function updateTimelineRecurrenceVisibility() {
       var pop = detailModal && detailModal.querySelector('[data-bind="timeline-popover"]');
@@ -857,6 +859,7 @@
 
     calendars.forEach(function (cal) {
       var defaultKind = cal.getAttribute('data-default-absence-kind') || 'vacation';
+      var adminCreate = cal.getAttribute('data-admin-create') === '1';
 
       cal.addEventListener('mousedown', function (e) {
         if (e.button !== 0) return;
@@ -895,9 +898,9 @@
         if (!cell) return;
         if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
         var ids = cell.getAttribute('data-absence-ids');
-        if (ids) {
+        if (ids && !adminCreate) {
           var firstId = ids.split(',')[0];
-          if (firstId) window.location.href = '/hm_absences/' + firstId + '/edit';
+          if (firstId) window.location.href = '/hr_absences/' + firstId + '/edit';
         } else {
           openAbsenceModalFor(cellDate(cell), cellDate(cell), defaultKind);
         }
@@ -908,10 +911,21 @@
         var cell = e.target.closest('td.hm-tc-cal-clickable[data-date]');
         if (!cell) return;
         if (clickTimer) clearTimeout(clickTimer);
-        clickTimer = setTimeout(function () {
-          fetchDayDetail(cellDate(cell));
-          clickTimer = null;
-        }, 220);
+        // In admin mode (global calendar), single-click on cell body opens the
+        // absence modal for that day. The day-link itself is wrapped in an <a>
+        // (covered by isInteractive above) so navigation to /admin/.../day/X
+        // still works when clicking the date number specifically.
+        if (adminCreate) {
+          clickTimer = setTimeout(function () {
+            openAbsenceModalFor(cellDate(cell), cellDate(cell), defaultKind);
+            clickTimer = null;
+          }, 220);
+        } else {
+          clickTimer = setTimeout(function () {
+            fetchDayDetail(cellDate(cell));
+            clickTimer = null;
+          }, 220);
+        }
       });
     });
 
@@ -1234,6 +1248,55 @@
     }, Math.max(5, pollSeconds) * 1000);
   }
 
+  // Admin global calendar: clicking a holiday-flagged day opens a popover that
+  // lists the affected vs. unaffected users for that day's regional holiday(s).
+  function setupHolidayPopover() {
+    var pop = document.getElementById('hm-tc-holiday-popover');
+    if (!pop) return;
+    var affectedLabel = pop.dataset.affectedLabel || 'Affected';
+    var unaffectedLabel = pop.dataset.unaffectedLabel || 'Not affected';
+    function close() { pop.hidden = true; pop.innerHTML = ''; }
+    document.addEventListener('click', function (e) {
+      var cell = e.target.closest && e.target.closest('td.hm-tc-cal-holiday');
+      if (!cell || !cell.dataset.holidayDetail) {
+        if (!e.target.closest || !e.target.closest('#hm-tc-holiday-popover')) close();
+        return;
+      }
+      // Don't fight other handlers when the click is on a link inside the cell.
+      if (e.target.closest('a')) return;
+      e.preventDefault();
+      var data;
+      try { data = JSON.parse(cell.dataset.holidayDetail); } catch (err) { return; }
+      var parts = data.map(function (h) {
+        var aff = (h.affected || []).map(function (n) { return '<li>' + escapeHtml(n) + '</li>'; }).join('') || '<li class="hm-tc-holiday-empty">—</li>';
+        var unaff = (h.unaffected || []).map(function (n) { return '<li>' + escapeHtml(n) + '</li>'; }).join('') || '<li class="hm-tc-holiday-empty">—</li>';
+        return '<div class="hm-tc-holiday-block">' +
+                 '<div class="hm-tc-holiday-name">' + escapeHtml(h.name) + ' <span class="hm-tc-holiday-regions">(' + escapeHtml((h.regions || []).join(', ')) + ')</span></div>' +
+                 '<div class="hm-tc-holiday-cols">' +
+                   '<div><strong>' + escapeHtml(affectedLabel) + '</strong><ul>' + aff + '</ul></div>' +
+                   '<div><strong>' + escapeHtml(unaffectedLabel) + '</strong><ul>' + unaff + '</ul></div>' +
+                 '</div>' +
+               '</div>';
+      }).join('');
+      pop.innerHTML = parts + '<button type="button" class="hm-tc-holiday-close">×</button>';
+      pop.hidden = false;
+      var r = cell.getBoundingClientRect();
+      pop.style.position = 'absolute';
+      pop.style.top  = (window.scrollY + r.bottom + 6) + 'px';
+      pop.style.left = (window.scrollX + r.left) + 'px';
+      pop.querySelector('.hm-tc-holiday-close').addEventListener('click', close);
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') close();
+    });
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
   function askPermissionOnce() {
     if (permissionAsked) return;
     permissionAsked = true;
@@ -1269,6 +1332,7 @@
     setupCalendarInteractions();
     setupAbsenceEditModal();
     setupNavEndToggle();
+    setupHolidayPopover();
 
     notifiedTarget = loadNotifyFlag('target');
     notifiedBreakReminder = loadNotifyFlag('break_reminder');

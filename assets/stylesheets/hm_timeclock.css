@@ -266,9 +266,55 @@ table.hm-tc-calendar-grid {
 .hm-tc-cal-marker-blocked  { background: #e67e22; }
 .hm-tc-cal-marker-workday  { background: #27ae60; }
 .hm-tc-cal-marker-homeoffice { background: #8e44ad; }
+.hm-tc-cal-marker-lecture  { background: #1abc9c; }
+.hm-tc-cal-marker-lecture-break {
+  background: #d8f3ec;
+  border: 1px dashed #1abc9c;
+}
+.hm-tc-cal-marker-holiday  { background: #c0392b; }
 .hm-tc-cal-marker-pending {
   background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, rgba(255,255,255,0.65) 3px, rgba(255,255,255,0.65) 6px);
 }
+.hm-tc-cal-holiday > .hm-tc-cal-date { color: #c0392b; font-weight: 600; }
+.hm-tc-cal-lecture { background: linear-gradient(180deg, transparent 0%, transparent 65%, rgba(26,188,156,0.18) 65%, rgba(26,188,156,0.18) 100%); }
+.hm-tc-cal-lecture-break { background: linear-gradient(180deg, transparent 0%, transparent 65%, rgba(216,243,236,0.5) 65%, rgba(216,243,236,0.5) 100%); }
+.hm-tc-cal-plan-banner {
+  background: #eef7fb;
+  border-left: 3px solid #3498db;
+  padding: 0.35em 0.75em;
+  margin: 0.3em 0 0.6em;
+  border-radius: 0 4px 4px 0;
+  font-size: 0.9em;
+}
+.hm-tc-cal-plan-note { color: #5b6776; font-style: italic; margin-left: 0.3em; }
+
+/* ======= Holiday click-through popover (admin global calendar) ======= */
+.hm-tc-holiday-popover {
+  position: absolute;
+  z-index: 50;
+  background: #fff;
+  border: 1px solid #c8d3df;
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);
+  padding: 0.6em 0.9em;
+  min-width: 280px;
+  max-width: 480px;
+  font-size: 0.9em;
+}
+.hm-tc-holiday-block + .hm-tc-holiday-block { margin-top: 0.6em; border-top: 1px solid #eaeef2; padding-top: 0.5em; }
+.hm-tc-holiday-name { font-weight: 600; color: #2c3e50; margin-bottom: 0.3em; }
+.hm-tc-holiday-regions { font-weight: normal; color: #6c7a89; font-size: 0.9em; }
+.hm-tc-holiday-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6em; }
+.hm-tc-holiday-cols ul { list-style: none; padding: 0; margin: 0.25em 0 0; }
+.hm-tc-holiday-cols li { padding: 0.05em 0; color: #2c3e50; }
+.hm-tc-holiday-cols li.hm-tc-holiday-empty { color: #95a5a6; font-style: italic; }
+.hm-tc-holiday-close {
+  position: absolute; top: 4px; right: 6px;
+  background: transparent; border: none; cursor: pointer;
+  font-size: 1.2em; color: #6c7a89;
+}
+.hm-tc-holiday-close:hover { color: #c0392b; }
+.hm-tc-cal-holiday[data-holiday-detail] { cursor: help; }
 .hm-tc-cal-day-link { text-decoration: none; color: inherit; display: block; }
 .hm-tc-cal-day-link:hover .hm-tc-cal-date { text-decoration: underline; color: #1abc9c; }
 .hm-tc-cal-clickable { cursor: pointer; transition: box-shadow 0.12s ease; }
@@ -360,6 +406,8 @@ table.hm-tc-calendar-grid {
 .hm-tc-cal-legend-vacation { background: #3498db; }
 .hm-tc-cal-legend-sickness { background: #e74c3c; }
 .hm-tc-cal-legend-offsite  { background: #f1c40f; }
+.hm-tc-cal-legend-lecture  { background: #1abc9c; }
+.hm-tc-cal-legend-holiday  { background: #c0392b; }
 .hm-tc-cal-legend-pending  {
   background:
     repeating-linear-gradient(45deg, #95a5a6, #95a5a6 4px, #fff 4px, #fff 8px);
@@ -968,3 +1016,44 @@ button.hm-tc-day-detail-close {
 .hm-tc-import-table tr.hm-tc-import-invalid { background: #fdeeee; }
 .hm-tc-import-table .hm-tc-import-err { color: #c0392b; font-weight: bold; }
 .hm-tc-import-table select.hm-import-user { max-width: 16em; }
+
+/* ======= Admin per-user edit lists (monthly plans, lecture periods) =======
+   Replaces <form>-inside-<tr> nesting which is invalid HTML and caused
+   labels/inputs to overlap. Each row is its own <form> rendered as a CSS grid. */
+.hm-tc-edit-list { margin: 0.4em 0 0.6em; display: flex; flex-direction: column; gap: 0.3em; }
+.hm-tc-edit-row {
+  display: grid;
+  align-items: center;
+  gap: 0.5em;
+  padding: 0.35em 0.5em;
+  background: #fbfcfd;
+  border: 1px solid #e3e7eb;
+  border-radius: 4px;
+}
+.hm-tc-edit-row-head {
+  background: transparent;
+  border: none;
+  padding: 0.1em 0.5em;
+  font-weight: 600;
+  color: #44505f;
+  font-size: 0.9em;
+}
+.hm-tc-edit-row-new { background: #f3f7fb; border-color: #c8d3df; margin-top: 0.6em; }
+.hm-tc-edit-row > input, .hm-tc-edit-row > select { min-width: 0; }
+.hm-tc-edit-actions { display: inline-flex; align-items: center; gap: 0.4em; justify-content: flex-end; }
+.hm-tc-edit-actions .icon { padding-left: 18px; }
+
+/* Column templates per list type (head + rows share grid-template-columns) */
+.hm-tc-monthly-plan-list { grid-template-columns: 4em 4em 8em minmax(8em, 1fr) auto; }
+.hm-tc-monthly-plan-list .hm-tc-edit-row-head,
+.hm-tc-monthly-plan-list.hm-tc-edit-row {
+  grid-template-columns: 4em 4em 8em minmax(8em, 1fr) auto;
+}
+.hm-tc-monthly-plan-list .hm-tc-edit-row {
+  grid-template-columns: 4em 4em 8em minmax(8em, 1fr) auto;
+}
+.hm-tc-lecture-list,
+.hm-tc-lecture-list .hm-tc-edit-row,
+.hm-tc-lecture-list .hm-tc-edit-row-head {
+  grid-template-columns: 9em 9em 9em 7em 7em minmax(8em, 1fr) auto;
+}

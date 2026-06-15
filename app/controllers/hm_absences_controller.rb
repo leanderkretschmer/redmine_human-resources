@@ -8,10 +8,18 @@ class HmAbsencesController < ApplicationController
     permitted = params.require(:hm_absence).permit(:kind, :starts_on, :ends_on, :reason,
                                                    :recurrence, :recurrence_until,
                                                    :first_day_half, :last_day_half,
-                                                   :start_time, :end_time)
+                                                   :start_time, :end_time, :user_id)
     unless HmAbsence::KINDS.include?(permitted[:kind])
       return respond_create_failure(l(:notice_hm_absence_forbidden))
     end
+
+    # Admins may target a specific user (or all active users) when creating
+    # absences from the calendar; non-admins always book against themselves.
+    target_user_ids = resolve_target_user_ids(permitted[:user_id])
+    if target_user_ids.empty?
+      return respond_create_failure(l(:notice_hm_absence_forbidden))
+    end
+    admin_acting = User.current.admin?
 
     starts_on = parse_date(permitted[:starts_on])
     ends_on   = parse_date(permitted[:ends_on]) || starts_on
@@ -20,16 +28,11 @@ class HmAbsencesController < ApplicationController
     if hard_gate
       return respond_create_failure(window_error_message(permitted[:kind], hard_gate))
     end
-    unless User.current.admin?
+    unless admin_acting
       user_gate = HmAbsence.validate_user_window(permitted[:kind], starts_on, ends_on)
       if user_gate
         return respond_create_failure(window_error_message(permitted[:kind], user_gate))
       end
-    end
-
-    if HmAbsence::EXCLUSIVE_KINDS.include?(permitted[:kind]) &&
-       HmAbsence.overlapping_for(User.current.id, permitted[:kind], starts_on, ends_on).exists?
-      return respond_create_failure(l(:notice_hm_absence_overlap, kind: HmAbsence.kind_label(permitted[:kind])))
     end
 
     recurrence_capable = HmAbsence::RECURRENCE_CAPABLE_KINDS.include?(permitted[:kind])
@@ -48,7 +51,11 @@ class HmAbsencesController < ApplicationController
               [[starts_on, ends_on]]
             end
 
-    status = if HmAbsence::AUTO_APPROVED_KINDS.include?(permitted[:kind])
+    # When an admin books an absence from the calendar (whether for one user or
+    # the entire active roster), the entry is approved on the spot — there is
+    # nobody above the admin to wait on.
+    approve_admin = admin_acting
+    status = if approve_admin || HmAbsence::AUTO_APPROVED_KINDS.include?(permitted[:kind])
                HmAbsence::STATUS_APPROVED
              else
                HmAbsence::STATUS_REQUESTED
@@ -61,31 +68,37 @@ class HmAbsencesController < ApplicationController
 
     created = []
     HmAbsence.transaction do
-      pairs.each do |s, e|
-        absence = HmAbsence.new(
-          kind: permitted[:kind],
-          reason: permitted[:reason],
-          starts_on: s,
-          ends_on:   e,
-          first_day_half: first_half,
-          last_day_half:  last_half,
-          start_time: normalize_hhmm(permitted[:start_time]),
-          end_time:   normalize_hhmm(permitted[:end_time]),
-          user_id: User.current.id,
-          status: status,
-          approved_by_id: status == HmAbsence::STATUS_APPROVED ? User.current.id : nil,
-          approved_at:    status == HmAbsence::STATUS_APPROVED ? Time.current      : nil
-        )
-        absence.save!
-        absence.log_audit!(User.current, HmAbsenceAudit::ACTION_CREATED, to_status: absence.status)
-        created << absence
+      target_user_ids.each do |uid|
+        if HmAbsence::EXCLUSIVE_KINDS.include?(permitted[:kind]) &&
+           HmAbsence.overlapping_for(uid, permitted[:kind], starts_on, ends_on).exists?
+          next
+        end
+        pairs.each do |s, e|
+          absence = HmAbsence.new(
+            kind: permitted[:kind],
+            reason: permitted[:reason],
+            starts_on: s,
+            ends_on:   e,
+            first_day_half: first_half,
+            last_day_half:  last_half,
+            start_time: normalize_hhmm(permitted[:start_time]),
+            end_time:   normalize_hhmm(permitted[:end_time]),
+            user_id: uid,
+            status: status,
+            approved_by_id: status == HmAbsence::STATUS_APPROVED ? User.current.id : nil,
+            approved_at:    status == HmAbsence::STATUS_APPROVED ? Time.current      : nil
+          )
+          absence.save!
+          absence.log_audit!(User.current, HmAbsenceAudit::ACTION_CREATED, to_status: absence.status)
+          created << absence
+        end
       end
     end
 
     @absence = created.first
     notice = nil
     if @absence
-      HmAbsenceMailer.deliver_absence_requested(@absence) if @absence.vacation?
+      HmAbsenceMailer.deliver_absence_requested(@absence) if @absence.vacation? && !admin_acting
       notice = if created.size > 1
                  l(:notice_hm_recurrence_created, count: created.size)
                elsif @absence.vacation?
@@ -161,7 +174,7 @@ class HmAbsencesController < ApplicationController
     @absence.approve_by!(User.current)
     HmAbsenceMailer.deliver_absence_decided(@absence)
     flash[:notice] = l(:notice_hm_absence_approved)
-    redirect_back(fallback_location: hm_admin_path)
+    redirect_back(fallback_location: hr_admin_path)
   end
 
   def reject
@@ -169,17 +182,34 @@ class HmAbsencesController < ApplicationController
     @absence.reject_by!(User.current)
     HmAbsenceMailer.deliver_absence_decided(@absence)
     flash[:notice] = l(:notice_hm_absence_rejected)
-    redirect_back(fallback_location: hm_admin_path)
+    redirect_back(fallback_location: hr_admin_path)
   end
 
   private
+
+  # Translate the modal's user_id selection into the list of users we'll book
+  # against. Non-admins are pinned to themselves; admins may pick a specific
+  # user (a numeric id) or "company-wide" (blank → every active user).
+  def resolve_target_user_ids(raw_value)
+    return [User.current.id] unless User.current.admin?
+    s = raw_value.to_s.strip
+    if s.empty?
+      User.active.where.not(type: 'AnonymousUser').pluck(:id)
+    else
+      id = s.to_i
+      return [] unless id.positive?
+      User.where(id: id).pluck(:id)
+    end
+  rescue StandardError
+    []
+  end
 
   def find_absence
     @absence = HmAbsence.find(params[:id])
   rescue ActiveRecord::RecordNotFound
     respond_to do |format|
       format.json { render json: { error: l(:notice_hm_absence_not_found) }, status: :not_found and return }
-      format.html { redirect_back(fallback_location: hm_timeclock_path, alert: l(:notice_hm_absence_not_found)) and return }
+      format.html { redirect_back(fallback_location: hr_timeclock_path, alert: l(:notice_hm_absence_not_found)) and return }
     end
   end
 
@@ -240,7 +270,7 @@ class HmAbsencesController < ApplicationController
     respond_to do |format|
       format.html do
         flash[:error] = message
-        redirect_back(fallback_location: hm_timeclock_path)
+        redirect_back(fallback_location: hr_timeclock_path)
       end
       format.json { render json: { error: message }, status: :unprocessable_entity }
     end
@@ -250,7 +280,7 @@ class HmAbsencesController < ApplicationController
     respond_to do |format|
       format.html do
         flash[:notice] = message if message.present?
-        redirect_back(fallback_location: hm_timeclock_path)
+        redirect_back(fallback_location: hr_timeclock_path)
       end
       format.json { render json: { ok: true, id: @absence&.id, message: message } }
     end
@@ -258,10 +288,10 @@ class HmAbsencesController < ApplicationController
 
   def redirect_target
     case @absence.kind
-    when HmAbsence::KIND_VACATION then hm_vacation_path
-    when HmAbsence::KIND_SICKNESS then hm_sickness_path
-    when HmAbsence::KIND_SCHOOL, HmAbsence::KIND_BLOCK then hm_planning_path
-    else hm_timeclock_path
+    when HmAbsence::KIND_VACATION then hr_vacation_path
+    when HmAbsence::KIND_SICKNESS then hr_sickness_path
+    when HmAbsence::KIND_SCHOOL, HmAbsence::KIND_BLOCK then hr_planning_path
+    else hr_timeclock_path
     end
   end
 

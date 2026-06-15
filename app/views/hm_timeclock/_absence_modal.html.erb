@@ -1,14 +1,35 @@
-<div id="hm-absence-modal" class="hm-tc-popup" role="dialog" aria-modal="true" aria-hidden="true">
+<div id="hm-absence-modal" class="hm-tc-popup" role="dialog" aria-modal="true" aria-hidden="true"
+     data-admin="<%= User.current.admin? ? '1' : '0' %>">
   <div class="hm-tc-popup-inner hm-tc-absence-modal-inner">
     <h3 class="hm-tc-absence-modal-title"><%= l(:label_hm_absence_modal_title) %></h3>
-    <%= form_with url: hm_absences_path, method: :post, scope: :hm_absence, local: true,
+    <%= form_with url: hr_absences_path, method: :post, scope: :hm_absence, local: true,
                   html: { id: 'hm-absence-modal-form' } do |f| %>
+      <% if User.current.admin? %>
+        <div class="hm-tc-absence-modal-row" id="hm_absence_user_row">
+          <%= f.label :user_id, l(:label_hm_absence_for_user) %>
+          <%= f.select :user_id,
+                       ([[l(:label_hm_absence_for_company), '']] +
+                        User.active.where.not(type: 'AnonymousUser').sorted.pluck(:firstname, :lastname, :login, :id)
+                          .map { |fn, ln, lg, id| ["#{fn} #{ln} (#{lg})", id] }),
+                       { include_blank: false },
+                       { id: 'hm_absence_user_id' } %>
+          <em class="info"><%= l(:label_hm_absence_admin_auto_approved) %></em>
+        </div>
+      <% end %>
       <div class="hm-tc-absence-modal-row">
         <%= f.label :kind, l(:label_hm_absence_kind) %>
         <%= f.select :kind,
-                     [[l(:label_hm_hr_vacation), HmAbsence::KIND_VACATION],
-                      [l(:label_hm_hr_sickness), HmAbsence::KIND_SICKNESS],
-                      [l(:label_hm_hr_offsite),  HmAbsence::KIND_OFFSITE]],
+                     (User.current.admin? ?
+                       [[l(:label_hm_hr_vacation),   HmAbsence::KIND_VACATION],
+                        [l(:label_hm_hr_sickness),   HmAbsence::KIND_SICKNESS],
+                        [l(:label_hm_hr_offsite),    HmAbsence::KIND_OFFSITE],
+                        [l(:label_hm_hr_homeoffice), HmAbsence::KIND_HOMEOFFICE],
+                        [l(:label_hm_hr_care),       HmAbsence::KIND_CARE],
+                        [l(:label_hm_hr_school),     HmAbsence::KIND_SCHOOL],
+                        [l(:label_hm_hr_block),      HmAbsence::KIND_BLOCK]] :
+                       [[l(:label_hm_hr_vacation), HmAbsence::KIND_VACATION],
+                        [l(:label_hm_hr_sickness), HmAbsence::KIND_SICKNESS],
+                        [l(:label_hm_hr_offsite),  HmAbsence::KIND_OFFSITE]]),
                      {}, { id: 'hm_absence_kind' } %>
       </div>
       <div class="hm-tc-absence-modal-row">

@@ -1,5 +1,5 @@
 <%= form_with model: @type,
-              url: @type.persisted? ? hm_admin_employment_type_path(@type) : hm_admin_employment_types_path,
+              url: @type.persisted? ? hr_admin_employment_type_path(@type) : hr_admin_employment_types_path,
               scope: :hm_employment_type,
               method: @type.persisted? ? :patch : :post,
               local: true,
@@ -69,6 +69,6 @@
   </div>
   <p>
     <%= submit_tag l(:button_save), class: 'button-positive' %>
-    <%= link_to l(:button_cancel), hm_admin_employment_types_path %>
+    <%= link_to l(:button_cancel), hr_admin_employment_types_path %>
   </p>
 <% end %>

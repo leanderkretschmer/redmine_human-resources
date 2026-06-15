@@ -16,6 +16,11 @@ class HmTimeclockController < ApplicationController
                                 .order(:started_at).to_a
     overlay = HmAbsence.for_user(User.current).active.overlapping(@month, @month.end_of_month).to_a
     @absences_by_day = HmAbsence.build_by_day(overlay, @month, @month.end_of_month)
+    @lecture_periods = HmLecturePeriod.for_user(User.current)
+                                      .where('starts_on <= ? AND ends_on >= ?', @month.end_of_month, @month)
+                                      .to_a
+    @monthly_plan    = HmMonthlyPlan.for_user(User.current).for_period(@month.year, @month.month).first
+    @holidays_by_day = compute_personal_holidays(User.current, @month)
     @snapshot = build_snapshot
 
     @chart_view = %w[today week month].include?(params[:chart_view]) ? params[:chart_view] : 'today'
@@ -55,7 +60,7 @@ class HmTimeclockController < ApplicationController
     if @user_setting.save
       flash[:notice] = l(:notice_hm_timeclock_settings_saved)
       respond_to do |format|
-        format.html { redirect_to hm_timeclock_path }
+        format.html { redirect_to hr_timeclock_path }
         format.json { render json: build_snapshot }
       end
     else
@@ -70,7 +75,7 @@ class HmTimeclockController < ApplicationController
     open = current_open_entry
     if open && open.overdue?(as_of: Time.current)
       flash[:error] = l(:notice_hm_timeclock_resolve_correction_first)
-      return redirect_to hm_timeclock_path
+      return redirect_to hr_timeclock_path
     end
     unless open
       HmWorkEntry.create!(
@@ -151,7 +156,7 @@ class HmTimeclockController < ApplicationController
     entry = HmWorkEntry.for_user(User.current).where(id: params[:id]).first
     unless entry && entry.open? && entry.overdue?(as_of: Time.current)
       flash[:error] = l(:notice_hm_timeclock_correction_invalid)
-      return redirect_to hm_timeclock_path
+      return redirect_to hr_timeclock_path
     end
 
     tz = User.current.time_zone || Time.zone
@@ -159,7 +164,7 @@ class HmTimeclockController < ApplicationController
 
     if ended_at.nil?
       flash[:error] = l(:notice_hm_timeclock_correction_invalid)
-      return redirect_to hm_timeclock_path
+      return redirect_to hr_timeclock_path
     end
 
     HmWorkEntry.transaction do
@@ -175,7 +180,7 @@ class HmTimeclockController < ApplicationController
     end
 
     flash[:notice] = l(:notice_hm_timeclock_correction_saved)
-    redirect_to hm_timeclock_path
+    redirect_to hr_timeclock_path
   end
 
   private
@@ -200,7 +205,7 @@ class HmTimeclockController < ApplicationController
     respond_to do |format|
       format.html do
         flash[:notice] = message if message.present?
-        redirect_to hm_timeclock_path
+        redirect_to hr_timeclock_path
       end
       format.json { render json: build_snapshot }
     end
@@ -208,6 +213,28 @@ class HmTimeclockController < ApplicationController
 
   def build_snapshot
     RedmineHumanResources::Snapshot.new(User.current, @user_setting).to_h
+  end
+
+  # Region-aware holiday lookup for the personal calendar. Returns a hash
+  # { Date => [{ name:, regions: }, …] } so the calendar partial can mark days
+  # and render tooltips. Skips entirely when the user has no region configured.
+  def compute_personal_holidays(user, month_start)
+    setting = HmUserSetting.for(user)
+    region  = setting.effective_region_code
+    return {} if region.blank?
+    range_from = month_start
+    range_to   = month_start.end_of_month
+    year_maps = {}
+    out = {}
+    (range_from..range_to).each do |d|
+      map = (year_maps[d.year] ||= RedmineHumanResources::Holidays.holidays_for(d.year, region_code: region))
+      name = map[d]
+      out[d] = [{ name: name, regions: [region] }] if name
+    end
+    out
+  rescue StandardError => e
+    Rails.logger.warn("[hr] personal holiday lookup failed: #{e.message}") if defined?(Rails)
+    {}
   end
 
   def compute_personal_chart_metrics(user, range_from, range_to, tz)
@@ -291,8 +318,8 @@ class HmTimeclockController < ApplicationController
         partial:    a.partial?,
         partial_minutes: a.partial_minutes_on(date),
         can_manage: can_manage,
-        edit_url:   can_manage ? edit_hm_absence_path(a, format: nil) : nil,
-        delete_url: can_manage ? hm_absence_path(a, format: nil)      : nil
+        edit_url:   can_manage ? edit_hr_absence_path(a, format: nil) : nil,
+        delete_url: can_manage ? hr_absence_path(a, format: nil)      : nil
       }
     end
     {

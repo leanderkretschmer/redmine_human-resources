@@ -22,6 +22,7 @@ class HmAdminController < ApplicationController
     range_to   = @month.end_of_month
     overlay = HmAbsence.active.overlapping(range_from, range_to).includes(:user).to_a
     @absences_by_day = HmAbsence.build_by_day(overlay, range_from, range_to)
+    @holidays_by_day = compute_global_holidays(all_users, range_from, range_to)
     @pending_absences = HmAbsence.pending.includes(:user, :approver).order(:starts_on).limit(100).to_a
 
     # ── Dashboard KPIs (across the full filtered set, all pages) ──
@@ -83,7 +84,9 @@ class HmAdminController < ApplicationController
     @user_setting = HmUserSetting.for(@user)
     @employment_types = HmEmploymentType.active.ordered.to_a
     @monthly_plans = HmMonthlyPlan.for_user(@user).order(year: :desc, month: :desc).limit(36).to_a
+    @monthly_plan_current = @monthly_plans.find { |p| p.year == @month.year && p.month == @month.month }
     @lecture_periods = HmLecturePeriod.for_user(@user).ordered.to_a
+    @holidays_by_day = compute_user_holidays(@user, @month, @month.end_of_month)
     respond_to do |format|
       format.html
       format.csv do
@@ -103,7 +106,7 @@ class HmAdminController < ApplicationController
     @absences = HmAbsence.where('starts_on <= ? AND ends_on >= ?', @date, @date).includes(:user, :approver).to_a
     @ticket_coverage = build_ticket_coverage(@date, @entries)
   rescue ArgumentError
-    redirect_to hm_admin_path
+    redirect_to hr_admin_path
   end
 
   private
@@ -221,6 +224,72 @@ class HmAdminController < ApplicationController
   rescue StandardError => e
     Rails.logger.warn("[hr] compute_chart_metrics failed for user #{user.id}: #{e.message}")
     { work: 0, break_secs: 0, coverage: 0 }
+  end
+
+  # Per-day list of holidays across the user list. Each entry has the holiday
+  # name, the regions where it applies, and the affected vs. unaffected users
+  # for that name on that day. Users without a configured region are treated
+  # as unaffected.
+  def compute_global_holidays(users, range_from, range_to)
+    user_region = users.each_with_object({}) do |u, h|
+      h[u.id] = HmUserSetting.for(u).effective_region_code.presence
+    end
+    regions_used = user_region.values.compact.uniq
+    return {} if regions_used.empty?
+
+    region_year_maps = {}
+    out = {}
+    (range_from..range_to).each do |d|
+      day_holidays = {}
+      regions_used.each do |r|
+        region_year_maps[r] ||= {}
+        map = (region_year_maps[r][d.year] ||= RedmineHumanResources::Holidays.holidays_for(d.year, region_code: r))
+        name = map[d]
+        next unless name
+        entry = (day_holidays[name] ||= { regions: [], users: [] })
+        entry[:regions] << r unless entry[:regions].include?(r)
+      end
+      next if day_holidays.empty?
+
+      affected_ids = []
+      users.each do |u|
+        r = user_region[u.id]
+        next unless r
+        day_holidays.each do |_name, entry|
+          if entry[:regions].include?(r)
+            entry[:users] << u
+            affected_ids << u.id
+          end
+        end
+      end
+      unaffected = users.reject { |u| affected_ids.include?(u.id) }
+
+      out[d] = day_holidays.map do |name, entry|
+        { name: name, regions: entry[:regions], affected: entry[:users].uniq, unaffected: unaffected }
+      end
+    end
+    out
+  rescue StandardError => e
+    Rails.logger.warn("[hr] global holiday lookup failed: #{e.message}") if defined?(Rails)
+    {}
+  end
+
+  # Region-aware holiday map for a single user. Returns {} if the user has no
+  # region configured (we then fall back silently — no annotated days).
+  def compute_user_holidays(user, range_from, range_to)
+    region = HmUserSetting.for(user).effective_region_code
+    return {} if region.blank?
+    year_maps = {}
+    out = {}
+    (range_from..range_to).each do |d|
+      map = (year_maps[d.year] ||= RedmineHumanResources::Holidays.holidays_for(d.year, region_code: region))
+      name = map[d]
+      out[d] = [{ name: name, regions: [region] }] if name
+    end
+    out
+  rescue StandardError => e
+    Rails.logger.warn("[hr] admin user holiday lookup failed: #{e.message}") if defined?(Rails)
+    {}
   end
 
   def compute_summary(user)

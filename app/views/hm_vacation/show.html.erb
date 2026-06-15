@@ -7,7 +7,7 @@
 <h3><%= l(:label_hm_absence_request_new_vacation) %></h3>
 <%= render partial: 'hm_timeclock/absence_form', locals: {
       absence: @new_absence,
-      form_url: hm_vacation_path,
+      form_url: hr_vacation_path,
       form_method: :post,
       submit_label: l(:button_hm_absence_request_vacation)
     } %>
@@ -18,7 +18,7 @@
 <h3><%= l(:label_hm_timeclock_calendar) %></h3>
 <%= render partial: 'hm_timeclock/calendar', locals: {
       month: @month, entries: [], user: User.current,
-      base_path: ->(m) { hm_vacation_path(month: m.strftime('%Y-%m')) },
+      base_path: ->(m) { hr_vacation_path(month: m.strftime('%Y-%m')) },
       absences_by_day: @absences_by_day,
       clickable_for_absence: true,
       default_absence_kind: HmAbsence::KIND_VACATION

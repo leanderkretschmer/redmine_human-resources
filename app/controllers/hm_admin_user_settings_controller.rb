@@ -44,6 +44,6 @@ class HmAdminUserSettingsController < ApplicationController
     else
       flash[:error] = setting.errors.full_messages.join(', ')
     end
-    redirect_to hm_admin_user_path(user_id: user.id)
+    redirect_to hr_admin_user_path(user_id: user.id)
   end
 end

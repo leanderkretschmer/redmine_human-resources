@@ -7,7 +7,7 @@ class HmPlanningController < ApplicationController
     @user_setting = HmUserSetting.for(User.current)
     unless @user_setting.planning_eligible?
       flash[:notice] = l(:notice_hm_planning_not_eligible)
-      return redirect_to hm_timeclock_path
+      return redirect_to hr_timeclock_path
     end
 
     @kinds = @user_setting.planning_kinds
@@ -24,9 +24,29 @@ class HmPlanningController < ApplicationController
                          .order(starts_on: :desc).limit(100).to_a
     overlay = HmAbsence.for_user(User.current).active.overlapping(range_from, range_to).to_a
     @absences_by_day = HmAbsence.build_by_day(overlay, range_from, range_to)
+    @lecture_periods = HmLecturePeriod.for_user(User.current)
+                                      .where('starts_on <= ? AND ends_on >= ?', range_to, range_from)
+                                      .to_a
+    @monthly_plan    = HmMonthlyPlan.for_user(User.current).for_period(@month.year, @month.month).first
+    @holidays_by_day = compute_holidays(User.current, range_from, range_to)
   end
 
   private
+
+  def compute_holidays(user, range_from, range_to)
+    region = HmUserSetting.for(user).effective_region_code
+    return {} if region.blank?
+    year_maps = {}
+    out = {}
+    (range_from..range_to).each do |d|
+      map = (year_maps[d.year] ||= RedmineHumanResources::Holidays.holidays_for(d.year, region_code: region))
+      name = map[d]
+      out[d] = [{ name: name, regions: [region] }] if name
+    end
+    out
+  rescue StandardError
+    {}
+  end
 
   def parse_month_param
     return nil unless params[:month].present?

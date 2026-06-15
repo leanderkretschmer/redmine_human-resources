@@ -3,8 +3,8 @@
 <% end %>
 
 <div class="contextual">
-  <%= link_to l(:label_hm_admin_import), hm_admin_import_path, class: 'icon icon-import' %>
-  <%= link_to l(:label_hm_admin_employment_types), hm_admin_employment_types_path, class: 'icon icon-settings' %>
+  <%= link_to l(:label_hm_admin_import), hr_admin_import_path, class: 'icon icon-import' %>
+  <%= link_to l(:label_hm_admin_employment_types), hr_admin_employment_types_path, class: 'icon icon-settings' %>
 </div>
 
 <h2><%= l(:label_hm_admin) %></h2>
@@ -33,7 +33,7 @@
 
 <h3><%= l(:label_hm_admin_users) %></h3>
 
-<%= form_with url: hm_admin_path, method: :get, local: true, html: { class: 'hm-admin-filters' } do %>
+<%= form_with url: hr_admin_path, method: :get, local: true, html: { class: 'hm-admin-filters' } do %>
   <%= hidden_field_tag :month, @month.strftime('%Y-%m') %>
   <p>
     <label for="filter_name"><%= l(:label_hm_admin_search_name) %></label>
@@ -41,13 +41,13 @@
                        placeholder: l(:label_hm_admin_search_placeholder) %>
     <%= submit_tag l(:button_apply), name: nil %>
     <% if @filter_name.present? %>
-      <%= link_to l(:button_clear), hm_admin_path(month: @month.strftime('%Y-%m')), class: 'icon icon-reload' %>
+      <%= link_to l(:button_clear), hr_admin_path(month: @month.strftime('%Y-%m')), class: 'icon icon-reload' %>
     <% end %>
   </p>
 <% end %>
 
 <% if @chart_rows.any? %>
-  <%= form_with url: hm_admin_path, method: :get, local: true, html: { class: 'hm-tc-barchart-toggle' } do %>
+  <%= form_with url: hr_admin_path, method: :get, local: true, html: { class: 'hm-tc-barchart-toggle' } do %>
     <%= hidden_field_tag :month, @month.strftime('%Y-%m') %>
     <%= hidden_field_tag :filter_name, @filter_name if @filter_name.present? %>
     <strong><%= l(:label_hm_admin_chart_view) %>:</strong>
@@ -73,7 +73,7 @@
         coverage_title = "#{l(:label_hm_admin_bar_coverage)}: #{hm_format_seconds(cover_s)}"
       %>
       <div class="hm-tc-bar-row">
-        <span class="hm-tc-bar-name"><%= link_to h(row[:user].name), hm_admin_user_path(user_id: row[:user].id) %></span>
+        <span class="hm-tc-bar-name"><%= link_to h(row[:user].name), hr_admin_user_path(user_id: row[:user].id) %></span>
         <span class="hm-tc-bar-track hm-tc-bar-track-stacked">
           <span class="hm-tc-bar-seg hm-tc-bar-seg-work"
                 style="width: <%= [work_pct, 0.5].max %>%"
@@ -102,14 +102,22 @@
 <h3><%= l(:label_hm_admin_global_calendar) %></h3>
 <%= render partial: 'hm_timeclock/calendar', locals: {
       month: @month, entries: [], user: nil,
-      base_path: ->(m) { hm_admin_path(month: m.strftime('%Y-%m'),
+      base_path: ->(m) { hr_admin_path(month: m.strftime('%Y-%m'),
                                        filter_login: @filter_login,
                                        filter_mail:  @filter_mail,
                                        filter_name:  @filter_name) },
       absences_by_day: @absences_by_day,
-      day_link: ->(d) { hm_admin_day_path(date: d.strftime('%Y-%m-%d')) },
-      show_users_in_absence: true
+      holidays_by_day: @holidays_by_day,
+      day_link: ->(d) { hr_admin_day_path(date: d.strftime('%Y-%m-%d')) },
+      show_users_in_absence: true,
+      clickable_for_absence: true
     } %>
+
+<%= render partial: 'hm_timeclock/absence_modal' %>
+
+<div id="hm-tc-holiday-popover" class="hm-tc-holiday-popover" hidden
+     data-affected-label="<%= l(:label_hm_cal_holiday_affected) %>"
+     data-unaffected-label="<%= l(:label_hm_cal_holiday_unaffected) %>"></div>
 
 <% if @pending_absences.any? %>
   <h3><%= l(:label_hm_admin_pending_approvals) %></h3>

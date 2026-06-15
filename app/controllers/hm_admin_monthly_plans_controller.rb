@@ -13,7 +13,7 @@ class HmAdminMonthlyPlansController < ApplicationController
     else
       flash[:error] = plan.errors.full_messages.join(', ')
     end
-    redirect_to hm_admin_user_path(user_id: @user.id)
+    redirect_to hr_admin_user_path(user_id: @user.id)
   end
 
   def update
@@ -25,14 +25,14 @@ class HmAdminMonthlyPlansController < ApplicationController
     else
       flash[:error] = plan.errors.full_messages.join(', ')
     end
-    redirect_to hm_admin_user_path(user_id: @user.id)
+    redirect_to hr_admin_user_path(user_id: @user.id)
   end
 
   def destroy
     plan = HmMonthlyPlan.where(user_id: @user.id).find(params[:id])
     plan.destroy
     flash[:notice] = l(:notice_hm_monthly_plan_removed)
-    redirect_to hm_admin_user_path(user_id: @user.id)
+    redirect_to hr_admin_user_path(user_id: @user.id)
   end
 
   private

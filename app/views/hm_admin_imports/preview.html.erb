@@ -3,14 +3,14 @@
 <% end %>
 
 <div class="contextual">
-  <%= link_to l(:label_hm_admin_import_back), hm_admin_import_path, class: 'icon icon-back' %>
+  <%= link_to l(:label_hm_admin_import_back), hr_admin_import_path, class: 'icon icon-back' %>
 </div>
 
 <h2><%= l(:label_hm_admin_import) %> — <%= l(:label_hm_import_preview_title) %></h2>
 
 <p class="hm-tc-section-hint"><%= l(:label_hm_import_preview_intro, count: @rows.size) %></p>
 
-<%= form_with url: hm_admin_import_commit_path, method: :post, local: true do %>
+<%= form_with url: hr_admin_import_commit_path, method: :post, local: true do %>
   <p class="hm-tc-import-bulk">
     <label for="hm-import-bulk-user"><%= l(:label_hm_import_assign_all) %></label>
     <select id="hm-import-bulk-user">

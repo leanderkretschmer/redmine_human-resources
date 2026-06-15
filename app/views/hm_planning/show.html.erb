@@ -6,7 +6,7 @@
 <p class="hm-tc-section-hint"><%= l(:label_hm_planning_intro) %></p>
 
 <h3><%= l(:label_hm_planning_new) %></h3>
-<%= form_with model: @new_absence, url: hm_absences_path, method: :post,
+<%= form_with model: @new_absence, url: hr_absences_path, method: :post,
               scope: :hm_absence, local: true, html: { class: 'hm-tc-absence-form' } do |f| %>
   <div class="box tabular">
     <p>
@@ -50,8 +50,11 @@
 <h3><%= l(:label_hm_timeclock_calendar) %></h3>
 <%= render partial: 'hm_timeclock/calendar', locals: {
       month: @month, entries: [], user: User.current,
-      base_path: ->(m) { hm_planning_path(month: m.strftime('%Y-%m')) },
-      absences_by_day: @absences_by_day
+      base_path: ->(m) { hr_planning_path(month: m.strftime('%Y-%m')) },
+      absences_by_day: @absences_by_day,
+      lecture_periods: @lecture_periods,
+      monthly_plan: @monthly_plan,
+      holidays_by_day: @holidays_by_day
     } %>
 
 <h3><%= l(:label_hm_planning_list) %></h3>

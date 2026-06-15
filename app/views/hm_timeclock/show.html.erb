@@ -4,10 +4,10 @@
 
 <div class="contextual">
   <%= link_to l(:label_hm_admin_export_csv),
-              export_hm_timeclock_path(month: @month.strftime('%Y-%m')),
+              export_hr_timeclock_path(month: @month.strftime('%Y-%m')),
               class: 'icon icon-download' %>
   <%= link_to l(:label_hm_timeclock_settings),
-              edit_hm_timeclock_settings_path,
+              edit_hr_timeclock_settings_path,
               class: 'icon icon-settings' %>
 </div>
 
@@ -18,7 +18,7 @@
 <% end %>
 
 <div id="hm-timeclock-card"
-     data-status-url="<%= hm_timeclock_status_path(format: :json) %>"
+     data-status-url="<%= hr_timeclock_status_path(format: :json) %>"
      data-snapshot="<%= h @snapshot.to_json %>">
   <div class="hm-tc-state-row">
     <span class="hm-tc-status hm-tc-status-<%= @snapshot[:state] %>" data-bind="state-label">
@@ -73,16 +73,16 @@
   </div>
 
   <div class="hm-tc-actions">
-    <%= button_to l(:button_hm_timeclock_start),  start_hm_timeclock_path,
+    <%= button_to l(:button_hm_timeclock_start),  start_hr_timeclock_path,
                   data: { state_visible: 'idle' },
                   class: 'hm-tc-btn hm-tc-btn-start' %>
-    <%= button_to l(:button_hm_timeclock_pause),  pause_hm_timeclock_path,
+    <%= button_to l(:button_hm_timeclock_pause),  pause_hr_timeclock_path,
                   data: { state_visible: 'working' },
                   class: 'hm-tc-btn hm-tc-btn-pause' %>
-    <%= button_to l(:button_hm_timeclock_resume), resume_hm_timeclock_path,
+    <%= button_to l(:button_hm_timeclock_resume), resume_hr_timeclock_path,
                   data: { state_visible: 'on_break' },
                   class: 'hm-tc-btn hm-tc-btn-resume' %>
-    <%= button_to l(:button_hm_timeclock_stop),   stop_hm_timeclock_path,
+    <%= button_to l(:button_hm_timeclock_stop),   stop_hr_timeclock_path,
                   data: { state_visible: 'working,on_break' },
                   class: 'hm-tc-btn hm-tc-btn-stop' %>
   </div>
@@ -90,7 +90,7 @@
 
 <% if @chart_metrics %>
   <h3><%= l(:label_hm_personal_chart_title) %></h3>
-  <%= form_with url: hm_timeclock_path, method: :get, local: true, html: { class: 'hm-tc-barchart-toggle' } do %>
+  <%= form_with url: hr_timeclock_path, method: :get, local: true, html: { class: 'hm-tc-barchart-toggle' } do %>
     <%= hidden_field_tag :month, @month.strftime('%Y-%m') %>
     <strong><%= l(:label_hm_admin_chart_view) %>:</strong>
     <% %w[today week month].each do |mode| %>
@@ -142,8 +142,11 @@
 <h3><%= l(:label_hm_timeclock_calendar) %></h3>
 <%= render partial: 'calendar', locals: {
       month: @month, entries: @entries_month, user: User.current,
-      base_path: ->(m) { hm_timeclock_path(month: m.strftime('%Y-%m')) },
+      base_path: ->(m) { hr_timeclock_path(month: m.strftime('%Y-%m')) },
       absences_by_day: @absences_by_day,
+      lecture_periods: @lecture_periods,
+      monthly_plan: @monthly_plan,
+      holidays_by_day: @holidays_by_day,
       clickable_for_absence: true
     } %>
 

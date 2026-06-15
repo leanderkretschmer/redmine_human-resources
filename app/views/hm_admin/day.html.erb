@@ -3,7 +3,7 @@
 <% end %>
 
 <div class="contextual">
-  <%= link_to l(:label_hm_admin_back), hm_admin_path(month: @date.strftime('%Y-%m')), class: 'icon icon-back' %>
+  <%= link_to l(:label_hm_admin_back), hr_admin_path(month: @date.strftime('%Y-%m')), class: 'icon icon-back' %>
 </div>
 
 <h2><%= l(:label_hm_admin_day_title, date: I18n.l(@date)) %></h2>
@@ -27,7 +27,7 @@
       <% @entry_rows.each do |row| %>
         <tr>
           <td>
-            <%= link_to h(row[:user].name), hm_admin_user_path(user_id: row[:user].id) %>
+            <%= link_to h(row[:user].name), hr_admin_user_path(user_id: row[:user].id) %>
             <% if row[:entry_count] > 1 %>
               <span class="hm-tc-segments" title="<%= row[:entry_count] %> Segmente">×<%= row[:entry_count] %></span>
             <% end %>
@@ -60,7 +60,7 @@
       <% @ticket_coverage.each do |uid, row| %>
         <% next unless row[:user] %>
         <tr>
-          <td><%= link_to h(row[:user].name), hm_admin_user_path(user_id: uid) %></td>
+          <td><%= link_to h(row[:user].name), hr_admin_user_path(user_id: uid) %></td>
           <td><%= hm_format_seconds(row[:worked_seconds]) %></td>
           <td><%= hm_format_seconds(row[:logged_seconds]) %></td>
           <td>

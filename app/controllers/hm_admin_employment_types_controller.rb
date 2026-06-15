@@ -17,7 +17,7 @@ class HmAdminEmploymentTypesController < ApplicationController
     @type = HmEmploymentType.new(type_params)
     if @type.save
       flash[:notice] = l(:notice_hm_employment_type_saved)
-      redirect_to hm_admin_employment_types_path
+      redirect_to hr_admin_employment_types_path
     else
       render :new, status: :unprocessable_entity
     end
@@ -29,7 +29,7 @@ class HmAdminEmploymentTypesController < ApplicationController
   def update
     if @type.update(type_params)
       flash[:notice] = l(:notice_hm_employment_type_saved)
-      redirect_to hm_admin_employment_types_path
+      redirect_to hr_admin_employment_types_path
     else
       render :edit, status: :unprocessable_entity
     end
@@ -38,7 +38,7 @@ class HmAdminEmploymentTypesController < ApplicationController
   def destroy
     @type.update(archived: true)
     flash[:notice] = l(:notice_hm_employment_type_archived)
-    redirect_to hm_admin_employment_types_path
+    redirect_to hr_admin_employment_types_path
   end
 
   private

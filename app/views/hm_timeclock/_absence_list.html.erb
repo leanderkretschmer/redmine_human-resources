@@ -62,24 +62,24 @@
             <% end %>
           </td>
           <% if local_assigns[:show_user] %>
-            <td><%= link_to h(a.user.name), hm_admin_user_path(user_id: a.user.id) %></td>
+            <td><%= link_to h(a.user.name), hr_admin_user_path(user_id: a.user.id) %></td>
           <% end %>
           <td class="hm-tc-abs-actions">
             <% if User.current.admin? && a.requested? %>
-              <%= button_to l(:button_hm_absence_approve), approve_hm_absence_path(id: a.id), method: :post, class: 'button-positive' %>
-              <%= button_to l(:button_hm_absence_reject),  reject_hm_absence_path(id: a.id),  method: :post, class: 'button-negative' %>
+              <%= button_to l(:button_hm_absence_approve), approve_hr_absence_path(id: a.id), method: :post, class: 'button-positive' %>
+              <%= button_to l(:button_hm_absence_reject),  reject_hr_absence_path(id: a.id),  method: :post, class: 'button-negative' %>
             <% end %>
             <% if (a.user_id == User.current.id && (a.requested? || a.sickness? || a.offsite?)) || User.current.admin? %>
               <a href="#" class="icon icon-edit hm-tc-edit-absence-btn"
                  data-absence-id="<%= a.id %>"
-                 data-update-url="<%= hm_absence_path(id: a.id) %>"
+                 data-update-url="<%= hr_absence_path(id: a.id) %>"
                  data-starts-on="<%= a.starts_on.iso8601 %>"
                  data-ends-on="<%= a.ends_on.iso8601 %>"
                  data-reason="<%= h a.reason %>"
                  data-status="<%= a.status %>"
                  data-kind="<%= a.kind %>"
                  data-kind-label="<%= h HmAbsence.kind_label(a.kind) %>"><%= l(:button_hm_absence_edit) %></a>
-              <%= button_to l(:button_hm_absence_delete), hm_absence_path(id: a.id), method: :delete, class: 'icon icon-del',
+              <%= button_to l(:button_hm_absence_delete), hr_absence_path(id: a.id), method: :delete, class: 'icon icon-del',
                             data: { confirm: l(:text_are_you_sure) } %>
             <% end %>
           </td>

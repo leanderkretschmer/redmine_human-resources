@@ -99,20 +99,20 @@
     <p><strong><%= l(:label_hm_quick_links_pattern) %>:</strong></p>
     <dl class="hm-tc-quick-links">
       <dt><%= l(:label_hm_quick_link_start) %></dt>
-      <dd><code><%= base %>/hm_timeclock/quick/start?key=&lt;API_KEY&gt;</code></dd>
+      <dd><code><%= base %>/hr_timeclock/quick/start?key=&lt;API_KEY&gt;</code></dd>
       <dt><%= l(:label_hm_quick_link_stop) %></dt>
-      <dd><code><%= base %>/hm_timeclock/quick/stop?key=&lt;API_KEY&gt;</code></dd>
+      <dd><code><%= base %>/hr_timeclock/quick/stop?key=&lt;API_KEY&gt;</code></dd>
       <dt><%= l(:label_hm_quick_link_toggle) %></dt>
-      <dd><code><%= base %>/hm_timeclock/quick/toggle?key=&lt;API_KEY&gt;</code></dd>
+      <dd><code><%= base %>/hr_timeclock/quick/toggle?key=&lt;API_KEY&gt;</code></dd>
     </dl>
     <p><strong><%= l(:label_hm_quick_links_own_example) %>:</strong></p>
     <dl class="hm-tc-quick-links">
       <dt><%= l(:label_hm_quick_link_start) %></dt>
-      <dd><code><%= base %><%= hm_quick_path(do: 'start',  key: api_key) %></code></dd>
+      <dd><code><%= base %><%= hr_quick_path(do: 'start',  key: api_key) %></code></dd>
       <dt><%= l(:label_hm_quick_link_stop) %></dt>
-      <dd><code><%= base %><%= hm_quick_path(do: 'stop',   key: api_key) %></code></dd>
+      <dd><code><%= base %><%= hr_quick_path(do: 'stop',   key: api_key) %></code></dd>
       <dt><%= l(:label_hm_quick_link_toggle) %></dt>
-      <dd><code><%= base %><%= hm_quick_path(do: 'toggle', key: api_key) %></code></dd>
+      <dd><code><%= base %><%= hr_quick_path(do: 'toggle', key: api_key) %></code></dd>
     </dl>
     <p><%= link_to l(:label_hm_quick_rotate_key), '/my/account', class: 'icon icon-key' %></p>
   </div>
@@ -121,7 +121,7 @@
   <div class="hm-settings-panel" data-panel="import" style="display:none">
     <p><%= l(:label_hm_admin_import_intro) %></p>
     <p>
-      <%= link_to l(:label_hm_admin_import), hm_admin_import_path, class: 'icon icon-import' %>
+      <%= link_to l(:label_hm_admin_import), hr_admin_import_path, class: 'icon icon-import' %>
     </p>
     <p class="info"><%= l(:hm_settings_import_note) %></p>
   </div>

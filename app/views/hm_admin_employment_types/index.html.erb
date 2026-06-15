@@ -3,8 +3,8 @@
 <% end %>
 
 <div class="contextual">
-  <%= link_to l(:button_hm_employment_type_new), new_hm_admin_employment_type_path, class: 'icon icon-add' %>
-  <%= link_to l(:label_hm_admin_back), hm_admin_path, class: 'icon icon-back' %>
+  <%= link_to l(:button_hm_employment_type_new), new_hr_admin_employment_type_path, class: 'icon icon-add' %>
+  <%= link_to l(:label_hm_admin_back), hr_admin_path, class: 'icon icon-back' %>
 </div>
 
 <h2><%= l(:label_hm_admin_employment_types) %></h2>
@@ -40,9 +40,9 @@
           <td><%= t.allows_monthly_plan? ? '✓' : '—' %></td>
           <td><%= t.archived? ? '✓' : '' %></td>
           <td>
-            <%= link_to l(:button_hm_absence_edit), edit_hm_admin_employment_type_path(t), class: 'icon icon-edit' %>
+            <%= link_to l(:button_hm_absence_edit), edit_hr_admin_employment_type_path(t), class: 'icon icon-edit' %>
             <% unless t.archived? %>
-              <%= link_to l(:button_hm_absence_delete), hm_admin_employment_type_path(t), method: :delete,
+              <%= link_to l(:button_hm_absence_delete), hr_admin_employment_type_path(t), method: :delete,
                           data: { confirm: l(:text_are_you_sure) }, class: 'icon icon-del' %>
             <% end %>
           </td>

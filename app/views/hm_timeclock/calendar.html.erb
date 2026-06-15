@@ -3,12 +3,12 @@
 <% end %>
 
 <div class="contextual">
-  <%= link_to l(:label_hm_timeclock_navbar), hm_timeclock_path, class: 'icon icon-time' %>
+  <%= link_to l(:label_hm_timeclock_navbar), hr_timeclock_path, class: 'icon icon-time' %>
 </div>
 
 <h2><%= l(:label_hm_timeclock_calendar) %></h2>
 
 <%= render partial: 'calendar', locals: {
       month: @month, entries: @entries_month, user: User.current,
-      base_path: ->(m) { hm_timeclock_calendar_path(month: m.strftime('%Y-%m')) }
+      base_path: ->(m) { hr_timeclock_calendar_path(month: m.strftime('%Y-%m')) }
     } %>

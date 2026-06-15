@@ -4,9 +4,9 @@
 
 <div class="contextual">
   <%= link_to l(:label_hm_admin_export_csv),
-              hm_admin_user_path(user_id: @user.id, month: @month.strftime('%Y-%m'), format: :csv),
+              hr_admin_user_path(user_id: @user.id, month: @month.strftime('%Y-%m'), format: :csv),
               class: 'icon icon-download' %>
-  <%= link_to l(:label_hm_admin_back), hm_admin_path, class: 'icon icon-back' %>
+  <%= link_to l(:label_hm_admin_back), hr_admin_path, class: 'icon icon-back' %>
 </div>
 
 <h2><%= l(:label_hm_admin) %> — <%= h @user.name %></h2>
@@ -17,7 +17,7 @@
   <div><strong><%= l(:label_hm_admin_total_month) %>:</strong> <%= hm_format_seconds(@summary[:month]) %></div>
 </div>
 
-<%= form_with url: hm_admin_user_path(user_id: @user.id), method: :get, local: true, html: { class: 'hm-admin-view-toggle' } do %>
+<%= form_with url: hr_admin_user_path(user_id: @user.id), method: :get, local: true, html: { class: 'hm-admin-view-toggle' } do %>
   <strong><%= l(:label_hm_admin_view_mode) %>:</strong>
   <% %w[day week month].each do |mode| %>
     <label class="hm-tc-view-mode-option">
@@ -42,14 +42,25 @@
 <% selected_weekdays = @user_setting.effective_school_weekdays %>
 <% breakdown = @user_setting.hour_distribution %>
 <% day_abbrs = I18n.t('date.day_names') %>
+<%
+  t = @user_setting.hm_employment_type
+  variable_hours   = @user_setting.allows_monthly_plan?
+  show_pensum      = t.nil? ? true  : (t.fixed_pensum? || !variable_hours && !t.freelancer?)
+  show_pensum      = false if variable_hours
+  show_vacation    = t.nil? ? true  : t.supports_vacation?
+  show_school      = t.nil? ? true  : (t.supports_school_days? || selected_weekdays.any? ||
+                                       @user_setting.weekly_school_days_override.to_i.positive? ||
+                                       @user_setting.school_weekdays_override.to_s.length.positive?)
+  show_breakdown   = breakdown && show_pensum
+%>
 <%= form_with model: @user_setting,
-              url: update_hm_admin_user_setting_path(user_id: @user.id), method: :patch,
+              url: update_hr_admin_user_setting_path(user_id: @user.id), method: :patch,
               scope: :hm_user_setting, local: true, html: { class: 'hm-tc-settings-form' } do |f| %>
   <div class="box tabular">
     <p>
       <%= f.label :hm_employment_type_id, l(:label_hm_employment_type) %>
       <%= f.select :hm_employment_type_id,
-                   @employment_types.map { |t| [t.name, t.id] },
+                   @employment_types.map { |type| [type.name, type.id] },
                    { include_blank: true },
                    { selected: @user_setting.hm_employment_type_id } %>
     </p>
@@ -61,20 +72,22 @@
                    { selected: @user_setting.region_code } %>
       <em class="info"><%= l(:label_hm_region_hint) %></em>
     </p>
-    <p>
-      <%= f.label :daily_target_hours, l(:label_hm_timeclock_required_daily) %>
-      <%= number_field_tag 'hm_user_setting[daily_target_hours]',
-                           @user_setting.daily_target_minutes ? (@user_setting.daily_target_minutes / 60.0) : nil,
-                           min: 0, step: 0.5,
-                           placeholder: (@user_setting.effective_daily_target_minutes / 60.0).round(2) %>
-    </p>
-    <p>
-      <%= f.label :weekly_target_hours, l(:label_hm_timeclock_required_weekly) %>
-      <%= number_field_tag 'hm_user_setting[weekly_target_hours]',
-                           @user_setting.weekly_target_minutes ? (@user_setting.weekly_target_minutes / 60.0) : nil,
-                           min: 0, step: 0.5,
-                           placeholder: (@user_setting.effective_weekly_target_minutes / 60.0).round(2) %>
-    </p>
+    <% if show_pensum %>
+      <p>
+        <%= f.label :daily_target_hours, l(:label_hm_timeclock_required_daily) %>
+        <%= number_field_tag 'hm_user_setting[daily_target_hours]',
+                             @user_setting.daily_target_minutes ? (@user_setting.daily_target_minutes / 60.0) : nil,
+                             min: 0, step: 0.5,
+                             placeholder: (@user_setting.effective_daily_target_minutes / 60.0).round(2) %>
+      </p>
+      <p>
+        <%= f.label :weekly_target_hours, l(:label_hm_timeclock_required_weekly) %>
+        <%= number_field_tag 'hm_user_setting[weekly_target_hours]',
+                             @user_setting.weekly_target_minutes ? (@user_setting.weekly_target_minutes / 60.0) : nil,
+                             min: 0, step: 0.5,
+                             placeholder: (@user_setting.effective_weekly_target_minutes / 60.0).round(2) %>
+      </p>
+    <% end %>
     <p>
       <%= f.label :max_break_hours, l(:label_hm_timeclock_max_break) %>
       <%= number_field_tag 'hm_user_setting[max_break_hours]',
@@ -82,12 +95,14 @@
                            min: 0, step: 0.5,
                            placeholder: (@user_setting.effective_max_break_minutes / 60.0).round(2) %>
     </p>
-    <p>
-      <%= f.label :yearly_vacation_days_override, l(:label_hm_employment_type_vacation) %>
-      <%= f.number_field :yearly_vacation_days_override,
-                         min: 0, step: 1,
-                         placeholder: @user_setting.effective_yearly_vacation_days %>
-    </p>
+    <% if show_vacation %>
+      <p>
+        <%= f.label :yearly_vacation_days_override, l(:label_hm_employment_type_vacation) %>
+        <%= f.number_field :yearly_vacation_days_override,
+                           min: 0, step: 1,
+                           placeholder: @user_setting.effective_yearly_vacation_days %>
+      </p>
+    <% end %>
     <p>
       <%= f.label :homeoffice_days_per_year_override, l(:label_hm_admin_homeoffice_days_override) %>
       <%= f.number_field :homeoffice_days_per_year_override,
@@ -111,22 +126,24 @@
                            placeholder: @user_setting.effective_care_hours_per_year %>
       </p>
     <% end %>
-    <p>
-      <%= label_tag :school_weekdays, l(:label_hm_school_weekdays) %>
-      <span class="hm-tc-weekday-group">
-        <% (1..5).each do |i| %>
-          <label class="hm-tc-weekday-check">
-            <%= check_box_tag 'hm_user_setting[school_weekdays_override][]',
-                              i.to_s,
-                              selected_weekdays.include?(i),
-                              id: "hm_user_setting_school_weekdays_override_#{i}" %>
-            <%= day_abbrs[i % 7] %>
-          </label>
-        <% end %>
-        <%= hidden_field_tag 'hm_user_setting[school_weekdays_override][]', '' %>
-      </span>
-    </p>
-    <% if breakdown %>
+    <% if show_school %>
+      <p>
+        <%= label_tag :school_weekdays, l(:label_hm_school_weekdays) %>
+        <span class="hm-tc-weekday-group">
+          <% (1..5).each do |i| %>
+            <label class="hm-tc-weekday-check">
+              <%= check_box_tag 'hm_user_setting[school_weekdays_override][]',
+                                i.to_s,
+                                selected_weekdays.include?(i),
+                                id: "hm_user_setting_school_weekdays_override_#{i}" %>
+              <%= day_abbrs[i % 7] %>
+            </label>
+          <% end %>
+          <%= hidden_field_tag 'hm_user_setting[school_weekdays_override][]', '' %>
+        </span>
+      </p>
+    <% end %>
+    <% if show_breakdown %>
       <p class="hm-tc-distribution-hint">
         <strong><%= l(:label_hm_distribution) %>:</strong>
         <%= l(:hm_distribution_full_days, count: breakdown[:full_days],
@@ -155,60 +172,48 @@
 <% if @user_setting.allows_monthly_plan? %>
   <h3><%= l(:label_hm_admin_monthly_plans) %></h3>
   <% if @monthly_plans.any? %>
-    <table class="list">
-      <thead>
-        <tr>
-          <th><%= l(:label_hm_admin_monthly_plan_year) %></th>
-          <th><%= l(:label_hm_admin_monthly_plan_month) %></th>
-          <th><%= l(:label_hm_admin_monthly_plan_target) %></th>
-          <th><%= l(:label_hm_admin_monthly_plan_notes) %></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @monthly_plans.each do |p| %>
-          <tr class="<%= cycle('odd', 'even') %>">
-            <%= form_with url: hm_admin_user_monthly_plan_path(user_id: @user.id, id: p.id),
-                          method: :patch, scope: :hm_monthly_plan, local: true do |f| %>
-              <td><%= p.year %></td>
-              <td><%= p.month %></td>
-              <td>
-                <%= number_field_tag 'hm_monthly_plan[target_hours]', (p.target_minutes / 60.0), min: 0, step: 0.5, size: 6 %>
-              </td>
-              <td><%= text_field_tag 'hm_monthly_plan[notes]', p.notes, size: 40 %></td>
-              <td>
-                <%= submit_tag l(:button_save), class: 'icon icon-save' %>
-                <%= link_to l(:button_hm_absence_delete),
-                            hm_admin_user_monthly_plan_path(user_id: @user.id, id: p.id),
-                            method: :delete,
-                            data: { confirm: l(:text_are_you_sure) },
-                            class: 'icon icon-del' %>
-              </td>
-            <% end %>
-          </tr>
+    <div class="hm-tc-edit-list hm-tc-monthly-plan-list">
+      <div class="hm-tc-edit-row hm-tc-edit-row-head">
+        <span><%= l(:label_hm_admin_monthly_plan_year) %></span>
+        <span><%= l(:label_hm_admin_monthly_plan_month) %></span>
+        <span><%= l(:label_hm_admin_monthly_plan_target) %></span>
+        <span><%= l(:label_hm_admin_monthly_plan_notes) %></span>
+        <span></span>
+      </div>
+      <% @monthly_plans.each do |p| %>
+        <%= form_with url: hr_admin_user_monthly_plan_path(user_id: @user.id, id: p.id),
+                      method: :patch, scope: :hm_monthly_plan, local: true,
+                      html: { class: 'hm-tc-edit-row' } do |f| %>
+          <span><%= p.year %></span>
+          <span><%= p.month %></span>
+          <%= number_field_tag 'hm_monthly_plan[target_hours]', (p.target_minutes / 60.0), min: 0, step: 0.5 %>
+          <%= text_field_tag 'hm_monthly_plan[notes]', p.notes %>
+          <span class="hm-tc-edit-actions">
+            <%= submit_tag l(:button_save), class: 'icon icon-save' %>
+            <%= link_to l(:button_hm_absence_delete),
+                        hr_admin_user_monthly_plan_path(user_id: @user.id, id: p.id),
+                        method: :delete,
+                        data: { confirm: l(:text_are_you_sure) },
+                        class: 'icon icon-del' %>
+          </span>
         <% end %>
-      </tbody>
-    </table>
+      <% end %>
+    </div>
   <% else %>
     <p class="nodata"><%= l(:label_hm_admin_monthly_plan_none) %></p>
   <% end %>
 
-  <%= form_with url: hm_admin_user_monthly_plans_path(user_id: @user.id),
+  <%= form_with url: hr_admin_user_monthly_plans_path(user_id: @user.id),
                 method: :post, scope: :hm_monthly_plan, local: true,
-                html: { class: 'hm-tc-settings-form' } do |f| %>
-    <div class="box tabular">
-      <p>
-        <%= f.label :year, l(:label_hm_admin_monthly_plan_year) %>
-        <%= f.number_field :year, value: Date.current.year, min: 2020, max: 2099 %>
-        <%= f.label :month, l(:label_hm_admin_monthly_plan_month) %>
-        <%= f.number_field :month, value: Date.current.month, min: 1, max: 12 %>
-        <%= f.label :target_hours, l(:label_hm_admin_monthly_plan_target) %>
-        <%= number_field_tag 'hm_monthly_plan[target_hours]', '', min: 0, step: 0.5, size: 6 %>
-        <%= f.label :notes, l(:label_hm_admin_monthly_plan_notes) %>
-        <%= f.text_field :notes, size: 30 %>
-        <%= submit_tag l(:button_save), class: 'button-positive' %>
-      </p>
-    </div>
+                html: { class: 'hm-tc-edit-row hm-tc-edit-row-new hm-tc-monthly-plan-list' } do |f| %>
+    <%= f.number_field :year, value: Date.current.year, min: 2020, max: 2099,
+                       placeholder: l(:label_hm_admin_monthly_plan_year) %>
+    <%= f.number_field :month, value: Date.current.month, min: 1, max: 12,
+                       placeholder: l(:label_hm_admin_monthly_plan_month) %>
+    <%= number_field_tag 'hm_monthly_plan[target_hours]', '', min: 0, step: 0.5,
+                         placeholder: l(:label_hm_admin_monthly_plan_target) %>
+    <%= f.text_field :notes, placeholder: l(:label_hm_admin_monthly_plan_notes) %>
+    <span class="hm-tc-edit-actions"><%= submit_tag l(:button_save), class: 'button-positive' %></span>
   <% end %>
 <% end %>
 
@@ -216,87 +221,72 @@
   <h3><%= l(:label_hm_admin_lecture_periods) %></h3>
   <p class="hm-tc-section-hint"><%= l(:label_hm_admin_lecture_periods_hint) %></p>
   <% if @lecture_periods.any? %>
-    <table class="list">
-      <thead>
-        <tr>
-          <th><%= l(:label_hm_lecture_period_kind) %></th>
-          <th><%= l(:label_hm_lecture_period_starts_on) %></th>
-          <th><%= l(:label_hm_lecture_period_ends_on) %></th>
-          <th><%= l(:label_hm_lecture_period_weekly_target) %></th>
-          <th><%= l(:label_hm_lecture_period_daily_target) %></th>
-          <th><%= l(:label_hm_lecture_period_label) %></th>
-          <th></th>
-        </tr>
-      </thead>
-      <tbody>
-        <% @lecture_periods.each do |p| %>
-          <tr class="<%= cycle('odd', 'even') %>">
-            <%= form_with url: hm_admin_user_lecture_period_path(user_id: @user.id, id: p.id),
-                          method: :patch, scope: :hm_lecture_period, local: true do |f| %>
-              <td>
-                <%= f.select :kind,
-                             HmLecturePeriod::KINDS.map { |k| [HmLecturePeriod.label_for(k), k] },
-                             {}, { selected: p.kind } %>
-              </td>
-              <td><%= f.date_field :starts_on, value: p.starts_on %></td>
-              <td><%= f.date_field :ends_on,   value: p.ends_on %></td>
-              <td><%= number_field_tag 'hm_lecture_period[weekly_target_hours]',
-                                      p.weekly_target_minutes ? (p.weekly_target_minutes / 60.0) : nil,
-                                      min: 0, step: 0.5, size: 6 %></td>
-              <td><%= number_field_tag 'hm_lecture_period[daily_target_hours]',
-                                      p.daily_target_minutes ? (p.daily_target_minutes / 60.0) : nil,
-                                      min: 0, step: 0.5, size: 6 %></td>
-              <td><%= f.text_field :label, value: p.label, size: 20 %></td>
-              <td>
-                <%= submit_tag l(:button_save), class: 'icon icon-save' %>
-                <%= link_to l(:button_hm_absence_delete),
-                            hm_admin_user_lecture_period_path(user_id: @user.id, id: p.id),
-                            method: :delete,
-                            data: { confirm: l(:text_are_you_sure) },
-                            class: 'icon icon-del' %>
-              </td>
-            <% end %>
-          </tr>
+    <div class="hm-tc-edit-list hm-tc-lecture-list">
+      <div class="hm-tc-edit-row hm-tc-edit-row-head">
+        <span><%= l(:label_hm_lecture_period_kind) %></span>
+        <span><%= l(:label_hm_lecture_period_starts_on) %></span>
+        <span><%= l(:label_hm_lecture_period_ends_on) %></span>
+        <span><%= l(:label_hm_lecture_period_weekly_target) %></span>
+        <span><%= l(:label_hm_lecture_period_daily_target) %></span>
+        <span><%= l(:label_hm_lecture_period_label) %></span>
+        <span></span>
+      </div>
+      <% @lecture_periods.each do |p| %>
+        <%= form_with url: hr_admin_user_lecture_period_path(user_id: @user.id, id: p.id),
+                      method: :patch, scope: :hm_lecture_period, local: true,
+                      html: { class: 'hm-tc-edit-row' } do |f| %>
+          <%= f.select :kind,
+                       HmLecturePeriod::KINDS.map { |k| [HmLecturePeriod.label_for(k), k] },
+                       {}, { selected: p.kind } %>
+          <%= f.date_field :starts_on, value: p.starts_on %>
+          <%= f.date_field :ends_on,   value: p.ends_on %>
+          <%= number_field_tag 'hm_lecture_period[weekly_target_hours]',
+                               p.weekly_target_minutes ? (p.weekly_target_minutes / 60.0) : nil,
+                               min: 0, step: 0.5 %>
+          <%= number_field_tag 'hm_lecture_period[daily_target_hours]',
+                               p.daily_target_minutes ? (p.daily_target_minutes / 60.0) : nil,
+                               min: 0, step: 0.5 %>
+          <%= f.text_field :label, value: p.label %>
+          <span class="hm-tc-edit-actions">
+            <%= submit_tag l(:button_save), class: 'icon icon-save' %>
+            <%= link_to l(:button_hm_absence_delete),
+                        hr_admin_user_lecture_period_path(user_id: @user.id, id: p.id),
+                        method: :delete,
+                        data: { confirm: l(:text_are_you_sure) },
+                        class: 'icon icon-del' %>
+          </span>
         <% end %>
-      </tbody>
-    </table>
+      <% end %>
+    </div>
   <% else %>
     <p class="nodata"><%= l(:label_hm_admin_lecture_periods_none) %></p>
   <% end %>
 
-  <%= form_with url: hm_admin_user_lecture_periods_path(user_id: @user.id),
+  <%= form_with url: hr_admin_user_lecture_periods_path(user_id: @user.id),
                 method: :post, scope: :hm_lecture_period, local: true,
-                html: { class: 'hm-tc-settings-form' } do |f| %>
-    <div class="box tabular">
-      <p>
-        <%= f.label :kind, l(:label_hm_lecture_period_kind) %>
-        <%= f.select :kind,
-                     HmLecturePeriod::KINDS.map { |k| [HmLecturePeriod.label_for(k), k] },
-                     {}, { selected: HmLecturePeriod::KIND_LECTURE } %>
-        <%= f.label :starts_on, l(:label_hm_lecture_period_starts_on) %>
-        <%= f.date_field :starts_on, value: Date.current %>
-        <%= f.label :ends_on, l(:label_hm_lecture_period_ends_on) %>
-        <%= f.date_field :ends_on, value: Date.current.end_of_month %>
-        <%= f.label :weekly_target_hours, l(:label_hm_lecture_period_weekly_target) %>
-        <%= number_field_tag 'hm_lecture_period[weekly_target_hours]', '', min: 0, step: 0.5, size: 6 %>
-        <%= f.label :daily_target_hours, l(:label_hm_lecture_period_daily_target) %>
-        <%= number_field_tag 'hm_lecture_period[daily_target_hours]', '', min: 0, step: 0.5, size: 6 %>
-        <%= f.label :label, l(:label_hm_lecture_period_label) %>
-        <%= f.text_field :label, size: 20 %>
-        <%= submit_tag l(:button_save), class: 'button-positive' %>
-      </p>
-    </div>
+                html: { class: 'hm-tc-edit-row hm-tc-edit-row-new hm-tc-lecture-list' } do |f| %>
+    <%= f.select :kind,
+                 HmLecturePeriod::KINDS.map { |k| [HmLecturePeriod.label_for(k), k] },
+                 {}, { selected: HmLecturePeriod::KIND_LECTURE } %>
+    <%= f.date_field :starts_on, value: Date.current %>
+    <%= f.date_field :ends_on, value: Date.current.end_of_month %>
+    <%= number_field_tag 'hm_lecture_period[weekly_target_hours]', '', min: 0, step: 0.5,
+                         placeholder: l(:label_hm_lecture_period_weekly_target) %>
+    <%= number_field_tag 'hm_lecture_period[daily_target_hours]', '', min: 0, step: 0.5,
+                         placeholder: l(:label_hm_lecture_period_daily_target) %>
+    <%= f.text_field :label, placeholder: l(:label_hm_lecture_period_label) %>
+    <span class="hm-tc-edit-actions"><%= submit_tag l(:button_save), class: 'button-positive' %></span>
   <% end %>
 <% end %>
 
 <%= render partial: 'hm_timeclock/calendar', locals: {
       month: @month, entries: @entries, user: @user,
-      base_path: ->(m) { hm_admin_user_path(user_id: @user.id, month: m.strftime('%Y-%m')) },
-      absences_by_day: @absences_by_day
+      base_path: ->(m) { hr_admin_user_path(user_id: @user.id, month: m.strftime('%Y-%m')) },
+      absences_by_day: @absences_by_day,
+      lecture_periods: @lecture_periods,
+      monthly_plan: @monthly_plan_current,
+      holidays_by_day: @holidays_by_day
     } %>
-
-<h3><%= l(:label_hm_timeclock_history) %></h3>
-<%= render partial: 'hm_timeclock/entries_table', locals: { entries: @entries } %>
 
 <h3><%= l(:label_hm_absence_all_for_user) %></h3>
 <%= render partial: 'hm_timeclock/absence_list', locals: { absences: @absences } %>

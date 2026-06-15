@@ -22,7 +22,7 @@ class HmCareController < ApplicationController
       @new_absence.log_audit!(User.current, HmAbsenceAudit::ACTION_CREATED, to_status: @new_absence.status)
       HmAbsenceMailer.deliver_absence_requested(@new_absence)
       flash[:notice] = l(:notice_hm_absence_requested)
-      redirect_to hm_care_path
+      redirect_to hr_care_path
     else
       load_state
       render :show, status: :unprocessable_entity

@@ -6,9 +6,21 @@
   show_users      = local_assigns[:show_users_in_absence]
   clickable       = local_assigns[:clickable_for_absence]
   default_kind    = local_assigns[:default_absence_kind]
+  lecture_periods = local_assigns[:lecture_periods]
+  monthly_plan    = local_assigns[:monthly_plan]
+  holidays_by_day = local_assigns[:holidays_by_day]
   day_names       = (I18n.t('date.abbr_day_names') || %w[Sun Mon Tue Wed Thu Fri Sat]).rotate(1)
+  lecture_by_day  = {}
+  (lecture_periods || []).each do |lp|
+    from = [lp.starts_on, month].max
+    to   = [lp.ends_on,   month.end_of_month].min
+    next if from > to
+    (from..to).each { |d| (lecture_by_day[d] ||= []) << lp }
+  end
 %>
-<div class="hm-tc-calendar" <%= "data-default-absence-kind=\"#{h default_kind}\"".html_safe if default_kind %>>
+<div class="hm-tc-calendar"
+     <%= "data-default-absence-kind=\"#{h default_kind}\"".html_safe if default_kind %>
+     <%= 'data-admin-create="1"'.html_safe if show_users %>>
   <div class="hm-tc-calendar-nav">
     <%= link_to '«', base_path.call(month.prev_month), class: 'hm-tc-cal-nav-btn' %>
     <span class="hm-tc-calendar-title"><%= I18n.l(month, format: '%B %Y') %></span>
@@ -18,6 +30,12 @@
         <span class="hm-tc-cal-legend-swatch hm-tc-cal-legend-vacation"></span> <%= l(:label_hm_hr_vacation) %>
         <span class="hm-tc-cal-legend-swatch hm-tc-cal-legend-sickness"></span> <%= l(:label_hm_hr_sickness) %>
         <span class="hm-tc-cal-legend-swatch hm-tc-cal-legend-offsite"></span> <%= l(:label_hm_hr_offsite) %>
+        <% if lecture_by_day.any? %>
+          <span class="hm-tc-cal-legend-swatch hm-tc-cal-legend-lecture"></span> <%= l(:label_hm_cal_legend_lecture) %>
+        <% end %>
+        <% if holidays_by_day&.any? %>
+          <span class="hm-tc-cal-legend-swatch hm-tc-cal-legend-holiday"></span> <%= l(:label_hm_cal_legend_holiday) %>
+        <% end %>
         <span class="hm-tc-cal-legend-swatch hm-tc-cal-legend-pending"></span> <%= l(:label_hm_absence_pending_legend) %>
       </span>
     <% end %>
@@ -25,6 +43,17 @@
       <span class="hm-tc-cal-hint"><%= l(:label_hm_calendar_click_hint) %></span>
     <% end %>
   </div>
+  <% if monthly_plan %>
+    <%
+      mp_target_hours = (monthly_plan.target_minutes / 60.0).round(1)
+      mp_daily_h      = (monthly_plan.daily_target_minutes / 60.0).round(2)
+    %>
+    <p class="hm-tc-cal-plan-banner">
+      <strong><%= l(:label_hm_admin_monthly_plans) %>:</strong>
+      <%= l(:label_hm_cal_monthly_plan_summary, hours: mp_target_hours, daily: mp_daily_h) %>
+      <% if monthly_plan.notes.present? %><span class="hm-tc-cal-plan-note">— <%= h monthly_plan.notes %></span><% end %>
+    </p>
+  <% end %>
   <table class="hm-tc-calendar-grid">
     <thead>
       <tr>
@@ -42,10 +71,15 @@
               cell_classes << 'hm-tc-cal-empty'   unless day
               cell_classes << 'hm-tc-cal-today'   if day && day == Date.current
               cell_classes << 'hm-tc-cal-weekend' if day && [6, 7].include?(day.cwday)
-              cell_classes << 'hm-tc-cal-clickable' if day && clickable && !day_link
+              cell_classes << 'hm-tc-cal-clickable' if day && clickable
 
               day_absences = (day && absences_by_day) ? (absences_by_day[day] || []) : []
+              day_lectures = (day && lecture_by_day[day]) || []
+              day_holidays = (day && holidays_by_day) ? (holidays_by_day[day] || []) : []
               cell_classes << 'hm-tc-cal-has-absence' if day_absences.any? && !show_users
+              cell_classes << 'hm-tc-cal-lecture' if day_lectures.any? { |lp| lp.lecture? }
+              cell_classes << 'hm-tc-cal-lecture-break' if day_lectures.any? { |lp| lp.break? }
+              cell_classes << 'hm-tc-cal-holiday' if day_holidays.any?
 
               cell_attrs = +%(class="#{cell_classes.join(' ')}")
               if day && clickable && !day_link
@@ -57,21 +91,50 @@
                   cell_attrs << %( data-absence-kinds="#{kinds}")
                 end
               end
+              if day && day_holidays.any?
+                # Surface the holiday name(s) for tooltip rendering; if affected
+                # user lists are provided (admin view) emit a JSON payload that
+                # the click handler reads to show a who-is-off popover.
+                names = day_holidays.map { |hd| hd[:name] }.uniq.join(' / ')
+                cell_attrs << %( data-holiday="#{ERB::Util.h(names)}")
+                if day_holidays.any? { |hd| hd[:affected]&.any? || hd[:unaffected]&.any? }
+                  payload = day_holidays.map do |hd|
+                    {
+                      name: hd[:name],
+                      regions: hd[:regions],
+                      affected:   (hd[:affected]   || []).map { |u| u.name },
+                      unaffected: (hd[:unaffected] || []).map { |u| u.name }
+                    }
+                  end
+                  cell_attrs << %( data-holiday-detail="#{ERB::Util.h(payload.to_json)}")
+                end
+              end
             %>
             <td <%= cell_attrs.html_safe %>>
               <% if day %>
-                <% if day_absences.any? && !show_users %>
-                  <%
-                    kinds_present = day_absences.group_by(&:kind)
-                    marker_order  = [HmAbsence::KIND_VACATION, HmAbsence::KIND_SICKNESS, HmAbsence::KIND_OFFSITE, HmAbsence::KIND_SCHOOL, HmAbsence::KIND_BLOCK, HmAbsence::KIND_WORKDAY, HmAbsence::KIND_HOMEOFFICE]
-                  %>
+                <%
+                  kinds_present = day_absences.group_by(&:kind)
+                  marker_order  = [HmAbsence::KIND_VACATION, HmAbsence::KIND_SICKNESS, HmAbsence::KIND_OFFSITE, HmAbsence::KIND_SCHOOL, HmAbsence::KIND_BLOCK, HmAbsence::KIND_WORKDAY, HmAbsence::KIND_HOMEOFFICE]
+                  has_markers = (day_absences.any? && !show_users) || day_lectures.any? || day_holidays.any?
+                %>
+                <% if has_markers %>
                   <div class="hm-tc-cal-markers">
-                    <% marker_order.each do |k| %>
-                      <% group = kinds_present[k] %>
-                      <% next unless group %>
-                      <% pending = group.all?(&:requested?) %>
-                      <span class="hm-tc-cal-marker hm-tc-cal-marker-<%= k %><%= ' hm-tc-cal-marker-pending' if pending %>"
-                            title="<%= h(HmAbsence.kind_label(k)) %><%= ' (' + HmAbsence.status_label(HmAbsence::STATUS_REQUESTED) + ')' if pending %>"></span>
+                    <% if day_holidays.any? %>
+                      <span class="hm-tc-cal-marker hm-tc-cal-marker-holiday"
+                            title="<%= h(day_holidays.map { |hd| hd[:name] }.uniq.join(' / ')) %>"></span>
+                    <% end %>
+                    <% if !show_users && day_absences.any? %>
+                      <% marker_order.each do |k| %>
+                        <% group = kinds_present[k] %>
+                        <% next unless group %>
+                        <% pending = group.all?(&:requested?) %>
+                        <span class="hm-tc-cal-marker hm-tc-cal-marker-<%= k %><%= ' hm-tc-cal-marker-pending' if pending %>"
+                              title="<%= h(HmAbsence.kind_label(k)) %><%= ' (' + HmAbsence.status_label(HmAbsence::STATUS_REQUESTED) + ')' if pending %>"></span>
+                      <% end %>
+                    <% end %>
+                    <% day_lectures.each do |lp| %>
+                      <span class="hm-tc-cal-marker hm-tc-cal-marker-lecture<%= '-break' if lp.break? %>"
+                            title="<%= h(lp.effective_label) %>"></span>
                     <% end %>
                   </div>
                 <% end %>

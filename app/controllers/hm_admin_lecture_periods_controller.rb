@@ -9,7 +9,7 @@ class HmAdminLecturePeriodsController < ApplicationController
     else
       flash[:error] = period.errors.full_messages.join(', ')
     end
-    redirect_to hm_admin_user_path(user_id: @user.id)
+    redirect_to hr_admin_user_path(user_id: @user.id)
   end
 
   def update
@@ -19,14 +19,14 @@ class HmAdminLecturePeriodsController < ApplicationController
     else
       flash[:error] = period.errors.full_messages.join(', ')
     end
-    redirect_to hm_admin_user_path(user_id: @user.id)
+    redirect_to hr_admin_user_path(user_id: @user.id)
   end
 
   def destroy
     period = HmLecturePeriod.for_user(@user).find(params[:id])
     period.destroy
     flash[:notice] = l(:notice_hm_lecture_period_deleted)
-    redirect_to hm_admin_user_path(user_id: @user.id)
+    redirect_to hr_admin_user_path(user_id: @user.id)
   end
 
   private
