@@ -242,6 +242,7 @@ en:
   label_hm_cal_holiday_affected: "Affected"
   label_hm_cal_holiday_unaffected: "Not affected"
   label_hm_absence_for_user: "For employee"
+  label_hm_absence_for_self: "— own entry —"
   label_hm_absence_for_company: "— company-wide (all active users) —"
   label_hm_absence_admin_auto_approved: "Will be approved immediately."
   label_hm_school_weekdays: "School weekdays"

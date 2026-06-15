@@ -228,13 +228,16 @@ class HmAdminController < ApplicationController
 
   # Per-day list of holidays across the user list. Each entry has the holiday
   # name, the regions where it applies, and the affected vs. unaffected users
-  # for that name on that day. Users without a configured region are treated
-  # as unaffected.
+  # for that name on that day. Users without a configured region inherit the
+  # federal (bundesweit) holiday set so they still see something on the
+  # calendar.
+  FEDERAL_REGION_SENTINEL = '__federal__'.freeze
+
   def compute_global_holidays(users, range_from, range_to)
     user_region = users.each_with_object({}) do |u, h|
-      h[u.id] = HmUserSetting.for(u).effective_region_code.presence
+      h[u.id] = HmUserSetting.for(u).effective_region_code.presence || FEDERAL_REGION_SENTINEL
     end
-    regions_used = user_region.values.compact.uniq
+    regions_used = user_region.values.uniq
     return {} if regions_used.empty?
 
     region_year_maps = {}
@@ -243,11 +246,13 @@ class HmAdminController < ApplicationController
       day_holidays = {}
       regions_used.each do |r|
         region_year_maps[r] ||= {}
-        map = (region_year_maps[r][d.year] ||= RedmineHumanResources::Holidays.holidays_for(d.year, region_code: r))
+        lookup_region = (r == FEDERAL_REGION_SENTINEL ? nil : r)
+        map = (region_year_maps[r][d.year] ||= RedmineHumanResources::Holidays.holidays_for(d.year, region_code: lookup_region))
         name = map[d]
         next unless name
         entry = (day_holidays[name] ||= { regions: [], users: [] })
-        entry[:regions] << r unless entry[:regions].include?(r)
+        display = (r == FEDERAL_REGION_SENTINEL ? 'DE' : r)
+        entry[:regions] << display unless entry[:regions].include?(display)
       end
       next if day_holidays.empty?
 
@@ -274,17 +279,16 @@ class HmAdminController < ApplicationController
     {}
   end
 
-  # Region-aware holiday map for a single user. Returns {} if the user has no
-  # region configured (we then fall back silently — no annotated days).
+  # Holiday map for a single user. Falls back to federal holidays if no
+  # region is configured (better than showing an empty calendar header).
   def compute_user_holidays(user, range_from, range_to)
-    region = HmUserSetting.for(user).effective_region_code
-    return {} if region.blank?
+    region = HmUserSetting.for(user).effective_region_code.presence
     year_maps = {}
     out = {}
     (range_from..range_to).each do |d|
       map = (year_maps[d.year] ||= RedmineHumanResources::Holidays.holidays_for(d.year, region_code: region))
       name = map[d]
-      out[d] = [{ name: name, regions: [region] }] if name
+      out[d] = [{ name: name, regions: region ? [region] : ['DE'] }] if name
     end
     out
   rescue StandardError => e

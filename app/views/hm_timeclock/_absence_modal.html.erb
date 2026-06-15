@@ -8,11 +8,13 @@
         <div class="hm-tc-absence-modal-row" id="hm_absence_user_row">
           <%= f.label :user_id, l(:label_hm_absence_for_user) %>
           <%= f.select :user_id,
-                       ([[l(:label_hm_absence_for_company), '']] +
-                        User.active.where.not(type: 'AnonymousUser').sorted.pluck(:firstname, :lastname, :login, :id)
-                          .map { |fn, ln, lg, id| ["#{fn} #{ln} (#{lg})", id] }),
+                       ([[l(:label_hm_absence_for_self), User.current.id],
+                         [l(:label_hm_absence_for_company), 'all']] +
+                        User.active.where.not(type: 'AnonymousUser').where.not(id: User.current.id)
+                            .sorted.pluck(:firstname, :lastname, :login, :id)
+                            .map { |fn, ln, lg, id| ["#{fn} #{ln} (#{lg})", id] }),
                        { include_blank: false },
-                       { id: 'hm_absence_user_id' } %>
+                       { id: 'hm_absence_user_id', selected: User.current.id } %>
           <em class="info"><%= l(:label_hm_absence_admin_auto_approved) %></em>
         </div>
       <% end %>

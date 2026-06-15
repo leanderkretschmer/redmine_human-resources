@@ -188,18 +188,20 @@ class HmAbsencesController < ApplicationController
   private
 
   # Translate the modal's user_id selection into the list of users we'll book
-  # against. Non-admins are pinned to themselves; admins may pick a specific
-  # user (a numeric id) or "company-wide" (blank → every active user).
+  # against. Non-admins are pinned to themselves; admins target a specific
+  # user (numeric id) or the entire active roster (explicit "all" sentinel).
+  # Anything else — including a missing field, which is the case for the
+  # day-detail timeline popover that has no user picker — falls back to the
+  # current actor so admins booking their own time aren't accidentally
+  # spamming every employee.
   def resolve_target_user_ids(raw_value)
     return [User.current.id] unless User.current.admin?
     s = raw_value.to_s.strip
-    if s.empty?
-      User.active.where.not(type: 'AnonymousUser').pluck(:id)
-    else
-      id = s.to_i
-      return [] unless id.positive?
-      User.where(id: id).pluck(:id)
-    end
+    return [User.current.id] if s.empty?
+    return User.active.where.not(type: 'AnonymousUser').pluck(:id) if s == 'all'
+    id = s.to_i
+    return [] unless id.positive?
+    User.where(id: id).pluck(:id)
   rescue StandardError
     []
   end

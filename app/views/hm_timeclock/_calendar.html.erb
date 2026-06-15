@@ -82,7 +82,7 @@
               cell_classes << 'hm-tc-cal-holiday' if day_holidays.any?
 
               cell_attrs = +%(class="#{cell_classes.join(' ')}")
-              if day && clickable && !day_link
+              if day && clickable
                 cell_attrs << %( data-date="#{day.iso8601}")
                 if day_absences.any?
                   ids = day_absences.map(&:id).join(',')

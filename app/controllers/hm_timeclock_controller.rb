@@ -215,13 +215,13 @@ class HmTimeclockController < ApplicationController
     RedmineHumanResources::Snapshot.new(User.current, @user_setting).to_h
   end
 
-  # Region-aware holiday lookup for the personal calendar. Returns a hash
-  # { Date => [{ name:, regions: }, …] } so the calendar partial can mark days
-  # and render tooltips. Skips entirely when the user has no region configured.
+  # Holiday lookup for the personal calendar. Returns a hash
+  # { Date => [{ name:, regions: }, …] }. When the user has no region set we
+  # still show the federal (bundesweit) holidays — better than a silently
+  # empty calendar.
   def compute_personal_holidays(user, month_start)
     setting = HmUserSetting.for(user)
-    region  = setting.effective_region_code
-    return {} if region.blank?
+    region  = setting.effective_region_code.presence
     range_from = month_start
     range_to   = month_start.end_of_month
     year_maps = {}
@@ -229,7 +229,7 @@ class HmTimeclockController < ApplicationController
     (range_from..range_to).each do |d|
       map = (year_maps[d.year] ||= RedmineHumanResources::Holidays.holidays_for(d.year, region_code: region))
       name = map[d]
-      out[d] = [{ name: name, regions: [region] }] if name
+      out[d] = [{ name: name, regions: region ? [region] : [] }] if name
     end
     out
   rescue StandardError => e

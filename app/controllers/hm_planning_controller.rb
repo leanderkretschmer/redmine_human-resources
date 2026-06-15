@@ -34,14 +34,13 @@ class HmPlanningController < ApplicationController
   private
 
   def compute_holidays(user, range_from, range_to)
-    region = HmUserSetting.for(user).effective_region_code
-    return {} if region.blank?
+    region = HmUserSetting.for(user).effective_region_code.presence
     year_maps = {}
     out = {}
     (range_from..range_to).each do |d|
       map = (year_maps[d.year] ||= RedmineHumanResources::Holidays.holidays_for(d.year, region_code: region))
       name = map[d]
-      out[d] = [{ name: name, regions: [region] }] if name
+      out[d] = [{ name: name, regions: region ? [region] : ['DE'] }] if name
     end
     out
   rescue StandardError
