@@ -5,14 +5,27 @@
     <%= form_with url: hr_absences_path, method: :post, scope: :hr_absence, local: true,
                   html: { id: 'hr-absence-modal-form' } do |f| %>
       <% if User.current.admin? %>
+        <%
+          # Restrict the user picker to the same HR roster the admin
+          # bargraph displays: anyone with a HrWorkEntry or HrAbsence on
+          # record (implicitly users that are actually tracked by HR).
+          hr_user_ids = (HrWorkEntry.distinct.pluck(:user_id) +
+                         HrAbsence.distinct.pluck(:user_id)).uniq
+          hr_users_for_picker = if hr_user_ids.any?
+                                  User.active.where(id: hr_user_ids)
+                                      .where.not(type: 'AnonymousUser')
+                                      .where.not(id: User.current.id)
+                                      .sorted.pluck(:firstname, :lastname, :login, :id)
+                                else
+                                  []
+                                end
+        %>
         <div class="hr-tc-absence-modal-row" id="hr_absence_user_row">
           <%= f.label :user_id, l(:label_hr_absence_for_user) %>
           <%= f.select :user_id,
                        ([[l(:label_hr_absence_for_self), User.current.id],
                          [l(:label_hr_absence_for_company), 'all']] +
-                        User.active.where.not(type: 'AnonymousUser').where.not(id: User.current.id)
-                            .sorted.pluck(:firstname, :lastname, :login, :id)
-                            .map { |fn, ln, lg, id| ["#{fn} #{ln} (#{lg})", id] }),
+                        hr_users_for_picker.map { |fn, ln, lg, id| ["#{fn} #{ln} (#{lg})", id] }),
                        { include_blank: false },
                        { id: 'hr_absence_user_id', selected: User.current.id } %>
           <em class="info"><%= l(:label_hr_absence_admin_auto_approved) %></em>
