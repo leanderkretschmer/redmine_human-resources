@@ -384,8 +384,53 @@ table.hr-tc-calendar-grid {
 .hr-tc-cal-year-day-homeoffice { background: #8e44ad; color: #fff; }
 .hr-tc-cal-year-day-care       { background: #c0392b; color: #fff; }
 .hr-tc-cal-year-day-holiday    { box-shadow: inset 0 0 0 1px #c0392b; }
-.hr-tc-cal-year-day-link { color: inherit; text-decoration: none; display: block; width: 100%; height: 100%; }
+.hr-tc-cal-year-day-link { color: inherit; text-decoration: none; }
 .hr-tc-cal-year-day-link:hover { text-decoration: underline; }
+.hr-tc-cal-year-day-pending {
+  background-image: repeating-linear-gradient(45deg, transparent 0 3px, rgba(255,255,255,0.55) 3px 6px);
+}
+/* Admin year view: per-user vertical stripes inside each day cell. The day
+   number sits centred on top of the stripes; pending requests get a dashed
+   overlay so an unconfirmed third request shows through alongside two solid
+   approved vacations. */
+.hr-tc-cal-year-day {
+  position: relative;
+  overflow: hidden;
+}
+.hr-tc-cal-year-day-has-abs { color: #fff; }
+.hr-tc-cal-year-day-stripes {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  z-index: 0;
+}
+.hr-tc-cal-year-day-stripe {
+  flex: 1 1 0;
+  height: 100%;
+  background-color: #95a5a6;
+}
+.hr-tc-cal-year-day-stripe-pending {
+  background-image: repeating-linear-gradient(45deg, transparent 0 2px, rgba(255,255,255,0.65) 2px 4px);
+}
+.hr-tc-cal-year-day-num {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  padding: 0 2px;
+  text-shadow: 0 0 2px rgba(0,0,0,0.55);
+  pointer-events: auto;
+}
+.hr-tc-cal-year-day-has-abs .hr-tc-cal-year-day-link { color: #fff; }
+.hr-tc-cal-year-day-overflow {
+  display: inline-block;
+  margin-left: 2px;
+  font-size: 0.8em;
+  font-weight: 700;
+  background: rgba(0,0,0,0.35);
+  color: #fff;
+  border-radius: 6px;
+  padding: 0 3px;
+}
 
 /* ======= Week view (7-day timeline) ======= */
 .hr-tc-cal-week {

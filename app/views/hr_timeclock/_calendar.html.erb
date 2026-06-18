@@ -188,25 +188,50 @@
                       day_abs = (day && absences_by_day) ? (absences_by_day[day] || []) : []
                       day_abs = day_abs.select { |a| active_set.include?(a.kind) }
                       day_hol = (day && holidays_by_day) ? (holidays_by_day[day] || []) : []
-
-                      bg_kind = day_abs.first&.kind
-                      cls << "hr-tc-cal-year-day-#{bg_kind}" if bg_kind
                       cls << 'hr-tc-cal-year-day-holiday' if day_hol.any?
+
+                      if show_users
+                        # Admin view: pile up per-user stripes so 3 weeks of vacation
+                        # split across two people show as two contiguous user-colour
+                        # blocks instead of one anonymous "vacation" colour.
+                        cls << 'hr-tc-cal-year-day-has-abs' if day_abs.any?
+                      else
+                        bg_kind = day_abs.first&.kind
+                        cls << "hr-tc-cal-year-day-#{bg_kind}" if bg_kind
+                        cls << 'hr-tc-cal-year-day-pending' if day_abs.any? && day_abs.all?(&:requested?)
+                      end
 
                       title_parts = []
                       title_parts << I18n.l(day) if day
                       title_parts.concat(day_abs.map do |a|
-                        "#{a.user&.name || ''} #{HrAbsence.kind_label(a.kind)}".strip
+                        "#{a.user&.name || ''} — #{HrAbsence.kind_label(a.kind)}#{' (Anfrage)' if a.requested?}".strip
                       end)
                       title_parts.concat(day_hol.map { |hd| hd[:name] })
                     %>
                     <td class="<%= cls.join(' ') %>" title="<%= h title_parts.join("\n") %>">
                       <% if day %>
-                        <% if base_path %>
-                          <%= link_to day.day, base_path.call(day.beginning_of_month), class: 'hr-tc-cal-year-day-link' %>
-                        <% else %>
-                          <%= day.day %>
+                        <% if show_users && day_abs.any? %>
+                          <%
+                            shown    = day_abs.first(4)
+                            overflow = day_abs.size - shown.size
+                          %>
+                          <div class="hr-tc-cal-year-day-stripes">
+                            <% shown.each do |a| %>
+                              <span class="hr-tc-cal-year-day-stripe<%= ' hr-tc-cal-year-day-stripe-pending' if a.requested? %>"
+                                    style="background-color: <%= hr_user_swatch_color(a.user_id) %>"></span>
+                            <% end %>
+                          </div>
                         <% end %>
+                        <span class="hr-tc-cal-year-day-num">
+                          <% if base_path %>
+                            <%= link_to day.day, base_path.call(day.beginning_of_month), class: 'hr-tc-cal-year-day-link' %>
+                          <% else %>
+                            <%= day.day %>
+                          <% end %>
+                          <% if show_users && overflow.to_i.positive? %>
+                            <span class="hr-tc-cal-year-day-overflow">+<%= overflow %></span>
+                          <% end %>
+                        </span>
                       <% end %>
                     </td>
                   <% end %>

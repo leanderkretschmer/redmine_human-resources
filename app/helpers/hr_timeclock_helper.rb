@@ -49,6 +49,17 @@ module HrTimeclockHelper
     cells
   end
 
+  # Deterministic swatch colour per user — used in the year-view admin
+  # calendar to tell apart absences from different employees at a glance.
+  USER_SWATCH_PALETTE = %w[#3498db #e67e22 #27ae60 #9b59b6 #1abc9c
+                           #f39c12 #16a085 #d35400 #2c3e50 #8e44ad
+                           #2980b9 #c0392b].freeze
+
+  def hr_user_swatch_color(user_id)
+    return '#95a5a6' unless user_id
+    USER_SWATCH_PALETTE[user_id.to_i % USER_SWATCH_PALETTE.size]
+  end
+
   def hr_totals_by_day(entries, time_zone)
     tz = time_zone || Time.zone
     entries.group_by { |e| e.started_at.in_time_zone(tz).to_date }

@@ -89,7 +89,7 @@ en:
   label_hr_timeclock_correction_max_end: "no later than"
   label_hr_admin: "HumanResources"
   label_hr_admin_overview: "Global overview of working time, vacation and sick days for all users."
-  label_hr_admin_global_calendar: "Monthly overview (all users)"
+  label_hr_admin_global_calendar: "Calendar"
   label_hr_admin_pending_approvals: "Pending approvals"
   label_hr_admin_users: "Users"
   label_hr_admin_filters: "Filters"

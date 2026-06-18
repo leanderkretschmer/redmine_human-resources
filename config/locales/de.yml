@@ -89,7 +89,7 @@ de:
   label_hr_timeclock_correction_max_end: "spätestens"
   label_hr_admin: "HumanResources"
   label_hr_admin_overview: "Globaler Überblick über Arbeitszeiten, Urlaubs- und Krankentage aller Nutzer."
-  label_hr_admin_global_calendar: "Monatsübersicht (alle Nutzer)"
+  label_hr_admin_global_calendar: "Kalender"
   label_hr_admin_pending_approvals: "Offene Genehmigungen"
   label_hr_admin_users: "Mitarbeiter"
   label_hr_admin_filters: "Filter"
