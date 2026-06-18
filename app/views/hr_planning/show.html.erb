@@ -51,6 +51,7 @@
 <%= render partial: 'hr_timeclock/calendar', locals: {
       month: @month, entries: [], user: User.current,
       base_path: ->(m) { hr_planning_path(month: m.strftime('%Y-%m')) },
+      first_day_of_week: RedmineHumanResources::Settings.first_day_of_week,
       absences_by_day: @absences_by_day,
       lecture_periods: @lecture_periods,
       monthly_plan: @monthly_plan,

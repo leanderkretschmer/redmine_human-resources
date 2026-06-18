@@ -308,6 +308,84 @@ table.hr-tc-calendar-grid {
 }
 .hr-tc-cal-view-toggle-btn.active { background: #2980b9; color: #fff; }
 .hr-tc-cal-view-toggle-btn:not(.active):hover { background: #eef3f7; }
+.hr-tc-cal-today-btn {
+  margin-left: 0.6em;
+  padding: 0.25em 0.9em;
+  border: 1px solid #2980b9;
+  border-radius: 16px;
+  color: #2980b9;
+  text-decoration: none;
+  font-size: 0.85em;
+  background: #fff;
+}
+.hr-tc-cal-today-btn:hover { background: #2980b9; color: #fff; }
+
+/* ======= Year view ======= */
+.hr-tc-cal-year-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3em;
+  margin: 0.4em 0 0.6em;
+  font-size: 0.85em;
+}
+.hr-tc-cal-year-filters-label { color: #6c7a89; font-weight: 600; margin-right: 0.2em; }
+.hr-tc-cal-year-chip {
+  display: inline-block;
+  padding: 0.15em 0.7em;
+  border-radius: 12px;
+  background: #ecf0f1;
+  color: #95a5a6;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+.hr-tc-cal-year-chip:hover { background: #d6dee6; color: #44505f; }
+.hr-tc-cal-year-chip.active { color: #fff; }
+.hr-tc-cal-year-chip-vacation.active   { background: #3498db; }
+.hr-tc-cal-year-chip-sickness.active   { background: #e74c3c; }
+.hr-tc-cal-year-chip-offsite.active    { background: #f1c40f; color: #2c3e50; }
+.hr-tc-cal-year-chip-school.active     { background: #16a085; }
+.hr-tc-cal-year-chip-blocked.active    { background: #e67e22; }
+.hr-tc-cal-year-chip-workday.active    { background: #27ae60; }
+.hr-tc-cal-year-chip-homeoffice.active { background: #8e44ad; }
+.hr-tc-cal-year-chip-care.active       { background: #c0392b; }
+
+.hr-tc-cal-year-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.8em;
+}
+@media (max-width: 1100px) { .hr-tc-cal-year-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 800px)  { .hr-tc-cal-year-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px)  { .hr-tc-cal-year-grid { grid-template-columns: 1fr; } }
+
+.hr-tc-cal-year-month {
+  border: 1px solid #e3e7eb;
+  border-radius: 4px;
+  padding: 0.35em 0.5em 0.5em;
+  background: #fff;
+}
+.hr-tc-cal-year-month-head { font-weight: 600; color: #2c3e50; margin-bottom: 0.25em; text-align: center; }
+.hr-tc-cal-year-month-link { color: inherit; text-decoration: none; }
+.hr-tc-cal-year-month-link:hover { color: #2980b9; text-decoration: underline; }
+.hr-tc-cal-year-grid-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.7em; }
+.hr-tc-cal-year-grid-table th { color: #95a5a6; font-weight: 500; text-align: center; padding: 1px 0; }
+.hr-tc-cal-year-grid-table td { padding: 0; text-align: center; height: 1.6em; vertical-align: middle; }
+.hr-tc-cal-year-day { color: #2c3e50; }
+.hr-tc-cal-year-day-empty { background: transparent; }
+.hr-tc-cal-year-day-weekend { color: #95a5a6; }
+.hr-tc-cal-year-day-today { outline: 1px solid #2980b9; outline-offset: -1px; font-weight: 700; }
+.hr-tc-cal-year-day-vacation   { background: #3498db; color: #fff; }
+.hr-tc-cal-year-day-sickness   { background: #e74c3c; color: #fff; }
+.hr-tc-cal-year-day-offsite    { background: #f1c40f; color: #2c3e50; }
+.hr-tc-cal-year-day-school     { background: #16a085; color: #fff; }
+.hr-tc-cal-year-day-blocked    { background: #e67e22; color: #fff; }
+.hr-tc-cal-year-day-workday    { background: #27ae60; color: #fff; }
+.hr-tc-cal-year-day-homeoffice { background: #8e44ad; color: #fff; }
+.hr-tc-cal-year-day-care       { background: #c0392b; color: #fff; }
+.hr-tc-cal-year-day-holiday    { box-shadow: inset 0 0 0 1px #c0392b; }
+.hr-tc-cal-year-day-link { color: inherit; text-decoration: none; display: block; width: 100%; height: 100%; }
+.hr-tc-cal-year-day-link:hover { text-decoration: underline; }
 
 /* ======= Week view (7-day timeline) ======= */
 .hr-tc-cal-week {

@@ -9,15 +9,29 @@
   monthly_plan    = local_assigns[:monthly_plan]
   holidays_by_day = local_assigns[:holidays_by_day]
   view_mode       = (local_assigns[:view_mode] || 'month').to_s
-  view_mode       = 'month' unless %w[month week].include?(view_mode)
+  view_mode       = 'month' unless %w[month week year].include?(view_mode)
   week_path       = local_assigns[:week_path]   # ->(Date) { url } — required for week toggle/nav
-  focus_date      = local_assigns[:focus_date]  # used for week nav targets and for the toggle's anchor day
+  year_path       = local_assigns[:year_path]   # ->(Date) { url } — required for year toggle/nav
+  focus_date      = local_assigns[:focus_date]  # nav anchor across views
   focus_date    ||= (view_mode == 'week' ? Date.current : month.to_date)
-  week_start      = view_mode == 'week' ? focus_date.beginning_of_week : nil
+  first_day_of_week = (local_assigns[:first_day_of_week] || :monday).to_sym
+  first_cwday    = first_day_of_week == :sunday ? 7 : 1
+  active_kinds   = local_assigns[:active_kinds]  # array of kind strings (year-view filter)
+  active_kinds ||= HrAbsence::KINDS
+  week_start      = view_mode == 'week' ? focus_date.beginning_of_week(first_day_of_week) : nil
   week_end        = week_start ? week_start + 6 : nil
-  day_names       = (I18n.t('date.abbr_day_names') || %w[Sun Mon Tue Wed Thu Fri Sat]).rotate(1)
-  lecture_range_from = view_mode == 'week' ? week_start : month
-  lecture_range_to   = view_mode == 'week' ? week_end   : month.end_of_month
+  day_names       = (I18n.t('date.abbr_day_names') || %w[Sun Mon Tue Wed Thu Fri Sat])
+                      .rotate(first_day_of_week == :sunday ? 0 : 1)
+  lecture_range_from = case view_mode
+                        when 'week' then week_start
+                        when 'year' then Date.new(focus_date.year, 1, 1)
+                        else month
+                        end
+  lecture_range_to   = case view_mode
+                        when 'week' then week_end
+                        when 'year' then Date.new(focus_date.year, 12, 31)
+                        else month.end_of_month
+                        end
   lecture_by_day  = {}
   (lecture_periods || []).each do |lp|
     from = [lp.starts_on, lecture_range_from].max
@@ -41,16 +55,33 @@
   week_start_hour = (local_assigns[:week_start_hour] || 6).to_i
   week_end_hour   = (local_assigns[:week_end_hour]   || 22).to_i
   week_hours      = week_end_hour - week_start_hour
+
+  # "Today" jump target for each view.
+  today_for_view = ->() do
+    case view_mode
+    when 'week' then (week_path ? week_path.call(Date.current) : '#')
+    when 'year' then (year_path ? year_path.call(Date.current) : '#')
+    else base_path.call(Date.current.beginning_of_month)
+    end
+  end
 %>
 <div class="hr-tc-calendar"
      <%= "data-default-absence-kind=\"#{h default_kind}\"".html_safe if default_kind %>
      <%= 'data-admin-create="1"'.html_safe if show_users %>>
-  <% if week_path %>
+  <% if week_path || year_path %>
     <div class="hr-tc-cal-view-toggle">
       <%= link_to l(:label_hr_admin_view_mode_month), base_path.call((focus_date || Date.current).beginning_of_month),
                   class: "hr-tc-cal-view-toggle-btn #{'active' if view_mode == 'month'}" %>
-      <%= link_to l(:label_hr_admin_view_mode_week), week_path.call(focus_date || Date.current),
-                  class: "hr-tc-cal-view-toggle-btn #{'active' if view_mode == 'week'}" %>
+      <% if week_path %>
+        <%= link_to l(:label_hr_admin_view_mode_week), week_path.call(focus_date || Date.current),
+                    class: "hr-tc-cal-view-toggle-btn #{'active' if view_mode == 'week'}" %>
+      <% end %>
+      <% if year_path %>
+        <%= link_to l(:label_hr_admin_view_mode_year), year_path.call(focus_date || Date.current),
+                    class: "hr-tc-cal-view-toggle-btn #{'active' if view_mode == 'year'}" %>
+      <% end %>
+      <%= link_to l(:label_hr_cal_today), today_for_view.call,
+                  class: 'hr-tc-cal-today-btn' %>
     </div>
   <% end %>
   <div class="hr-tc-calendar-nav">
@@ -61,6 +92,10 @@
         (KW <%= week_start.cweek %>)
       </span>
       <%= link_to '»', week_path.call(week_start + 7), class: 'hr-tc-cal-nav-btn' %>
+    <% elsif view_mode == 'year' %>
+      <%= link_to '«', year_path.call(Date.new(focus_date.year - 1, focus_date.month, [focus_date.day, 28].min)), class: 'hr-tc-cal-nav-btn' %>
+      <span class="hr-tc-calendar-title"><%= focus_date.year %></span>
+      <%= link_to '»', year_path.call(Date.new(focus_date.year + 1, focus_date.month, [focus_date.day, 28].min)), class: 'hr-tc-cal-nav-btn' %>
     <% else %>
       <%= link_to '«', base_path.call(month.prev_month), class: 'hr-tc-cal-nav-btn' %>
       <span class="hr-tc-calendar-title"><%= I18n.l(month, format: '%B %Y') %></span>
@@ -96,7 +131,93 @@
     </p>
   <% end %>
 
-  <% if view_mode == 'week' %>
+  <% if view_mode == 'year' %>
+    <%
+      year = focus_date.year
+      kind_palette = HrAbsence::KINDS  # order for filter chips
+      active_set   = active_kinds.map(&:to_s).to_set
+    %>
+    <% if year_path %>
+      <div class="hr-tc-cal-year-filters">
+        <span class="hr-tc-cal-year-filters-label"><%= l(:label_hr_cal_year_filter) %>:</span>
+        <% kind_palette.each do |k| %>
+          <%
+            on = active_set.include?(k)
+            new_kinds = on ? (active_set - [k]).to_a : (active_set + [k]).to_a
+            url = year_path.call(Date.new(year, focus_date.month, [focus_date.day, 28].min), new_kinds)
+          %>
+          <%= link_to HrAbsence.kind_label(k), url,
+                      class: "hr-tc-cal-year-chip hr-tc-cal-year-chip-#{k} #{'active' if on}" %>
+        <% end %>
+      </div>
+    <% end %>
+    <div class="hr-tc-cal-year-grid">
+      <% (1..12).each do |m| %>
+        <%
+          month_start = Date.new(year, m, 1)
+          month_end   = month_start.end_of_month
+          year_cells  = hr_calendar_cells(month_start, first_day_of_week)
+        %>
+        <div class="hr-tc-cal-year-month">
+          <div class="hr-tc-cal-year-month-head">
+            <% if base_path %>
+              <%= link_to I18n.l(month_start, format: '%B'), base_path.call(month_start),
+                          class: 'hr-tc-cal-year-month-link' %>
+            <% else %>
+              <%= I18n.l(month_start, format: '%B') %>
+            <% end %>
+          </div>
+          <table class="hr-tc-cal-year-grid-table">
+            <thead>
+              <tr>
+                <% day_names.each do |dn| %>
+                  <th><%= dn.to_s.first %></th>
+                <% end %>
+              </tr>
+            </thead>
+            <tbody>
+              <% year_cells.each_slice(7) do |week| %>
+                <tr>
+                  <% week.each do |day| %>
+                    <%
+                      cls = ['hr-tc-cal-year-day']
+                      cls << 'hr-tc-cal-year-day-empty' unless day
+                      cls << 'hr-tc-cal-year-day-today' if day && day == Date.current
+                      cls << 'hr-tc-cal-year-day-weekend' if day && [6, 7].include?(day.cwday)
+
+                      day_abs = (day && absences_by_day) ? (absences_by_day[day] || []) : []
+                      day_abs = day_abs.select { |a| active_set.include?(a.kind) }
+                      day_hol = (day && holidays_by_day) ? (holidays_by_day[day] || []) : []
+
+                      bg_kind = day_abs.first&.kind
+                      cls << "hr-tc-cal-year-day-#{bg_kind}" if bg_kind
+                      cls << 'hr-tc-cal-year-day-holiday' if day_hol.any?
+
+                      title_parts = []
+                      title_parts << I18n.l(day) if day
+                      title_parts.concat(day_abs.map do |a|
+                        "#{a.user&.name || ''} #{HrAbsence.kind_label(a.kind)}".strip
+                      end)
+                      title_parts.concat(day_hol.map { |hd| hd[:name] })
+                    %>
+                    <td class="<%= cls.join(' ') %>" title="<%= h title_parts.join("\n") %>">
+                      <% if day %>
+                        <% if base_path %>
+                          <%= link_to day.day, base_path.call(day.beginning_of_month), class: 'hr-tc-cal-year-day-link' %>
+                        <% else %>
+                          <%= day.day %>
+                        <% end %>
+                      <% end %>
+                    </td>
+                  <% end %>
+                </tr>
+              <% end %>
+            </tbody>
+          </table>
+        </div>
+      <% end %>
+    </div>
+  <% elsif view_mode == 'week' %>
     <div class="hr-tc-cal-week"
          data-week-start-hour="<%= week_start_hour %>"
          data-week-end-hour="<%= week_end_hour %>">
@@ -136,7 +257,7 @@
         %>
         <div <%= col_attrs.html_safe %>>
           <div class="hr-tc-cal-week-col-head">
-            <span class="hr-tc-cal-week-col-day"><%= day_names[day.cwday % 7] %></span>
+            <span class="hr-tc-cal-week-col-day"><%= day_names[(day.cwday - first_cwday) % 7] %></span>
             <% if day_link %>
               <%= link_to day_link.call(day), class: 'hr-tc-cal-day-link hr-tc-cal-week-col-date' do %>
                 <%= day.day %>.<%= day.month %>.
@@ -227,7 +348,7 @@
       <% end %>
     </div>
   <% else %>
-    <% cells = hr_calendar_cells(month) %>
+    <% cells = hr_calendar_cells(month, first_day_of_week) %>
     <table class="hr-tc-calendar-grid">
       <thead>
         <tr>

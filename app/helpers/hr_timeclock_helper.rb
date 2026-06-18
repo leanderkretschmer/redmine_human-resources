@@ -40,8 +40,9 @@ module HrTimeclockHelper
     str
   end
 
-  def hr_calendar_cells(month)
-    start_pad = (month.cwday - 1)
+  def hr_calendar_cells(month, first_day = :monday)
+    first_cwday = first_day.to_sym == :sunday ? 7 : 1
+    start_pad = (month.cwday - first_cwday) % 7
     cells = Array.new(start_pad)
     (month..month.end_of_month).each { |d| cells << d }
     cells << nil while cells.size % 7 != 0

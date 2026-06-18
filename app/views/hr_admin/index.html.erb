@@ -108,7 +108,14 @@
                                        filter_name:  @filter_name) },
       week_path: ->(d) { hr_admin_path(view: 'week', focus: d.iso8601,
                                        filter_name: @filter_name) },
+      year_path: ->(d, kinds = nil) {
+        p = { view: 'year', focus: d.iso8601, filter_name: @filter_name }
+        p[:kinds] = kinds.join(',') if kinds.is_a?(Array) && kinds.any?
+        hr_admin_path(p)
+      },
       view_mode: @cal_view, focus_date: @focus_date,
+      first_day_of_week: @week_start_day,
+      active_kinds: @active_kinds,
       absences_by_day: @absences_by_day,
       holidays_by_day: @holidays_by_day,
       lecture_periods: @lecture_periods,

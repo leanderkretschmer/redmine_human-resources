@@ -59,6 +59,20 @@
         <label for="settings_poll_interval_seconds"><%= l(:hr_settings_poll_interval) %></label>
         <%= text_field_tag 'settings[poll_interval_seconds]', @settings['poll_interval_seconds'], size: 4 %>
       </p>
+      <p>
+        <label for="settings_default_time_zone"><%= l(:hr_settings_default_time_zone) %></label>
+        <%= select_tag 'settings[default_time_zone]',
+                       options_for_select(ActiveSupport::TimeZone.all.map { |tz| [tz.to_s, tz.name] },
+                                          @settings['default_time_zone'].presence || 'Europe/Berlin') %>
+        <em class="info"><%= l(:hr_settings_default_time_zone_hint) %></em>
+      </p>
+      <p>
+        <label for="settings_first_day_of_week"><%= l(:hr_settings_first_day_of_week) %></label>
+        <%= select_tag 'settings[first_day_of_week]',
+                       options_for_select([[l(:hr_settings_first_day_monday), 'monday'],
+                                           [l(:hr_settings_first_day_sunday), 'sunday']],
+                                          @settings['first_day_of_week'].presence || 'monday') %>
+      </p>
     </div>
   </div>
 

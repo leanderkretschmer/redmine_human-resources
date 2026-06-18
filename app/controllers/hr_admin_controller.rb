@@ -5,8 +5,10 @@ class HrAdminController < ApplicationController
 
   def index
     today = Date.current
-    @cal_view = %w[month week].include?(params[:view]) ? params[:view] : 'month'
+    @cal_view = %w[month week year].include?(params[:view]) ? params[:view] : 'month'
     @focus_date = parse_admin_focus_param || today
+    @week_start_day = RedmineHumanResources::Settings.first_day_of_week
+    @active_kinds   = parse_admin_kinds_param || HrAbsence::KINDS
     @month = parse_month_param || (@cal_view == 'week' ? @focus_date.beginning_of_month : today.beginning_of_month)
 
     base_user_ids = (HrWorkEntry.distinct.pluck(:user_id) + HrAbsence.distinct.pluck(:user_id)).uniq
@@ -21,9 +23,13 @@ class HrAdminController < ApplicationController
     @summaries = all_users.each_with_object({}) { |u, h| h[u.id] = compute_summary(u) }
     all_users.sort_by! { |u| -(@summaries[u.id][:month].to_i) }
 
-    if @cal_view == 'week'
-      cal_from = @focus_date.beginning_of_week
-      cal_to   = @focus_date.end_of_week
+    case @cal_view
+    when 'week'
+      cal_from = @focus_date.beginning_of_week(@week_start_day)
+      cal_to   = @focus_date.end_of_week(@week_start_day)
+    when 'year'
+      cal_from = Date.new(@focus_date.year, 1, 1)
+      cal_to   = Date.new(@focus_date.year, 12, 31)
     else
       cal_from = @month
       cal_to   = @month.end_of_month
@@ -174,6 +180,13 @@ class HrAdminController < ApplicationController
     Date.parse(params[:focus].to_s)
   rescue ArgumentError
     nil
+  end
+
+  def parse_admin_kinds_param
+    raw = params[:kinds]
+    return nil if raw.blank?
+    list = raw.to_s.split(',').map(&:strip) & HrAbsence::KINDS
+    list.empty? ? [] : list
   end
 
   def build_ticket_coverage(date, work_entries)

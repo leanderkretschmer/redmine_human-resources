@@ -144,7 +144,14 @@
       month: @month, entries: @entries_month, user: User.current,
       base_path: ->(m) { hr_timeclock_path(month: m.strftime('%Y-%m')) },
       week_path: ->(d) { hr_timeclock_path(view: 'week', focus: d.iso8601) },
+      year_path: ->(d, kinds = nil) {
+        p = { view: 'year', focus: d.iso8601 }
+        p[:kinds] = kinds.join(',') if kinds.is_a?(Array) && kinds.any?
+        hr_timeclock_path(p)
+      },
       view_mode: @cal_view, focus_date: @focus_date,
+      first_day_of_week: @week_start_day,
+      active_kinds: @active_kinds,
       absences_by_day: @absences_by_day,
       lecture_periods: @lecture_periods,
       monthly_plan: @monthly_plan,
