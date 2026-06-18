@@ -212,13 +212,23 @@
                       <% if day %>
                         <% if show_users && day_abs.any? %>
                           <%
-                            shown    = day_abs.first(4)
+                            shown    = day_abs.first(3)
                             overflow = day_abs.size - shown.size
                           %>
                           <div class="hr-tc-cal-year-day-stripes">
                             <% shown.each do |a| %>
-                              <span class="hr-tc-cal-year-day-stripe<%= ' hr-tc-cal-year-day-stripe-pending' if a.requested? %>"
-                                    style="background-color: <%= hr_user_swatch_color(a.user_id) %>"></span>
+                              <%
+                                u = a.user
+                                initials = if u
+                                             parts = u.name.to_s.split(/\s+/).reject(&:empty?)
+                                             (parts.first(2).map { |p| p[0] }.join.presence || u.login.to_s[0, 2]).upcase
+                                           else
+                                             '?'
+                                           end
+                              %>
+                              <span class="hr-tc-cal-year-day-stripe hr-tc-cal-year-day-stripe-<%= a.kind %><%= ' hr-tc-cal-year-day-stripe-pending' if a.requested? %>">
+                                <span class="hr-tc-cal-year-day-stripe-label"><%= h initials %></span>
+                              </span>
                             <% end %>
                           </div>
                         <% end %>

@@ -330,25 +330,48 @@ table.hr-tc-calendar-grid {
   font-size: 0.85em;
 }
 .hr-tc-cal-year-filters-label { color: #6c7a89; font-weight: 600; margin-right: 0.2em; }
+/* Filter chips: neutral pill + a coloured dot that mirrors the calendar's
+   absence-kind palette. The chip itself never adopts the kind colour —
+   only the dot does — so it doesn't compete with the day-cell stripes. */
 .hr-tc-cal-year-chip {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35em;
   padding: 0.15em 0.7em;
   border-radius: 12px;
-  background: #ecf0f1;
-  color: #95a5a6;
+  background: transparent;
+  color: #6c7a89;
   text-decoration: none;
   border: 1px solid transparent;
 }
-.hr-tc-cal-year-chip:hover { background: #d6dee6; color: #44505f; }
-.hr-tc-cal-year-chip.active { color: #fff; }
-.hr-tc-cal-year-chip-vacation.active   { background: #3498db; }
-.hr-tc-cal-year-chip-sickness.active   { background: #e74c3c; }
-.hr-tc-cal-year-chip-offsite.active    { background: #f1c40f; color: #2c3e50; }
-.hr-tc-cal-year-chip-school.active     { background: #16a085; }
-.hr-tc-cal-year-chip-blocked.active    { background: #e67e22; }
-.hr-tc-cal-year-chip-workday.active    { background: #27ae60; }
-.hr-tc-cal-year-chip-homeoffice.active { background: #8e44ad; }
-.hr-tc-cal-year-chip-care.active       { background: #c0392b; }
+.hr-tc-cal-year-chip::before {
+  content: '';
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  border-radius: 50%;
+  background: #bdc3c7;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06);
+}
+.hr-tc-cal-year-chip:hover { background: #f5f7fa; color: #2c3e50; }
+.hr-tc-cal-year-chip.active {
+  background: #f5f7fa;
+  border-color: #d6dee6;
+  color: #2c3e50;
+  font-weight: 600;
+}
+.hr-tc-cal-year-chip:not(.active) {
+  opacity: 0.55;
+  text-decoration: line-through;
+}
+.hr-tc-cal-year-chip-vacation.active::before   { background: #3498db; }
+.hr-tc-cal-year-chip-sickness.active::before   { background: #e74c3c; }
+.hr-tc-cal-year-chip-offsite.active::before    { background: #f1c40f; }
+.hr-tc-cal-year-chip-school.active::before     { background: #16a085; }
+.hr-tc-cal-year-chip-blocked.active::before    { background: #e67e22; }
+.hr-tc-cal-year-chip-workday.active::before    { background: #27ae60; }
+.hr-tc-cal-year-chip-homeoffice.active::before { background: #8e44ad; }
+.hr-tc-cal-year-chip-care.active::before       { background: #c0392b; }
 
 .hr-tc-cal-year-grid {
   display: grid;
@@ -370,7 +393,7 @@ table.hr-tc-calendar-grid {
 .hr-tc-cal-year-month-link:hover { color: #2980b9; text-decoration: underline; }
 .hr-tc-cal-year-grid-table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 0.7em; }
 .hr-tc-cal-year-grid-table th { color: #95a5a6; font-weight: 500; text-align: center; padding: 1px 0; }
-.hr-tc-cal-year-grid-table td { padding: 0; text-align: center; height: 1.6em; vertical-align: middle; }
+.hr-tc-cal-year-grid-table td { padding: 0; text-align: center; height: 2.1em; vertical-align: middle; position: relative; }
 .hr-tc-cal-year-day { color: #2c3e50; }
 .hr-tc-cal-year-day-empty { background: transparent; }
 .hr-tc-cal-year-day-weekend { color: #95a5a6; }
@@ -404,29 +427,62 @@ table.hr-tc-calendar-grid {
   display: flex;
   z-index: 0;
 }
+/* All stripes are coloured by absence KIND, not by user — so vacation always
+   stays blue and is just split by a thin white separator when several people
+   are off the same day. Initials inside each stripe make the user visible
+   without hovering. */
 .hr-tc-cal-year-day-stripe {
   flex: 1 1 0;
   height: 100%;
   background-color: #95a5a6;
+  border-right: 1px solid rgba(255,255,255,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+.hr-tc-cal-year-day-stripe:last-child { border-right: none; }
+.hr-tc-cal-year-day-stripe-label {
+  color: #fff;
+  font-size: 0.62em;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-shadow: 0 0 2px rgba(0,0,0,0.35);
+  line-height: 1;
+}
+.hr-tc-cal-year-day-stripe-vacation   { background-color: #3498db; }
+.hr-tc-cal-year-day-stripe-sickness   { background-color: #e74c3c; }
+.hr-tc-cal-year-day-stripe-offsite    { background-color: #f1c40f; }
+.hr-tc-cal-year-day-stripe-offsite .hr-tc-cal-year-day-stripe-label { color: #2c3e50; text-shadow: none; }
+.hr-tc-cal-year-day-stripe-school     { background-color: #16a085; }
+.hr-tc-cal-year-day-stripe-blocked    { background-color: #e67e22; }
+.hr-tc-cal-year-day-stripe-workday    { background-color: #27ae60; }
+.hr-tc-cal-year-day-stripe-homeoffice { background-color: #8e44ad; }
+.hr-tc-cal-year-day-stripe-care       { background-color: #c0392b; }
 .hr-tc-cal-year-day-stripe-pending {
-  background-image: repeating-linear-gradient(45deg, transparent 0 2px, rgba(255,255,255,0.65) 2px 4px);
+  background-image: repeating-linear-gradient(45deg, transparent 0 2px, rgba(255,255,255,0.6) 2px 4px);
 }
+
 .hr-tc-cal-year-day-num {
-  position: relative;
+  position: absolute;
+  top: 1px;
+  left: 2px;
   z-index: 1;
-  display: inline-block;
-  padding: 0 2px;
-  text-shadow: 0 0 2px rgba(0,0,0,0.55);
+  font-size: 0.65em;
+  font-weight: 600;
+  color: #44505f;
   pointer-events: auto;
 }
-.hr-tc-cal-year-day-has-abs .hr-tc-cal-year-day-link { color: #fff; }
+.hr-tc-cal-year-day-has-abs .hr-tc-cal-year-day-num {
+  color: #fff;
+  text-shadow: 0 0 2px rgba(0,0,0,0.6);
+}
+.hr-tc-cal-year-day-has-abs .hr-tc-cal-year-day-link { color: inherit; }
 .hr-tc-cal-year-day-overflow {
   display: inline-block;
   margin-left: 2px;
-  font-size: 0.8em;
+  font-size: 0.85em;
   font-weight: 700;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0,0,0,0.45);
   color: #fff;
   border-radius: 6px;
   padding: 0 3px;

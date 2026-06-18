@@ -4,6 +4,7 @@
     <h3 class="hr-tc-absence-modal-title"><%= l(:label_hr_absence_modal_title) %></h3>
     <%= form_with url: hr_absences_path, method: :post, scope: :hr_absence, local: true,
                   html: { id: 'hr-absence-modal-form' } do |f| %>
+      <%= hidden_field_tag :return_to, request.fullpath %>
       <% if User.current.admin? %>
         <%
           # Restrict the user picker to the same HR roster the admin

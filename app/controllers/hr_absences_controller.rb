@@ -278,11 +278,22 @@ class HrAbsencesController < ApplicationController
     nil
   end
 
+  # When the modal carries an explicit return_to path (admin context), use it
+  # — otherwise fall back to the personal timeclock as before. Same-origin
+  # only, so admins who create entries from /admin/hr_timeclock land back
+  # there instead of being kicked to their own page.
+  def safe_return_to
+    raw = params[:return_to].to_s
+    return nil unless raw.start_with?('/')
+    raw
+  end
+
   def respond_create_failure(message)
     respond_to do |format|
       format.html do
         flash[:error] = message
-        redirect_back(fallback_location: hr_timeclock_path)
+        target = safe_return_to
+        target ? redirect_to(target) : redirect_back(fallback_location: hr_timeclock_path)
       end
       format.json { render json: { error: message }, status: :unprocessable_entity }
     end
@@ -292,7 +303,8 @@ class HrAbsencesController < ApplicationController
     respond_to do |format|
       format.html do
         flash[:notice] = message if message.present?
-        redirect_back(fallback_location: hr_timeclock_path)
+        target = safe_return_to
+        target ? redirect_to(target) : redirect_back(fallback_location: hr_timeclock_path)
       end
       format.json { render json: { ok: true, id: @absence&.id, message: message } }
     end
