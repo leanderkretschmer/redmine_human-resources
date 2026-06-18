@@ -70,12 +70,12 @@
      <%= 'data-admin-create="1"'.html_safe if show_users %>>
   <% if week_path || year_path %>
     <div class="hr-tc-cal-view-toggle">
-      <%= link_to l(:label_hr_admin_view_mode_month), base_path.call((focus_date || Date.current).beginning_of_month),
-                  class: "hr-tc-cal-view-toggle-btn #{'active' if view_mode == 'month'}" %>
       <% if week_path %>
         <%= link_to l(:label_hr_admin_view_mode_week), week_path.call(focus_date || Date.current),
                     class: "hr-tc-cal-view-toggle-btn #{'active' if view_mode == 'week'}" %>
       <% end %>
+      <%= link_to l(:label_hr_admin_view_mode_month), base_path.call((focus_date || Date.current).beginning_of_month),
+                  class: "hr-tc-cal-view-toggle-btn #{'active' if view_mode == 'month'}" %>
       <% if year_path %>
         <%= link_to l(:label_hr_admin_view_mode_year), year_path.call(focus_date || Date.current),
                     class: "hr-tc-cal-view-toggle-btn #{'active' if view_mode == 'year'}" %>
