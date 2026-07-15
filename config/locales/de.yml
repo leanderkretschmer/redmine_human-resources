@@ -44,6 +44,7 @@ de:
   notice_hr_planning_not_eligible: "Die Planung steht nur für variable Stellen oder Berufsschulpflichtige zur Verfügung."
   label_hr_recurrence_until_hint: "Pflicht bei Wiederholung — bis zu diesem Datum werden Einträge erzeugt."
   label_hr_admin: "HumanResources (Verwaltung)"
+  label_hr_admin_menu: "HR-Admin"
   label_hr_coming_soon: "Diese Funktion ist in Vorbereitung."
   label_hr_timeclock_navbar: "Stempeluhr"
   label_hr_timeclock_title: "Meine Arbeitszeit"
@@ -249,6 +250,10 @@ de:
   label_hr_absence_for_company: "— firmenweit (alle aktiven Nutzer) —"
   label_hr_absence_admin_auto_approved: "Wird direkt genehmigt."
   label_hr_school_weekdays: "Berufsschultage (Wochentage)"
+  label_hr_school_full_day: "Berufsschultag als voller Arbeitstag"
+  label_hr_school_full_day_hint: "Wird automatisch beim Ausstempeln auf 8 Std. gestreckt. Bei nur einem Berufsschultag automatisch aktiv."
+  label_hr_school_full_day_none: "— manuell —"
+  label_hr_school_full_day_auto: "— automatisch (einziger Berufsschultag) —"
   label_hr_distribution: "Verteilung der Wochenstunden"
   hr_distribution_full_days:
     one: "1 voller Tag à %{hours} h"

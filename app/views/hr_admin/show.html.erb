@@ -142,6 +142,18 @@
           <%= hidden_field_tag 'hr_user_setting[school_weekdays_override][]', '' %>
         </span>
       </p>
+      <% if @user_setting.effective_school_weekdays.any? %>
+        <p>
+          <%= f.label :full_school_weekday_override, l(:label_hr_school_full_day) %>
+          <% single_school_day = @user_setting.effective_school_weekdays.size == 1 %>
+          <% blank_label = single_school_day ? l(:label_hr_school_full_day_auto) : l(:label_hr_school_full_day_none) %>
+          <%= f.select :full_school_weekday_override,
+                       @user_setting.effective_school_weekdays.map { |i| [day_abbrs[i % 7], i] },
+                       { include_blank: blank_label },
+                       { selected: @user_setting.full_school_weekday_override } %>
+          <em class="info"><%= l(:label_hr_school_full_day_hint) %></em>
+        </p>
+      <% end %>
     <% end %>
     <% if show_breakdown %>
       <p class="hr-tc-distribution-hint">

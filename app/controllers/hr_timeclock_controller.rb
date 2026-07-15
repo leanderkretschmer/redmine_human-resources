@@ -136,6 +136,7 @@ class HrTimeclockController < ApplicationController
         brk = entry.current_break
         brk&.update!(ended_at: Time.current)
         entry.update!(state: HrWorkEntry::STATE_COMPLETED, ended_at: Time.current)
+        apply_school_full_day_boost!(entry)
       end
     end
     respond_action(l(:notice_hr_timeclock_stopped))
@@ -214,6 +215,28 @@ class HrTimeclockController < ApplicationController
 
   def current_open_entry
     HrWorkEntry.for_user(User.current).open.order(started_at: :desc).first
+  end
+
+  # Berufsschul-Vollzeittag: if the day of `entry.ended_at` (in the user's
+  # timezone) is the configured full-day school weekday, top up the just-closed
+  # entry so the sum of all entries on that day equals exactly 8 h. Silent no-op
+  # on any unexpected error — the clock-out itself must never fail because of
+  # this convenience feature.
+  def apply_school_full_day_boost!(entry)
+    return unless entry&.ended_at
+    tz  = RedmineHumanResources::Settings.user_time_zone(User.current)
+    day = entry.ended_at.in_time_zone(tz).to_date
+    return unless @user_setting.full_school_day?(day)
+
+    day_entries = HrWorkEntry.for_user(User.current).on_day(tz, day).to_a
+    total = day_entries.sum { |e| e.net_seconds }
+    target = 8 * 3600
+    deficit = target - total.to_i
+    return unless deficit.positive?
+
+    entry.update!(ended_at: entry.ended_at + deficit.seconds)
+  rescue StandardError => e
+    Rails.logger.warn("[hr] apply_school_full_day_boost! failed: #{e.message}")
   end
 
   def respond_action(message)

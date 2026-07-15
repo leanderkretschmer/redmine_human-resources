@@ -16,6 +16,7 @@ class HrUserSetting < ActiveRecord::Base
   validates :max_break_minutes,                   numericality: { greater_than_or_equal_to: 0, allow_nil: true }
   validates :yearly_vacation_days_override,       numericality: { greater_than_or_equal_to: 0, allow_nil: true }
   validates :weekly_school_days_override,         numericality: { greater_than_or_equal_to: 0, less_than_or_equal_to: 5, allow_nil: true }
+  validates :full_school_weekday_override,        numericality: { greater_than_or_equal_to: 1, less_than_or_equal_to: 5, allow_nil: true }
   validates :homeoffice_days_per_year_override,   numericality: { greater_than_or_equal_to: 0, allow_nil: true }
   validates :care_hours_per_year_override,        numericality: { greater_than_or_equal_to: 0, allow_nil: true }
   validates :care_status, inclusion: { in: CARE_STATUSES, allow_nil: true }
@@ -180,6 +181,28 @@ class HrUserSetting < ActiveRecord::Base
     own = parse_weekdays(school_weekdays_override)
     return own if own.any? || !school_weekdays_override.nil?
     parse_weekdays(template_value(:school_weekdays_pattern))
+  end
+
+  # Which single Berufsschul-Wochentag counts as a full 8h workday. Returns the
+  # cwday integer (1..5) that should be auto-stretched on clock-out, or nil when
+  # no auto-stretching applies. Rules:
+  #   - explicit admin override wins, but only when it is actually one of the
+  #     configured school weekdays;
+  #   - otherwise, when exactly one school weekday is configured, it is by law
+  #     the full-day one and gets stretched automatically;
+  #   - else nil (multiple school days without a picked one → manual).
+  def effective_full_school_weekday
+    weekdays = effective_school_weekdays
+    override = full_school_weekday_override
+    return override if override.present? && weekdays.include?(override)
+    return weekdays.first if weekdays.size == 1
+    nil
+  end
+
+  # True when `date` (in the user's time zone) is the auto-stretch school day.
+  def full_school_day?(date)
+    return false unless date
+    date.cwday == effective_full_school_weekday
   end
 
   # Distribution helper. Given total weekly company minutes and full-day minutes,
