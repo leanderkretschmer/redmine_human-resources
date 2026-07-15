@@ -84,10 +84,10 @@ Redmine::Plugin.register :redmine_human_resources do
        html: { id: 'hr-timeclock-menu-link', class: 'hr-timeclock-menu-link' },
        if: Proc.new { User.current.logged? }
 
-  menu :account_menu, :hr_admin_link,
+  menu :top_menu, :hr_admin_link,
        { controller: 'hr_admin', action: 'index' },
        caption: :label_hr_admin_menu,
-       after: :hr_timeclock,
+       before: :administration,
        html: { id: 'hr-admin-menu-link', class: 'hr-admin-menu-link' },
        if: Proc.new { User.current.logged? && User.current.admin? }
 
