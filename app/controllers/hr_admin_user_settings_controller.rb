@@ -15,6 +15,7 @@ class HrAdminUserSettingsController < ApplicationController
       :allows_monthly_plan_override, :notify_target_reached, :notify_break_over,
       :homeoffice_days_per_year_override,
       :care_status, :care_hours_per_year_override,
+      :employment_started_on,
       school_weekdays_override: []
     ).to_h
 
@@ -30,7 +31,7 @@ class HrAdminUserSettingsController < ApplicationController
     raw['region_code'] = nil if raw['region_code'].to_s.strip.empty?
     raw['care_status'] = nil if raw['care_status'].to_s.strip.empty?
     %w[homeoffice_days_per_year_override care_hours_per_year_override
-       full_school_weekday_override].each do |k|
+       full_school_weekday_override employment_started_on].each do |k|
       raw[k] = nil if raw[k].to_s.strip.empty?
     end
 

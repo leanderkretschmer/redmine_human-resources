@@ -300,9 +300,42 @@ class HrAbsence < ActiveRecord::Base
 
   def self.vacation_remaining(user, year = Date.current.year)
     setting = HrUserSetting.for(user)
-    allowed = setting.effective_yearly_vacation_days.to_i
+    allowed = prorated_yearly_vacation_days(setting, year)
     used = vacation_working_days_used(user.is_a?(User) ? user.id : user.to_i, year)
-    { allowed: allowed, used: used, remaining: (allowed - used) }
+    { allowed: allowed, used: used, remaining: (allowed - used), prorated: allowed != setting.effective_yearly_vacation_days.to_i }
+  end
+
+  # BUrlG §5: mid-year hires and departures earn 1/12 per full month of the
+  # calendar year, EXCEPT when the six-month Wartezeit is fulfilled within the
+  # first half of the calendar year — then the full annual entitlement applies.
+  # Fractions ≥ 0.5 round up to a full day per §5(2).
+  def self.prorated_yearly_vacation_days(setting, year)
+    full = setting.effective_yearly_vacation_days.to_i
+    start_date = setting.employment_started_on
+    return full if start_date.blank?
+    return 0 if start_date.year > year   # not employed yet
+    return full if start_date.year < year # full historical year
+
+    # Started in the year we're computing. Wartezeit = 6 months.
+    wartezeit_reached_on = start_date >> 6
+    in_first_half        = wartezeit_reached_on <= Date.new(year, 6, 30)
+
+    if in_first_half
+      # Wartezeit erfüllt in H1 → voller Jahresanspruch (BUrlG §4 + §5 e contrario)
+      full
+    else
+      # Zwölftel-Regel: ein Zwölftel pro vollem Monat ab Eintritt.
+      # "Voller Monat" = ein am Monatsersten begonnener Monat, sonst ab dem
+      # Folgemonat. Pragmatisch: Eintritt am oder vor dem 15. zählt den Monat.
+      first_counted_month = start_date.day <= 15 ? start_date.month : start_date.month + 1
+      return 0 if first_counted_month > 12
+      months = 12 - first_counted_month + 1
+      partial = full.to_f * months / 12.0
+      # BUrlG §5(2): halbe Tage aufrunden auf volle Tage.
+      whole = partial.to_i
+      frac  = partial - whole
+      frac >= 0.5 ? whole + 1 : whole
+    end
   end
 
   # Sum of working days of approved homeoffice entries within a year.
@@ -321,6 +354,45 @@ class HrAbsence < ActiveRecord::Base
     allowed = setting.effective_homeoffice_days_per_year.to_i
     used = homeoffice_working_days_used(user.is_a?(User) ? user.id : user.to_i, year)
     { allowed: allowed, used: used, remaining: (allowed - used) }
+  end
+
+  # Total sickness minutes across approved sickness absences in a year.
+  # Full-day entries count the user's base daily target; partial-time entries
+  # count only their explicit start/end window. Also returns the number of
+  # working days affected, for the "X h / Y Tage" personal-page tile.
+  def sickness_consumed_minutes
+    return 0 unless sickness?
+    setting = HrUserSetting.for(user) if user
+    daily = setting ? setting.base_daily_target_minutes : 480
+    total = 0
+    (starts_on..ends_on).each do |d|
+      if partial? && starts_on == d
+        total += partial_minutes_on(d)
+      else
+        total += daily
+      end
+    end
+    total
+  end
+
+  def self.sickness_minutes_used(user_id, year = Date.current.year)
+    year_start = Date.new(year, 1, 1)
+    year_end   = Date.new(year, 12, 31)
+    for_user(user_id).sickness.approved
+                     .where('starts_on <= ? AND ends_on >= ?', year_end, year_start)
+                     .sum(&:sickness_consumed_minutes)
+  end
+
+  def self.sickness_summary(user, year = Date.current.year)
+    uid = user.is_a?(User) ? user.id : user.to_i
+    minutes = sickness_minutes_used(uid, year)
+    region  = HrUserSetting.for(user.is_a?(User) ? user : User.find(uid)).effective_region_code rescue nil
+    days = for_user(uid).sickness.approved
+                       .where('starts_on <= ? AND ends_on >= ?', Date.new(year, 12, 31), Date.new(year, 1, 1))
+                       .sum do |a|
+      a.working_days_value(from: Date.new(year, 1, 1), to: Date.new(year, 12, 31), region_code: region)
+    end
+    { minutes: minutes, hours: (minutes / 60.0), days: (days * 2).round / 2.0 }
   end
 
   # Care quota is tracked in MINUTES. A full-day entry counts the user's base

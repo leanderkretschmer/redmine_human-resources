@@ -38,6 +38,27 @@ class HrTimeclockController < ApplicationController
     @holidays_by_day = compute_personal_holidays_range(User.current, cal_from, cal_to)
     @snapshot = build_snapshot
 
+    # Year-to-date sickness aggregation for the personal KPI tile.
+    @sickness_summary  = HrAbsence.sickness_summary(User.current, today.year)
+    @vacation_summary  = HrAbsence.vacation_remaining(User.current, today.year)
+    # Monthly-plan progress (Werkstudent/Intern) — sum this month's net work
+    # against the plan's target so we can render a progress KPI.
+    if @user_setting.allows_monthly_plan? && @monthly_plan
+      month_start = today.beginning_of_month
+      month_end   = today.end_of_month
+      month_entries = HrWorkEntry.for_user(User.current)
+                                 .in_range(month_start.in_time_zone(tz).beginning_of_day,
+                                           month_end.in_time_zone(tz).end_of_day).to_a
+      worked_secs = month_entries.sum { |e| e.net_seconds }
+      target_secs = @monthly_plan.target_minutes.to_i * 60
+      @monthly_plan_progress = {
+        worked_secs: worked_secs.to_i,
+        target_secs: target_secs,
+        remaining_secs: [target_secs - worked_secs.to_i, 0].max,
+        percent: target_secs.positive? ? [(worked_secs.to_f / target_secs * 100).round, 100].min : 0
+      }
+    end
+
     @chart_view = %w[today week month].include?(params[:chart_view]) ? params[:chart_view] : 'today'
     chart_from, chart_to = case @chart_view
                             when 'week'  then [today.beginning_of_week, today.end_of_week]

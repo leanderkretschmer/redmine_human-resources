@@ -15,6 +15,20 @@
   <div><strong><%= l(:label_hr_admin_total_today) %>:</strong> <%= hr_format_seconds(@summary[:today]) %></div>
   <div><strong><%= l(:label_hr_admin_total_week) %>:</strong>  <%= hr_format_seconds(@summary[:week]) %></div>
   <div><strong><%= l(:label_hr_admin_total_month) %>:</strong> <%= hr_format_seconds(@summary[:month]) %></div>
+  <%
+    year = Date.current.year
+    vac  = HrAbsence.vacation_remaining(@user, year)
+    sick = HrAbsence.sickness_summary(@user, year)
+  %>
+  <div>
+    <strong><%= l(:label_hr_kpi_vacation_remaining) %> <%= year %>:</strong>
+    <%= hr_format_days(vac[:remaining]) %> / <%= hr_format_days(vac[:allowed]) %>
+    <% if vac[:prorated] %><em class="info">(<%= l(:label_hr_kpi_vacation_prorated_short) %>)</em><% end %>
+  </div>
+  <div>
+    <strong><%= l(:label_hr_kpi_sickness_year) %> <%= year %>:</strong>
+    <%= hr_format_seconds((sick[:minutes].to_i * 60)) %> · <%= hr_format_days(sick[:days]) %> <%= l(:label_hr_kpi_days_suffix) %>
+  </div>
 </div>
 
 <%= form_with url: hr_admin_user_path(user_id: @user.id), method: :get, local: true, html: { class: 'hr-admin-view-toggle' } do %>
@@ -101,6 +115,11 @@
         <%= f.number_field :yearly_vacation_days_override,
                            min: 0, step: 1,
                            placeholder: @user_setting.effective_yearly_vacation_days %>
+      </p>
+      <p>
+        <%= f.label :employment_started_on, l(:label_hr_employment_started_on) %>
+        <%= f.date_field :employment_started_on, value: @user_setting.employment_started_on %>
+        <em class="info"><%= l(:label_hr_employment_started_on_hint) %></em>
       </p>
     <% end %>
     <p>

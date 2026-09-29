@@ -1192,6 +1192,26 @@ button.hr-tc-day-detail-close {
 .hr-tc-kpi-label { display: block; font-size: 0.85em; color: #5a6776; margin-top: 0.2em; }
 .hr-tc-kpi-alert { background: #fff5e6; border-color: #f0c27a; }
 .hr-tc-kpi-alert .hr-tc-kpi-value { color: #c87f0a; }
+.hr-tc-kpi-note { color: #c87f0a; font-weight: 700; cursor: help; margin-left: 0.15em; }
+.hr-tc-kpi-bar {
+  display: block;
+  height: 4px;
+  background: #dfe6ee;
+  border-radius: 2px;
+  margin-top: 0.4em;
+  overflow: hidden;
+}
+.hr-tc-kpi-bar-fill {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, #27ae60, #1f8f4f);
+  border-radius: 2px;
+  transition: width 0.3s ease;
+}
+.hr-tc-personal-kpis { margin: 0.5em 0 0.4em; }
+.hr-tc-personal-kpis .hr-tc-kpi { padding: 0.55em 0.8em; }
+.hr-tc-personal-kpis .hr-tc-kpi-value { font-size: 1.15em; }
+.hr-tc-sickness-hours { color: #6c7a89; font-size: 0.9em; }
 
 .hr-tc-barchart { margin: 0.5em 0 1.5em; }
 .hr-tc-bar-row {

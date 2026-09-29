@@ -72,6 +72,40 @@
     </label>
   </div>
 
+  <div class="hr-tc-kpis hr-tc-personal-kpis">
+    <div class="hr-tc-kpi">
+      <span class="hr-tc-kpi-value">
+        <%= hr_format_days(@vacation_summary[:remaining]) %>
+        <span class="hr-tc-kpi-target">/ <%= hr_format_days(@vacation_summary[:allowed]) %></span>
+      </span>
+      <span class="hr-tc-kpi-label">
+        <%= l(:label_hr_kpi_vacation_remaining) %>
+        <% if @vacation_summary[:prorated] %>
+          <span class="hr-tc-kpi-note" title="<%= l(:label_hr_kpi_vacation_prorated_hint) %>">*</span>
+        <% end %>
+      </span>
+    </div>
+    <div class="hr-tc-kpi">
+      <span class="hr-tc-kpi-value">
+        <%= hr_format_seconds((@sickness_summary[:minutes].to_i * 60)) %>
+        <span class="hr-tc-kpi-target">· <%= hr_format_days(@sickness_summary[:days]) %> <%= l(:label_hr_kpi_days_suffix) %></span>
+      </span>
+      <span class="hr-tc-kpi-label"><%= l(:label_hr_kpi_sickness_year) %></span>
+    </div>
+    <% if @monthly_plan_progress %>
+      <div class="hr-tc-kpi">
+        <span class="hr-tc-kpi-value">
+          <%= hr_format_seconds(@monthly_plan_progress[:worked_secs]) %>
+          <span class="hr-tc-kpi-target">/ <%= hr_format_seconds(@monthly_plan_progress[:target_secs]) %></span>
+        </span>
+        <span class="hr-tc-kpi-label"><%= l(:label_hr_kpi_monthly_plan) %> · <%= @monthly_plan_progress[:percent] %>%</span>
+        <span class="hr-tc-kpi-bar">
+          <span class="hr-tc-kpi-bar-fill" style="width: <%= @monthly_plan_progress[:percent] %>%"></span>
+        </span>
+      </div>
+    <% end %>
+  </div>
+
   <div class="hr-tc-actions">
     <%= button_to l(:button_hr_timeclock_start),  start_hr_timeclock_path,
                   data: { state_visible: 'idle' },

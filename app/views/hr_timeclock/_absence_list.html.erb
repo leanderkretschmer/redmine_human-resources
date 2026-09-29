@@ -34,6 +34,11 @@
               <span class="hr-tc-vacation-remaining" title="<%= l(:label_hr_vacation_remaining_full, used: hr_format_days(rem[:used]), allowed: rem[:allowed], year: a.starts_on.year) %>">
                 · <%= l(:label_hr_vacation_remaining_short, remaining: hr_format_days(rem[:remaining]), allowed: rem[:allowed]) %>
               </span>
+            <% elsif a.sickness? %>
+              <%= a.days %>
+              <span class="hr-tc-sickness-hours" title="<%= l(:label_hr_sickness_hours_suffix_full) %>">
+                · <%= hr_format_seconds((a.sickness_consumed_minutes * 60).to_i) %>
+              </span>
             <% else %>
               <%= a.days %>
             <% end %>
