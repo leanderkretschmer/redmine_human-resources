@@ -1,11 +1,18 @@
+<%
+  # `admin_mode` gates every "book on behalf of someone else" affordance —
+  # the user picker, the company-wide sentinel, and the extended kind list.
+  # Only the admin index (/admin/hr_timeclock) opts in; the personal page
+  # always renders the plain user modal, even for logged-in admins.
+  admin_mode = local_assigns.fetch(:admin_mode, false) && User.current.admin?
+%>
 <div id="hr-absence-modal" class="hr-tc-popup" role="dialog" aria-modal="true" aria-hidden="true"
-     data-admin="<%= User.current.admin? ? '1' : '0' %>">
+     data-admin="<%= admin_mode ? '1' : '0' %>">
   <div class="hr-tc-popup-inner hr-tc-absence-modal-inner">
     <h3 class="hr-tc-absence-modal-title"><%= l(:label_hr_absence_modal_title) %></h3>
     <%= form_with url: hr_absences_path, method: :post, scope: :hr_absence, local: true,
                   html: { id: 'hr-absence-modal-form' } do |f| %>
       <%= hidden_field_tag :return_to, request.fullpath %>
-      <% if User.current.admin? %>
+      <% if admin_mode %>
         <%
           # Restrict the user picker to the same HR roster the admin
           # bargraph displays: anyone with a HrWorkEntry or HrAbsence on
@@ -35,7 +42,7 @@
       <div class="hr-tc-absence-modal-row">
         <%= f.label :kind, l(:label_hr_absence_kind) %>
         <%= f.select :kind,
-                     (User.current.admin? ?
+                     (admin_mode ?
                        [[l(:label_hr_vacation),   HrAbsence::KIND_VACATION],
                         [l(:label_hr_sickness),   HrAbsence::KIND_SICKNESS],
                         [l(:label_hr_offsite),    HrAbsence::KIND_OFFSITE],

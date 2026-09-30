@@ -124,7 +124,7 @@
       clickable_for_absence: true
     } %>
 
-<%= render partial: 'hr_timeclock/absence_modal' %>
+<%= render partial: 'hr_timeclock/absence_modal', locals: { admin_mode: true } %>
 
 <div id="hr-tc-holiday-popover" class="hr-tc-holiday-popover" hidden
      data-affected-label="<%= l(:label_hr_cal_holiday_affected) %>"
