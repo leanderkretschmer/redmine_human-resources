@@ -1297,6 +1297,43 @@
     });
   }
 
+  // ── Entry-time correction modal (self-service) ─────────────────────────
+  function setupCorrectionModal() {
+    var modal = document.getElementById('hr-correction-modal');
+    if (!modal) return;
+    var form   = modal.querySelector('#hr-correction-modal-form');
+    var fStart = modal.querySelector('#hr_correction_started_at');
+    var fEnd   = modal.querySelector('#hr_correction_ended_at');
+    var fReason = modal.querySelector('#hr_correction_reason');
+
+    function open(btn) {
+      fStart.value = btn.getAttribute('data-started-at') || '';
+      fEnd.value   = btn.getAttribute('data-ended-at')   || '';
+      fReason.value = btn.getAttribute('data-reason') || '';
+      form.action = btn.getAttribute('data-url') || '#';
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+    }
+    function close() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    document.body.addEventListener('click', function (e) {
+      var btn = e.target.closest && e.target.closest('.hr-tc-entry-correct-btn');
+      if (!btn) return;
+      e.preventDefault();
+      open(btn);
+    });
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) close();
+      if (e.target.classList && e.target.classList.contains('hr-tc-absence-modal-cancel')) close();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.classList.contains('open')) close();
+    });
+  }
+
   function askPermissionOnce() {
     if (permissionAsked) return;
     permissionAsked = true;
@@ -1333,6 +1370,7 @@
     setupAbsenceEditModal();
     setupNavEndToggle();
     setupHolidayPopover();
+    setupCorrectionModal();
 
     notifiedTarget = loadNotifyFlag('target');
     notifiedBreakReminder = loadNotifyFlag('break_reminder');

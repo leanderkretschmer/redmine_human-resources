@@ -1,0 +1,26 @@
+<div id="hr-correction-modal" class="hr-tc-popup" role="dialog" aria-modal="true" aria-hidden="true">
+  <div class="hr-tc-popup-inner hr-tc-correction-modal-inner">
+    <h3 class="hr-tc-correction-modal-title"><%= l(:label_hr_correction_modal_title) %></h3>
+    <p class="hr-tc-correction-modal-hint"><%= l(:label_hr_correction_modal_hint) %></p>
+    <%= form_tag '#', method: :post, local: true, id: 'hr-correction-modal-form' do %>
+      <%= hidden_field_tag :return_to, request.fullpath %>
+      <div class="hr-tc-absence-modal-row">
+        <label for="hr_correction_started_at"><%= l(:label_hr_timeclock_session_started_at) %></label>
+        <input type="datetime-local" id="hr_correction_started_at" name="started_at" step="60" required>
+      </div>
+      <div class="hr-tc-absence-modal-row">
+        <label for="hr_correction_ended_at"><%= l(:label_hr_timeclock_session_ended_at) %></label>
+        <input type="datetime-local" id="hr_correction_ended_at" name="ended_at" step="60" required>
+      </div>
+      <div class="hr-tc-absence-modal-row">
+        <label for="hr_correction_reason"><%= l(:label_hr_absence_reason) %></label>
+        <textarea id="hr_correction_reason" name="reason" rows="3"
+                  placeholder="<%= l(:label_hr_correction_reason_placeholder) %>"></textarea>
+      </div>
+      <div class="hr-tc-absence-modal-actions">
+        <%= submit_tag l(:button_hr_correction_submit), class: 'button-positive' %>
+        <button type="button" class="hr-tc-absence-modal-cancel"><%= l(:button_cancel) %></button>
+      </div>
+    <% end %>
+  </div>
+</div>

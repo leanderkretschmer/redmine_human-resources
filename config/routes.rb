@@ -10,6 +10,9 @@ RedmineApp::Application.routes.draw do
     post  'resume',   to: 'hr_timeclock#resume',          as: 'resume_hr_timeclock'
     post  'stop',     to: 'hr_timeclock#stop',            as: 'stop_hr_timeclock'
     post  'correct/:id', to: 'hr_timeclock#correct',      as: 'correct_hr_timeclock'
+    post  'entries/:id/correction',  to: 'hr_timeclock#propose_correction', as: 'propose_correction_hr_entry'
+    post  'entries/:id/correction/approve', to: 'hr_timeclock#approve_correction', as: 'approve_correction_hr_entry'
+    post  'entries/:id/correction/reject',  to: 'hr_timeclock#reject_correction',  as: 'reject_correction_hr_entry'
     get   'export',   to: 'hr_timeclock#export',          as: 'export_hr_timeclock'
     get   'day/:date', to: 'hr_timeclock#day_detail',     as: 'day_hr_timeclock',
           constraints: { date: /\d{4}-\d{2}-\d{2}/ }

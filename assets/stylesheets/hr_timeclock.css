@@ -1213,6 +1213,57 @@ button.hr-tc-day-detail-close {
 .hr-tc-personal-kpis .hr-tc-kpi-value { font-size: 1.15em; }
 .hr-tc-sickness-hours { color: #6c7a89; font-size: 0.9em; }
 
+/* ======= Self-service work-entry corrections ======= */
+.hr-tc-entries-table .hr-tc-entry-pending-correction td { background: #fff8e7; }
+.hr-tc-entry-pending-correction {
+  background-image: repeating-linear-gradient(45deg,
+                     transparent 0 4px,
+                     rgba(230, 126, 34, 0.08) 4px 8px);
+}
+.hr-tc-entry-correction-arrow {
+  display: inline-block;
+  color: #e67e22;
+  font-size: 0.85em;
+  font-weight: 500;
+}
+.hr-tc-entry-correction-arrow strong { color: #c0392b; font-weight: 700; }
+.hr-tc-entry-correction-badge {
+  display: inline-block;
+  margin-left: 0.4em;
+  padding: 1px 7px;
+  font-size: 0.72em;
+  font-weight: 600;
+  border-radius: 10px;
+  background-image: repeating-linear-gradient(45deg,
+                     #e67e22 0 4px,
+                     #d35400 4px 8px);
+  color: #fff;
+  letter-spacing: 0.02em;
+  cursor: help;
+}
+.hr-tc-entry-actions { text-align: right; white-space: nowrap; }
+.hr-tc-entry-correct-btn {
+  padding: 0.2em 0.8em;
+  border: 1px solid #cdd6e0;
+  border-radius: 14px;
+  background: #fff;
+  color: #44505f;
+  cursor: pointer;
+  font-size: 0.85em;
+}
+.hr-tc-entry-correct-btn:hover { background: #eef3f7; border-color: #95a5a6; }
+.hr-tc-pending-corrections .button-positive,
+.hr-tc-pending-corrections .button-negative { padding: 0.25em 0.7em; }
+
+.hr-tc-correction-modal-inner {
+  min-width: 360px;
+  max-width: 520px;
+  border-top: 4px solid #e67e22;
+  text-align: left;
+}
+.hr-tc-correction-modal-title { margin: 0 0 0.4em; color: #c0392b; }
+.hr-tc-correction-modal-hint { color: #6c7a89; margin-bottom: 1em; font-size: 0.9em; }
+
 .hr-tc-barchart { margin: 0.5em 0 1.5em; }
 .hr-tc-bar-row {
   display: flex;

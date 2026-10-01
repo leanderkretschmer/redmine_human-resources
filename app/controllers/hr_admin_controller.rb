@@ -48,6 +48,8 @@ class HrAdminController < ApplicationController
                       []
                     end
     @pending_absences = HrAbsence.pending.includes(:user, :approver).order(:starts_on).limit(100).to_a
+    @pending_corrections = HrWorkEntry.with_pending_correction.includes(:user)
+                                      .order(correction_requested_at: :desc).limit(50).to_a
 
     # ── Dashboard KPIs (across the full filtered set, all pages) ──
     today = Date.current

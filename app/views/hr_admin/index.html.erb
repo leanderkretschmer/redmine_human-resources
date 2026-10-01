@@ -130,6 +130,45 @@
      data-affected-label="<%= l(:label_hr_cal_holiday_affected) %>"
      data-unaffected-label="<%= l(:label_hr_cal_holiday_unaffected) %>"></div>
 
+<% if @pending_corrections.any? %>
+  <h3><%= l(:label_hr_admin_pending_corrections) %></h3>
+  <table class="list hr-tc-pending-corrections">
+    <thead>
+      <tr>
+        <th><%= l(:label_hr_admin_users) %></th>
+        <th><%= l(:label_hr_timeclock_session_started_at) %></th>
+        <th><%= l(:label_hr_timeclock_session_ended_at) %></th>
+        <th><%= l(:label_hr_absence_reason) %></th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody>
+      <% @pending_corrections.each do |c| %>
+        <tr class="hr-tc-entry-pending-correction">
+          <td><%= h c.user&.name %></td>
+          <td>
+            <%= format_time(c.started_at) %>
+            <span class="hr-tc-entry-correction-arrow">→ <strong><%= c.proposed_started_at ? format_time(c.proposed_started_at) : '—' %></strong></span>
+          </td>
+          <td>
+            <%= c.ended_at ? format_time(c.ended_at) : '—' %>
+            <span class="hr-tc-entry-correction-arrow">→ <strong><%= c.proposed_ended_at ? format_time(c.proposed_ended_at) : '—' %></strong></span>
+          </td>
+          <td><%= h c.correction_reason %></td>
+          <td>
+            <%= button_to l(:button_hr_correction_approve),
+                          approve_correction_hr_entry_path(id: c.id),
+                          method: :post, class: 'button-positive' %>
+            <%= button_to l(:button_hr_correction_reject),
+                          reject_correction_hr_entry_path(id: c.id),
+                          method: :post, class: 'button-negative' %>
+          </td>
+        </tr>
+      <% end %>
+    </tbody>
+  </table>
+<% end %>
+
 <% if @pending_absences.any? %>
   <h3><%= l(:label_hr_admin_pending_approvals) %></h3>
   <%= render partial: 'hr_timeclock/absence_list', locals: {

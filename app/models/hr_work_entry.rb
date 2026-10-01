@@ -6,6 +6,9 @@ class HrWorkEntry < ActiveRecord::Base
   STATE_COMPLETED = 'completed'.freeze
   STATES          = [STATE_RUNNING, STATE_PAUSED, STATE_COMPLETED].freeze
 
+  CORRECTION_REQUESTED = 'requested'.freeze
+  CORRECTION_STATUSES  = [CORRECTION_REQUESTED].freeze
+
   belongs_to :user
   has_many :hr_break_entries,
            -> { order(:started_at) },
@@ -26,6 +29,7 @@ class HrWorkEntry < ActiveRecord::Base
     end
   }
   scope :in_range, ->(from, to) { where(started_at: from..to) }
+  scope :with_pending_correction, -> { where(correction_status: CORRECTION_REQUESTED) }
 
   def open?
     state != STATE_COMPLETED
@@ -106,6 +110,61 @@ class HrWorkEntry < ActiveRecord::Base
                 e.state, e.notes]
       end
     end
+  end
+
+  # ── Self-service time corrections ────────────────────────────────────────
+  # A user may propose new start/end times on their own completed entries;
+  # the proposal is held in `proposed_started_at`/`proposed_ended_at` with
+  # `correction_status = 'requested'` until an admin approves or rejects it.
+  # The real start/end stay untouched while a correction is pending so
+  # existing totals keep rendering until the admin signs off.
+
+  def pending_correction?
+    correction_status == CORRECTION_REQUESTED
+  end
+
+  def propose_correction!(new_started_at:, new_ended_at:, reason: nil)
+    raise ArgumentError, 'open entries cannot be corrected' if open?
+    raise ArgumentError, 'end must follow start' if new_ended_at && new_started_at && new_ended_at <= new_started_at
+    update!(
+      proposed_started_at: new_started_at,
+      proposed_ended_at:   new_ended_at,
+      correction_status:   CORRECTION_REQUESTED,
+      correction_reason:   reason.to_s[0, 500],
+      correction_requested_at: Time.current
+    )
+  end
+
+  def approve_correction!(by_user:)
+    return false unless pending_correction?
+    old_start, old_end = started_at, ended_at
+    new_start = proposed_started_at
+    new_end   = proposed_ended_at
+    reason    = correction_reason
+    stamp = "[Korrektur genehmigt am #{Time.current.iso8601} durch #{by_user&.login || 'admin'}] " \
+            "#{old_start&.iso8601}→#{new_start&.iso8601}, #{old_end&.iso8601}→#{new_end&.iso8601}" \
+            "#{reason.present? ? " · #{reason}" : ''}"
+    note = [notes.presence, stamp].compact.join("\n")
+    update!(
+      started_at: new_start, ended_at: new_end,
+      proposed_started_at: nil, proposed_ended_at: nil,
+      correction_status: nil, correction_reason: nil, correction_requested_at: nil,
+      notes: note
+    )
+    true
+  end
+
+  def reject_correction!(by_user:, note: nil)
+    return false unless pending_correction?
+    stamp = "[Korrektur abgelehnt am #{Time.current.iso8601} durch #{by_user&.login || 'admin'}]" \
+            "#{note.present? ? " · #{note}" : ''}"
+    combined = [notes.presence, stamp].compact.join("\n")
+    update!(
+      proposed_started_at: nil, proposed_ended_at: nil,
+      correction_status: nil, correction_reason: nil, correction_requested_at: nil,
+      notes: combined
+    )
+    true
   end
 
   def auto_close_overlong_break!(max_break_seconds, as_of: Time.current)

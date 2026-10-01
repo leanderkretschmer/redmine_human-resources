@@ -189,6 +189,55 @@ class HrTimeclockController < ApplicationController
     render json: { error: 'invalid_date' }, status: :bad_request
   end
 
+  # ── Self-service correction of an already-closed entry ───────────────────
+  # Users may propose new start/end times on their own completed entries;
+  # the request waits in state 'requested' until an admin signs it off.
+  def propose_correction
+    entry = HrWorkEntry.for_user(User.current).where(id: params[:id]).first
+    return redirect_to(hr_timeclock_path, alert: l(:notice_hr_correction_not_found)) unless entry
+    if entry.open?
+      flash[:error] = l(:notice_hr_correction_open_entry)
+      return redirect_to(hr_timeclock_path)
+    end
+
+    tz = RedmineHumanResources::Settings.user_time_zone(User.current)
+    new_start = parse_local_datetime(params[:started_at].to_s, tz, entry.started_at)
+    new_end   = parse_local_datetime(params[:ended_at].to_s,   tz, entry.ended_at)
+    unless new_start && new_end && new_end > new_start
+      flash[:error] = l(:notice_hr_correction_invalid_times)
+      return redirect_to(hr_timeclock_path)
+    end
+
+    entry.propose_correction!(
+      new_started_at: new_start,
+      new_ended_at:   new_end,
+      reason: params[:reason].to_s
+    )
+    flash[:notice] = l(:notice_hr_correction_submitted)
+    redirect_back(fallback_location: hr_timeclock_path)
+  rescue ArgumentError => e
+    flash[:error] = e.message
+    redirect_to hr_timeclock_path
+  end
+
+  def approve_correction
+    return head(:forbidden) unless User.current.admin?
+    entry = HrWorkEntry.where(id: params[:id]).first
+    return redirect_to(hr_admin_path, alert: l(:notice_hr_correction_not_found)) unless entry
+    entry.approve_correction!(by_user: User.current)
+    flash[:notice] = l(:notice_hr_correction_approved)
+    redirect_back(fallback_location: hr_admin_path)
+  end
+
+  def reject_correction
+    return head(:forbidden) unless User.current.admin?
+    entry = HrWorkEntry.where(id: params[:id]).first
+    return redirect_to(hr_admin_path, alert: l(:notice_hr_correction_not_found)) unless entry
+    entry.reject_correction!(by_user: User.current, note: params[:note])
+    flash[:notice] = l(:notice_hr_correction_rejected)
+    redirect_back(fallback_location: hr_admin_path)
+  end
+
   def correct
     entry = HrWorkEntry.for_user(User.current).where(id: params[:id]).first
     unless entry && entry.open? && entry.overdue?(as_of: Time.current)
@@ -399,6 +448,15 @@ class HrTimeclockController < ApplicationController
       events: events,
       absences: absence_events
     }
+  end
+
+  # Accept a `<input type="datetime-local">` payload (YYYY-MM-DDTHH:MM) or any
+  # parseable timestamp, interpreted in the user's own time zone.
+  def parse_local_datetime(str, tz, fallback = nil)
+    return fallback if str.blank?
+    Time.use_zone(tz) { Time.zone.parse(str) }
+  rescue ArgumentError
+    fallback
   end
 
   def parse_correction_time(entry, str, tz)
