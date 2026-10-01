@@ -1419,7 +1419,12 @@ button.hr-tc-day-detail-close {
   font-size: 0.9em;
 }
 .hr-tc-edit-row-new { background: #f3f7fb; border-color: #c8d3df; margin-top: 0.6em; }
-.hr-tc-edit-row > input, .hr-tc-edit-row > select { min-width: 0; }
+.hr-tc-edit-row > input, .hr-tc-edit-row > select {
+  min-width: 0;
+  max-width: 100%;
+  width: 100%;
+  box-sizing: border-box;
+}
 .hr-tc-edit-actions { display: inline-flex; align-items: center; gap: 0.4em; justify-content: flex-end; }
 .hr-tc-edit-actions .icon { padding-left: 18px; }
 

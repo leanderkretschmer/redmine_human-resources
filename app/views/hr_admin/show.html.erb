@@ -267,7 +267,7 @@
                       html: { class: 'hr-tc-edit-row' } do |f| %>
           <%= f.select :kind,
                        HrLecturePeriod::KINDS.map { |k| [HrLecturePeriod.label_for(k), k] },
-                       {}, { selected: p.kind } %>
+                       { selected: p.kind } %>
           <%= f.date_field :starts_on, value: p.starts_on %>
           <%= f.date_field :ends_on,   value: p.ends_on %>
           <%= number_field_tag 'hr_lecture_period[weekly_target_hours]',
@@ -276,7 +276,7 @@
           <%= number_field_tag 'hr_lecture_period[daily_target_hours]',
                                p.daily_target_minutes ? (p.daily_target_minutes / 60.0) : nil,
                                min: 0, step: 0.5 %>
-          <%= f.text_field :label, value: p.label %>
+          <%= f.text_field :label, value: p.label, size: 12 %>
           <span class="hr-tc-edit-actions">
             <%= submit_tag l(:button_save), class: 'icon icon-save' %>
             <%= link_to l(:button_hr_absence_delete),
@@ -297,14 +297,14 @@
                 html: { class: 'hr-tc-edit-row hr-tc-edit-row-new hr-tc-lecture-list' } do |f| %>
     <%= f.select :kind,
                  HrLecturePeriod::KINDS.map { |k| [HrLecturePeriod.label_for(k), k] },
-                 {}, { selected: HrLecturePeriod::KIND_LECTURE } %>
+                 { selected: HrLecturePeriod::KIND_LECTURE } %>
     <%= f.date_field :starts_on, value: Date.current %>
     <%= f.date_field :ends_on, value: Date.current.end_of_month %>
     <%= number_field_tag 'hr_lecture_period[weekly_target_hours]', '', min: 0, step: 0.5,
                          placeholder: l(:label_hr_lecture_period_weekly_target) %>
     <%= number_field_tag 'hr_lecture_period[daily_target_hours]', '', min: 0, step: 0.5,
                          placeholder: l(:label_hr_lecture_period_daily_target) %>
-    <%= f.text_field :label, placeholder: l(:label_hr_lecture_period_label) %>
+    <%= f.text_field :label, placeholder: l(:label_hr_lecture_period_label), size: 12 %>
     <span class="hr-tc-edit-actions"><%= submit_tag l(:button_save), class: 'button-positive' %></span>
   <% end %>
 <% end %>
