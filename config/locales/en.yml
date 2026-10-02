@@ -277,7 +277,7 @@ en:
   label_hr_absence_admin_auto_approved: "Will be approved immediately."
   label_hr_school_weekdays: "School weekdays"
   label_hr_school_full_day: "School day counted as full workday"
-  label_hr_school_full_day_hint: "Automatically stretched to 8 h on clock-out. Auto-enabled when only one school day is configured."
+  label_hr_school_full_day_hint: "Marks the school day that counts as a full workday. Clock-out times are never changed by this. Auto-enabled when only one school day is configured."
   label_hr_school_full_day_none: "— manual —"
   label_hr_school_full_day_auto: "— automatic (only school day) —"
   label_hr_distribution: "Weekly hours distribution"

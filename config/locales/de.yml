@@ -277,7 +277,7 @@ de:
   label_hr_absence_admin_auto_approved: "Wird direkt genehmigt."
   label_hr_school_weekdays: "Berufsschultage (Wochentage)"
   label_hr_school_full_day: "Berufsschultag als voller Arbeitstag"
-  label_hr_school_full_day_hint: "Wird automatisch beim Ausstempeln auf 8 Std. gestreckt. Bei nur einem Berufsschultag automatisch aktiv."
+  label_hr_school_full_day_hint: "Kennzeichnet den Berufsschultag, der als voller Arbeitstag zählt. Die Ausstempelzeit wird dadurch nicht verändert. Bei nur einem Berufsschultag automatisch aktiv."
   label_hr_school_full_day_none: "— manuell —"
   label_hr_school_full_day_auto: "— automatisch (einziger Berufsschultag) —"
   label_hr_distribution: "Verteilung der Wochenstunden"
