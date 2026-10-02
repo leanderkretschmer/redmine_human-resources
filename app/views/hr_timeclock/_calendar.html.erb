@@ -398,6 +398,9 @@
                 cell_classes << 'hr-tc-cal-lecture' if day_lectures.any? { |lp| lp.lecture? }
                 cell_classes << 'hr-tc-cal-lecture-break' if day_lectures.any? { |lp| lp.break? }
                 cell_classes << 'hr-tc-cal-holiday' if day_holidays.any?
+                # Zelle als Bezugsrahmen fuer die absolut positionierten Markierungen,
+                # sonst rutscht z.B. ein reiner Feiertags-Marker an den Seitenanfang.
+                cell_classes << 'hr-tc-cal-has-markers' if (day_absences.any? && !show_users) || day_lectures.any? || day_holidays.any?
 
                 cell_attrs = +%(class="#{cell_classes.join(' ')}")
                 if day && clickable

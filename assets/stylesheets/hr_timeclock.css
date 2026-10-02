@@ -242,6 +242,7 @@ table.hr-tc-calendar-grid {
   outline-offset: -2px;
 }
 .hr-tc-cal-has-absence            { background-color: #fafbfc; position: relative; }
+.hr-tc-cal-has-markers            { position: relative; }
 .hr-tc-cal-markers {
   position: absolute;
   top: 0;
