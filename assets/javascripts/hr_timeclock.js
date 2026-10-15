@@ -1335,6 +1335,14 @@
     var recurUntilRow = modal.querySelector('[data-bind="entry-recurrence-until"]');
     var timeCapableKinds = (modal.getAttribute('data-time-capable-kinds') || '').split(',');
     var recurrenceCapableKinds = ['offsite', 'school', 'blocked', 'homeoffice', 'workday'];
+    var dayUrlBase        = modal.getAttribute('data-day-url-base') || '';
+    var dayUrlPlaceholder = modal.getAttribute('data-day-url-placeholder') || '1970-01-01';
+    var confirmDeleteMsg  = modal.getAttribute('data-confirm-delete') || 'Wirklich löschen?';
+    var existingSection = modal.querySelector('[data-bind="entry-existing-section"]');
+    var existingList    = modal.querySelector('[data-bind="entry-existing-list"]');
+    var existingEmpty   = modal.querySelector('[data-bind="entry-existing-empty"]');
+    var existingLoading = modal.querySelector('[data-bind="entry-existing-loading"]');
+    var existingReqSeq = 0;
 
     function close() {
       modal.classList.remove('open');
@@ -1559,6 +1567,140 @@
       renderTimelineStep();
     });
 
+    // ── Vorhandene Einträge im gewählten Zeitraum ──────────────────────────
+    function csrfTokenEntry() {
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      return meta ? meta.getAttribute('content') : '';
+    }
+    function escHtml(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function fetchExistingForRange(startIso, endIso) {
+      if (!existingSection || !dayUrlBase) return;
+      var days = daysBetween(startIso, endIso);
+      if (!days.length) {
+        existingSection.hidden = true;
+        return;
+      }
+      existingSection.hidden = false;
+      existingList.innerHTML = '';
+      existingEmpty.hidden = true;
+      existingLoading.hidden = false;
+
+      var mySeq = ++existingReqSeq;
+      Promise.all(days.map(function (d) {
+        var url = dayUrlBase.replace(dayUrlPlaceholder, d);
+        return fetch(url, {
+          credentials: 'same-origin',
+          headers: { 'Accept': 'application/json' }
+        }).then(function (r) {
+          if (!r.ok) throw new Error('HTTP ' + r.status);
+          return r.json();
+        }).catch(function () { return null; });
+      })).then(function (results) {
+        if (mySeq !== existingReqSeq) return;  // stale response
+        existingLoading.hidden = true;
+        renderExisting(results.filter(Boolean));
+      });
+    }
+    function renderExisting(dayPayloads) {
+      existingList.innerHTML = '';
+      // Deduplicate absences: a multi-day absence shows up on every day it covers.
+      var seenAbsences = {};
+      var items = [];
+      dayPayloads.forEach(function (day) {
+        (day.absences || []).forEach(function (a) {
+          if (seenAbsences[a.id]) return;
+          seenAbsences[a.id] = true;
+          items.push({ day: day.date, kind: 'absence', data: a });
+        });
+        (day.events || []).forEach(function (e) {
+          if (e.type !== 'work') return;
+          items.push({ day: day.date, kind: 'work', data: e });
+        });
+      });
+      items.sort(function (a, b) {
+        if (a.day !== b.day) return a.day < b.day ? -1 : 1;
+        return a.kind === 'absence' ? -1 : 1;
+      });
+      if (!items.length) {
+        existingEmpty.hidden = false;
+        return;
+      }
+      existingEmpty.hidden = true;
+      items.forEach(function (it) {
+        var li = document.createElement('li');
+        li.className = 'hr-tc-entry-existing-item hr-tc-entry-existing-' + it.kind;
+        if (it.kind === 'absence') {
+          var a = it.data;
+          li.classList.add('hr-tc-entry-existing-' + a.kind);
+          var range = a.starts_on === a.ends_on
+            ? fmtDE(a.starts_on)
+            : (fmtDE(a.starts_on) + '–' + fmtDE(a.ends_on));
+          var timeInfo = (a.partial && a.start_time && a.end_time)
+            ? ' · ' + escHtml(a.start_time) + '–' + escHtml(a.end_time)
+            : '';
+          var statusInfo = (a.status && a.status !== 'approved')
+            ? ' · ' + escHtml(a.status_label || a.status)
+            : '';
+          var reason = a.reason ? '<span class="hr-tc-entry-existing-reason">' + escHtml(a.reason) + '</span>' : '';
+          var html =
+            '<span class="hr-tc-entry-existing-main">' +
+              '<strong>' + escHtml(a.kind_label) + '</strong>' +
+              ' <span class="hr-tc-entry-existing-when">' + range + timeInfo + '</span>' +
+              statusInfo +
+              reason +
+            '</span>';
+          if (a.delete_url) {
+            html += '<button type="button" class="hr-tc-entry-existing-del" ' +
+                    'data-url="' + escHtml(a.delete_url) + '" ' +
+                    'title="' + escHtml(a.kind_label) + '">✕</button>';
+          }
+          li.innerHTML = html;
+        } else {
+          // work entry — read-only here, correction handled elsewhere
+          var e = it.data;
+          li.innerHTML =
+            '<span class="hr-tc-entry-existing-main">' +
+              '<strong>' + fmtDE(it.day) + '</strong>' +
+              ' <span class="hr-tc-entry-existing-when">' + escHtml(e.starts_label) + '–' + escHtml(e.ends_label) + '</span>' +
+              ' <span class="hr-tc-entry-existing-net">(' + fmtHM(e.net_seconds) + ')</span>' +
+            '</span>';
+        }
+        existingList.appendChild(li);
+      });
+    }
+    function deleteExistingAbsence(url) {
+      if (!url) return;
+      if (!confirm(confirmDeleteMsg)) return;
+      fetch(url, {
+        method: 'DELETE',
+        credentials: 'same-origin',
+        headers: {
+          'X-CSRF-Token': csrfTokenEntry(),
+          'Accept': 'application/json'
+        }
+      }).then(function (r) {
+        if (r.ok || r.status === 302 || r.status === 404) {
+          fetchExistingForRange(startEl.value, endEl.value);
+        } else {
+          alert('Löschen fehlgeschlagen (' + r.status + ')');
+        }
+      }).catch(function () {
+        alert('Löschen fehlgeschlagen');
+      });
+    }
+    if (existingList) {
+      existingList.addEventListener('click', function (e) {
+        var btn = e.target.closest && e.target.closest('.hr-tc-entry-existing-del');
+        if (!btn) return;
+        e.preventDefault();
+        deleteExistingAbsence(btn.getAttribute('data-url'));
+      });
+    }
+
     function openModal(startIso, endIso, kindHint) {
       startEl.value = startIso || '';
       endEl.value   = (endIso || startIso) || '';
@@ -1578,6 +1720,7 @@
       if (timelinePrior) timelinePrior.innerHTML = '';
       if (timelineSel)   timelineSel.hidden = true;
       syncVisibility();
+      fetchExistingForRange(startEl.value, endEl.value);
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
       setTimeout(function () { kindSel && kindSel.focus(); }, 0);
@@ -1603,8 +1746,12 @@
     startEl.addEventListener('change', function () {
       if (!endEl.value || endEl.value < startEl.value) endEl.value = startEl.value;
       syncVisibility();
+      fetchExistingForRange(startEl.value, endEl.value);
     });
-    endEl.addEventListener('change', syncVisibility);
+    endEl.addEventListener('change', function () {
+      syncVisibility();
+      fetchExistingForRange(startEl.value, endEl.value);
+    });
     timeRadios.forEach(function (r) { r.addEventListener('change', syncVisibility); });
     perdayRadios.forEach(function (r) { r.addEventListener('change', syncVisibility); });
     if (recurSel) recurSel.addEventListener('change', syncVisibility);

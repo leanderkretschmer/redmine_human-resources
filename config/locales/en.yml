@@ -72,6 +72,8 @@ en:
   button_hr_entry_timeline_prev: "Back"
   button_hr_entry_timeline_next: "Next"
   button_hr_entry_timeline_skip: "Skip"
+  label_hr_entry_existing_title: "Existing entries in the selected range"
+  label_hr_entry_existing_empty: "No entries in this range."
   label_hr_sickness_hours_suffix_full: "Sickness hours based on this user's daily target."
   label_hr_correction_pending: "Correction requested"
   label_hr_correction_proposed: "Proposed value"

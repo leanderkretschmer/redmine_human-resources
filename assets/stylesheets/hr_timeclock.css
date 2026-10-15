@@ -1494,6 +1494,73 @@ button.hr-tc-day-detail-close {
 
 .hr-tc-entry-timeline-hint { color: #6c7a89; font-size: 0.82em; margin: 0.4em 0 0; }
 
+/* Vorhandene Einträge im Entry-Modal */
+.hr-tc-entry-existing-title {
+  margin: 0 0 0.4em;
+  font-size: 0.95em;
+  color: #2c3e50;
+}
+.hr-tc-entry-existing-loading,
+.hr-tc-entry-existing-empty {
+  margin: 0.2em 0;
+  color: #6c7a89;
+  font-size: 0.88em;
+  font-style: italic;
+}
+.hr-tc-entry-existing-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  max-height: 180px;
+  overflow-y: auto;
+}
+.hr-tc-entry-existing-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em;
+  background: #fff;
+  border: 1px solid #e3e7eb;
+  border-left: 3px solid #95a5a6;
+  border-radius: 4px;
+  padding: 0.35em 0.55em;
+  font-size: 0.88em;
+}
+.hr-tc-entry-existing-main { display: flex; align-items: baseline; gap: 0.4em; flex-wrap: wrap; min-width: 0; }
+.hr-tc-entry-existing-when { color: #4b5a68; font-variant-numeric: tabular-nums; }
+.hr-tc-entry-existing-net  { color: #27ae60; font-variant-numeric: tabular-nums; }
+.hr-tc-entry-existing-reason {
+  display: block;
+  width: 100%;
+  color: #6c7a89;
+  font-style: italic;
+  margin-top: 0.1em;
+}
+.hr-tc-entry-existing-del {
+  flex: 0 0 auto;
+  background: #fdecea;
+  border: 1px solid #e6a9a3;
+  color: #a94442;
+  border-radius: 3px;
+  padding: 0.1em 0.5em;
+  cursor: pointer;
+  font-size: 0.95em;
+  line-height: 1;
+}
+.hr-tc-entry-existing-del:hover { background: #f5c6c0; }
+.hr-tc-entry-existing-vacation   { border-left-color: #3498db; }
+.hr-tc-entry-existing-sickness   { border-left-color: #e74c3c; }
+.hr-tc-entry-existing-offsite    { border-left-color: #f1c40f; }
+.hr-tc-entry-existing-school     { border-left-color: #16a085; }
+.hr-tc-entry-existing-blocked    { border-left-color: #e67e22; }
+.hr-tc-entry-existing-workday    { border-left-color: #27ae60; }
+.hr-tc-entry-existing-homeoffice { border-left-color: #8e44ad; }
+.hr-tc-entry-existing-care       { border-left-color: #c0392b; }
+.hr-tc-entry-existing-work       { border-left-color: #2c3e50; }
+
 .hr-tc-barchart { margin: 0.5em 0 1.5em; }
 .hr-tc-bar-row {
   display: flex;

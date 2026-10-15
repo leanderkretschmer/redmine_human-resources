@@ -23,7 +23,10 @@
   time_capable_kinds = HrAbsence::RECURRENCE_CAPABLE_KINDS + [HrAbsence::KIND_SICKNESS, HrAbsence::KIND_CARE]
 %>
 <div id="hr-entry-modal" class="hr-tc-popup" role="dialog" aria-modal="true" aria-hidden="true"
-     data-time-capable-kinds="<%= time_capable_kinds.uniq.join(',') %>">
+     data-time-capable-kinds="<%= time_capable_kinds.uniq.join(',') %>"
+     data-day-url-base="<%= day_hr_timeclock_path(date: '1970-01-01') %>"
+     data-day-url-placeholder="1970-01-01"
+     data-confirm-delete="<%= l(:text_are_you_sure) %>">
   <div class="hr-tc-popup-inner hr-tc-entry-modal-inner">
     <h3 class="hr-tc-entry-modal-title"><%= l(:label_hr_entry_modal_title) %></h3>
     <%= form_with url: hr_absences_path, method: :post, scope: :hr_absence, local: true,
@@ -44,6 +47,18 @@
           <%= f.label :ends_on, l(:label_hr_absence_ends_on) %>
           <%= f.date_field :ends_on, required: true, id: 'hr_entry_ends_on' %>
         </div>
+      </div>
+
+      <%# ─── Vorhandene Einträge im gewählten Zeitraum ─── %>
+      <div class="hr-tc-entry-section hr-tc-entry-existing" data-bind="entry-existing-section" hidden>
+        <h4 class="hr-tc-entry-existing-title"><%= l(:label_hr_entry_existing_title) %></h4>
+        <p class="hr-tc-entry-existing-loading" data-bind="entry-existing-loading" hidden>
+          <%= l(:label_hr_day_detail_loading) %>
+        </p>
+        <ul class="hr-tc-entry-existing-list" data-bind="entry-existing-list"></ul>
+        <p class="hr-tc-entry-existing-empty" data-bind="entry-existing-empty" hidden>
+          <%= l(:label_hr_entry_existing_empty) %>
+        </p>
       </div>
 
       <div class="hr-tc-entry-row">
