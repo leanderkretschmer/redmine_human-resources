@@ -1256,6 +1256,114 @@ button.hr-tc-day-detail-close {
 .hr-tc-correction-modal-title { margin: 0 0 0.4em; color: #c0392b; }
 .hr-tc-correction-modal-hint { color: #6c7a89; margin-bottom: 1em; font-size: 0.9em; }
 
+/* ======= Unified calendar entry modal ======= */
+.hr-tc-entry-modal-inner {
+  min-width: 420px;
+  max-width: 580px;
+  text-align: left;
+  border-top: 4px solid #2980b9;
+}
+.hr-tc-entry-modal-title { margin: 0 0 0.9em; color: #2c3e50; }
+.hr-tc-entry-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+  margin-bottom: 0.75em;
+}
+.hr-tc-entry-row > label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9em;
+}
+.hr-tc-entry-row input[type="text"],
+.hr-tc-entry-row input[type="date"],
+.hr-tc-entry-row input[type="time"],
+.hr-tc-entry-row select {
+  padding: 0.35em 0.5em;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+}
+.hr-tc-entry-dates,
+.hr-tc-entry-time-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6em;
+}
+.hr-tc-entry-dates > div,
+.hr-tc-entry-time-fields > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25em;
+}
+.hr-tc-entry-time-row,
+.hr-tc-entry-section > .hr-tc-entry-row:first-child {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.8em;
+}
+.hr-tc-entry-time-row > label:first-child,
+.hr-tc-entry-section > .hr-tc-entry-row:first-child > label:first-child {
+  margin-right: 0.3em;
+  min-width: 7em;
+}
+.hr-tc-entry-mode-opt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-weight: 500;
+  color: #44505f;
+  cursor: pointer;
+}
+.hr-tc-entry-mode-opt input[type="radio"] { margin: 0; }
+.hr-tc-entry-section {
+  background: #f8fafc;
+  border: 1px solid #e3e7eb;
+  border-radius: 6px;
+  padding: 0.55em 0.75em;
+  margin-bottom: 0.75em;
+}
+.hr-tc-entry-perday-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3em;
+  margin-top: 0.5em;
+  max-height: 240px;
+  overflow-y: auto;
+  padding: 0.3em;
+  background: #fff;
+  border: 1px solid #e3e7eb;
+  border-radius: 4px;
+}
+.hr-tc-perday-row {
+  display: grid;
+  grid-template-columns: 5em 1fr auto 1fr;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.15em 0.1em;
+}
+.hr-tc-perday-day { font-weight: 600; color: #2c3e50; font-size: 0.9em; }
+.hr-tc-perday-sep { color: #95a5a6; text-align: center; }
+.hr-tc-perday-row input[type="time"] { padding: 0.25em 0.4em; }
+.hr-tc-entry-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6em;
+  margin-top: 1em;
+}
+.hr-tc-entry-cancel {
+  padding: 0.5em 1.2em;
+  background: #ecf0f1;
+  color: #2c3e50;
+  border: 1px solid #bdc3c7;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 600;
+}
+.hr-tc-entry-cancel:hover { background: #bdc3c7; }
+
 .hr-tc-barchart { margin: 0.5em 0 1.5em; }
 .hr-tc-bar-row {
   display: flex;

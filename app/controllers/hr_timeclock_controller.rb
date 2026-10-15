@@ -41,21 +41,43 @@ class HrTimeclockController < ApplicationController
     # Year-to-date sickness aggregation for the personal KPI tile.
     @sickness_summary  = HrAbsence.sickness_summary(User.current, today.year)
     @vacation_summary  = HrAbsence.vacation_remaining(User.current, today.year)
-    # Monthly-plan progress (Werkstudent/Intern) — sum this month's net work
-    # against the plan's target so we can render a progress KPI.
-    if @user_setting.allows_monthly_plan? && @monthly_plan
+
+    # "Arbeit diese Woche" — net seconds across the current ISO week, honours
+    # the configured first-day-of-week.
+    week_start = today.beginning_of_week(@week_start_day)
+    week_end   = today.end_of_week(@week_start_day)
+    week_entries = HrWorkEntry.for_user(User.current)
+                              .in_range(week_start.in_time_zone(tz).beginning_of_day,
+                                        week_end.in_time_zone(tz).end_of_day).to_a
+    @worked_this_week = week_entries.sum { |e| e.net_seconds }.to_i
+
+    # "Geplante Arbeitszeit" (Werkstudent/Intern) — count self-booked WORKDAY
+    # absences inside the current month: partial-time entries count their
+    # explicit window, full-day entries fall back to the user's base daily
+    # target. Compared against the monthly plan's target_minutes.
+    if @user_setting.allows_monthly_plan?
       month_start = today.beginning_of_month
       month_end   = today.end_of_month
-      month_entries = HrWorkEntry.for_user(User.current)
-                                 .in_range(month_start.in_time_zone(tz).beginning_of_day,
-                                           month_end.in_time_zone(tz).end_of_day).to_a
-      worked_secs = month_entries.sum { |e| e.net_seconds }
-      target_secs = @monthly_plan.target_minutes.to_i * 60
-      @monthly_plan_progress = {
-        worked_secs: worked_secs.to_i,
-        target_secs: target_secs,
-        remaining_secs: [target_secs - worked_secs.to_i, 0].max,
-        percent: target_secs.positive? ? [(worked_secs.to_f / target_secs * 100).round, 100].min : 0
+      planned_workdays = HrAbsence.for_user(User.current).active
+                                  .where(kind: HrAbsence::KIND_WORKDAY)
+                                  .where('starts_on <= ? AND ends_on >= ?', month_end, month_start)
+                                  .to_a
+      planned_min = planned_workdays.sum do |a|
+        (a.starts_on..a.ends_on).sum do |d|
+          next 0 unless d >= month_start && d <= month_end
+          if a.partial? && a.starts_on == d && a.ends_on == d
+            a.partial_minutes_on(d)
+          else
+            @user_setting.base_daily_target_minutes(on_date: d)
+          end
+        end
+      end
+      target_min = @monthly_plan ? @monthly_plan.target_minutes.to_i :
+                                   @user_setting.effective_weekly_target_minutes(on_date: today).to_i * 4
+      @planned_workday_summary = {
+        planned_secs: planned_min.to_i * 60,
+        target_secs:  target_min.to_i  * 60,
+        percent: target_min.to_i.positive? ? [(planned_min.to_f / target_min * 100).round, 100].min : 0
       }
     end
 

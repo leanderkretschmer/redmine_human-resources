@@ -45,11 +45,35 @@ class HrAbsencesController < ApplicationController
       return respond_create_failure(l(:notice_hr_recurrence_until_required))
     end
 
-    pairs = if recurrence_capable
+    # The unified entry modal can send a `per_day` hash with one time-window
+    # per calendar date — in that case we create one record per entry rather
+    # than a single multi-day range. Otherwise fall back to the usual single
+    # pair (optionally expanded by recurrence) using the global start/end
+    # time (or none, for full-day entries).
+    per_day = parse_per_day_param
+    pairs = if per_day.any?
+              per_day
+            elsif recurrence_capable
               HrAbsence.expand_recurrence(starts_on, ends_on, recurrence_kind, recurrence_until)
+                       .map { |s, e| [s, e, nil, nil] }
             else
-              [[starts_on, ends_on]]
+              [[starts_on, ends_on, nil, nil]]
             end
+
+    # Fill per-pair times with the global start/end when absent, then split
+    # any multi-day pair that carries a time window into one record per
+    # calendar day — the model only accepts start/end time on same-day
+    # entries (`time_range_consistent`).
+    global_start = normalize_hhmm(permitted[:start_time])
+    global_end   = normalize_hhmm(permitted[:end_time])
+    pairs = pairs.map { |s, e, pst, pen| [s, e, pst.presence || global_start, pen.presence || global_end] }
+    pairs = pairs.flat_map do |s, e, pst, pen|
+      if s != e && (pst || pen)
+        (s..e).map { |d| [d, d, pst, pen] }
+      else
+        [[s, e, pst, pen]]
+      end
+    end
 
     # When an admin books an absence from the calendar (whether for one user or
     # the entire active roster), the entry is approved on the spot — there is
@@ -73,7 +97,7 @@ class HrAbsencesController < ApplicationController
            HrAbsence.overlapping_for(uid, permitted[:kind], starts_on, ends_on).exists?
           next
         end
-        pairs.each do |s, e|
+        pairs.each do |s, e, per_start, per_end|
           absence = HrAbsence.new(
             kind: permitted[:kind],
             reason: permitted[:reason],
@@ -81,8 +105,8 @@ class HrAbsencesController < ApplicationController
             ends_on:   e,
             first_day_half: first_half,
             last_day_half:  last_half,
-            start_time: normalize_hhmm(permitted[:start_time]),
-            end_time:   normalize_hhmm(permitted[:end_time]),
+            start_time: per_start,
+            end_time:   per_end,
             user_id: uid,
             status: status,
             approved_by_id: status == HrAbsence::STATUS_APPROVED ? User.current.id : nil,
@@ -214,6 +238,25 @@ class HrAbsencesController < ApplicationController
     ids = (HrWorkEntry.distinct.pluck(:user_id) + HrAbsence.distinct.pluck(:user_id)).uniq
     return [] if ids.empty?
     User.active.where(id: ids).where.not(type: 'AnonymousUser').pluck(:id)
+  end
+
+  # Decode the `per_day` payload sent by the unified entry modal when the
+  # user picked "pro Tag anpassen". Returns an array of
+  # [date, date, start_time_hhmm, end_time_hhmm] tuples, one per calendar
+  # day. Silently drops malformed entries.
+  def parse_per_day_param
+    raw = params[:per_day]
+    return [] unless raw.respond_to?(:to_unsafe_h) || raw.is_a?(Hash)
+    hash = raw.respond_to?(:to_unsafe_h) ? raw.to_unsafe_h : raw
+    hash.filter_map do |date_str, times|
+      date = parse_date(date_str)
+      next unless date
+      times = times.respond_to?(:to_unsafe_h) ? times.to_unsafe_h : times
+      next unless times.is_a?(Hash)
+      s = normalize_hhmm(times['start_time'] || times[:start_time])
+      e = normalize_hhmm(times['end_time']   || times[:end_time])
+      [date, date, s, e]
+    end
   end
 
   def find_absence

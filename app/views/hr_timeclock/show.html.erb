@@ -92,15 +92,19 @@
       </span>
       <span class="hr-tc-kpi-label"><%= l(:label_hr_kpi_sickness_year) %></span>
     </div>
-    <% if @monthly_plan_progress %>
+    <div class="hr-tc-kpi">
+      <span class="hr-tc-kpi-value"><%= hr_format_seconds(@worked_this_week) %></span>
+      <span class="hr-tc-kpi-label"><%= l(:label_hr_kpi_worked_this_week) %></span>
+    </div>
+    <% if @planned_workday_summary %>
       <div class="hr-tc-kpi">
         <span class="hr-tc-kpi-value">
-          <%= hr_format_seconds(@monthly_plan_progress[:worked_secs]) %>
-          <span class="hr-tc-kpi-target">/ <%= hr_format_seconds(@monthly_plan_progress[:target_secs]) %></span>
+          <%= hr_format_seconds(@planned_workday_summary[:planned_secs]) %>
+          <span class="hr-tc-kpi-target">/ <%= hr_format_seconds(@planned_workday_summary[:target_secs]) %></span>
         </span>
-        <span class="hr-tc-kpi-label"><%= l(:label_hr_kpi_monthly_plan) %> · <%= @monthly_plan_progress[:percent] %>%</span>
+        <span class="hr-tc-kpi-label"><%= l(:label_hr_kpi_planned_workday) %> · <%= @planned_workday_summary[:percent] %>%</span>
         <span class="hr-tc-kpi-bar">
-          <span class="hr-tc-kpi-bar-fill" style="width: <%= @monthly_plan_progress[:percent] %>%"></span>
+          <span class="hr-tc-kpi-bar-fill" style="width: <%= @planned_workday_summary[:percent] %>%"></span>
         </span>
       </div>
     <% end %>
@@ -193,6 +197,7 @@
       clickable_for_absence: true
     } %>
 
+<%= render partial: 'entry_modal' %>
 <%= render partial: 'absence_modal' %>
 <%= render partial: 'day_detail_modal' %>
 <%= render partial: 'correction_modal' %>

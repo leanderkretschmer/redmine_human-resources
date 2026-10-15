@@ -798,6 +798,10 @@
     }
 
     function openAbsenceModalFor(starts, ends, kindHint) {
+      // Prefer the new unified entry modal when it is on the page.
+      if (window.HrTimeclockOpenEntryModal) {
+        return window.HrTimeclockOpenEntryModal(starts, ends, kindHint);
+      }
       if (!window.HrTimeclockOpenAbsenceModal) return;
       window.HrTimeclockOpenAbsenceModal(starts, kindHint);
       var endEl = document.querySelector('#hr_absence_ends_on');
@@ -911,21 +915,14 @@
         var cell = e.target.closest('td.hr-tc-cal-clickable[data-date]');
         if (!cell) return;
         if (clickTimer) clearTimeout(clickTimer);
-        // In admin mode (global calendar), single-click on cell body opens the
-        // absence modal for that day. The day-link itself is wrapped in an <a>
-        // (covered by isInteractive above) so navigation to /admin/.../day/X
-        // still works when clicking the date number specifically.
-        if (adminCreate) {
-          clickTimer = setTimeout(function () {
-            openAbsenceModalFor(cellDate(cell), cellDate(cell), defaultKind);
-            clickTimer = null;
-          }, 220);
-        } else {
-          clickTimer = setTimeout(function () {
-            fetchDayDetail(cellDate(cell));
-            clickTimer = null;
-          }, 220);
-        }
+        // Both personal and admin calendars funnel single-click into the same
+        // unified entry modal (drag already does the same via mouseup). The
+        // day-detail modal is reachable via the right-click context menu so
+        // "see what's booked" stays available for users who want it.
+        clickTimer = setTimeout(function () {
+          openAbsenceModalFor(cellDate(cell), cellDate(cell), defaultKind);
+          clickTimer = null;
+        }, 220);
       });
     });
 
@@ -1297,6 +1294,180 @@
     });
   }
 
+  // ── Unified calendar-entry modal ───────────────────────────────────────
+  // One modal for both single-click and drag-selection on the calendar.
+  // Shows a kind dropdown (dynamically filtered by employment type on the
+  // server side), two date fields, a reason, a time-mode toggle and — when
+  // a range is selected — a per-day toggle that lets the user set a single
+  // time window for all days OR tweak each day individually.
+  function setupEntryModal() {
+    var modal = document.getElementById('hr-entry-modal');
+    if (!modal) return;
+    var form      = modal.querySelector('#hr-entry-modal-form');
+    var kindSel   = modal.querySelector('#hr_entry_kind');
+    var startEl   = modal.querySelector('#hr_entry_starts_on');
+    var endEl     = modal.querySelector('#hr_entry_ends_on');
+    var reasonEl  = modal.querySelector('#hr_entry_reason');
+    var timeSec   = modal.querySelector('[data-bind="entry-time-section"]');
+    var timePart  = modal.querySelector('[data-bind="entry-time-partial"]');
+    var timeRadios = modal.querySelectorAll('input[name="hr_absence[time_mode]"]');
+    var startTimeEl = modal.querySelector('#hr_entry_start_time');
+    var endTimeEl   = modal.querySelector('#hr_entry_end_time');
+    var perdaySec = modal.querySelector('[data-bind="entry-perday-section"]');
+    var perdayList= modal.querySelector('[data-bind="entry-perday-list"]');
+    var perdayRadios = modal.querySelectorAll('input[name="hr_absence[per_day_mode]"]');
+    var recurSec  = modal.querySelector('[data-bind="entry-recurrence-section"]');
+    var recurSel  = modal.querySelector('#hr_entry_recurrence');
+    var recurUntilRow = modal.querySelector('[data-bind="entry-recurrence-until"]');
+    var timeCapableKinds = (modal.getAttribute('data-time-capable-kinds') || '').split(',');
+    var recurrenceCapableKinds = ['offsite', 'school', 'blocked', 'homeoffice', 'workday'];
+
+    function close() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    function daysBetween(a, b) {
+      // Both ISO date strings; inclusive range → array of ISO strings.
+      if (!a || !b) return [a].filter(Boolean);
+      var out = [];
+      var d = new Date(a + 'T00:00:00');
+      var end = new Date(b + 'T00:00:00');
+      if (d > end) { var tmp = d; d = end; end = tmp; }
+      while (d <= end) {
+        out.push(d.toISOString().slice(0, 10));
+        d.setDate(d.getDate() + 1);
+      }
+      return out;
+    }
+
+    function syncVisibility() {
+      var kind = kindSel.value;
+      var multi = startEl.value && endEl.value && startEl.value !== endEl.value;
+      var canTime = timeCapableKinds.indexOf(kind) !== -1;
+
+      timeSec.hidden = !canTime;
+      perdaySec.hidden = !(multi && canTime);
+      recurSec.hidden = !canTime || multi || recurrenceCapableKinds.indexOf(kind) === -1;
+
+      // Partial-time sub-row only when "mit Uhrzeit" selected.
+      var timeMode = modal.querySelector('input[name="hr_absence[time_mode]"]:checked');
+      timePart.hidden = !(canTime && timeMode && timeMode.value === 'partial');
+
+      // Recurrence until only when recurrence != none.
+      recurUntilRow.hidden = !(recurSel && recurSel.value && recurSel.value !== 'none');
+
+      // Per-day list only when "pro Tag" chosen.
+      var perMode = modal.querySelector('input[name="hr_absence[per_day_mode]"]:checked');
+      perdayList.hidden = !(multi && perMode && perMode.value === '1');
+      if (!perdayList.hidden) buildPerDayList();
+    }
+
+    function fmtDE(iso) {
+      var p = iso.split('-');
+      return p[2] + '.' + p[1] + '.';
+    }
+
+    function buildPerDayList() {
+      var days = daysBetween(startEl.value, endEl.value);
+      // Only rebuild if the day set changed.
+      var existing = Array.prototype.map.call(
+        perdayList.querySelectorAll('[data-day]'),
+        function (n) { return n.getAttribute('data-day'); }
+      ).join(',');
+      if (existing === days.join(',')) return;
+      // Preserve any already-entered times for days that persist.
+      var prior = {};
+      perdayList.querySelectorAll('[data-day]').forEach(function (row) {
+        var d = row.getAttribute('data-day');
+        prior[d] = {
+          start: (row.querySelector('.hr-tc-perday-start') || {}).value || '',
+          end:   (row.querySelector('.hr-tc-perday-end')   || {}).value || ''
+        };
+      });
+      perdayList.innerHTML = '';
+      // Seed per-day defaults from the global partial-time fields if filled.
+      var globalStart = startTimeEl && startTimeEl.value || '';
+      var globalEnd   = endTimeEl   && endTimeEl.value   || '';
+      days.forEach(function (d) {
+        var row = document.createElement('div');
+        row.className = 'hr-tc-perday-row';
+        row.setAttribute('data-day', d);
+        var preStart = (prior[d] && prior[d].start) || globalStart;
+        var preEnd   = (prior[d] && prior[d].end)   || globalEnd;
+        row.innerHTML =
+          '<span class="hr-tc-perday-day">' + escapeHtml(fmtDE(d)) + '</span>' +
+          '<input type="time" step="60" class="hr-tc-perday-start" name="per_day[' + d + '][start_time]" value="' + escapeHtml(preStart) + '">' +
+          '<span class="hr-tc-perday-sep">–</span>' +
+          '<input type="time" step="60" class="hr-tc-perday-end"   name="per_day[' + d + '][end_time]"   value="' + escapeHtml(preEnd)   + '">';
+        perdayList.appendChild(row);
+      });
+    }
+
+    function openModal(startIso, endIso, kindHint) {
+      startEl.value = startIso || '';
+      endEl.value   = (endIso || startIso) || '';
+      reasonEl.value = '';
+      if (startTimeEl) startTimeEl.value = '';
+      if (endTimeEl)   endTimeEl.value   = '';
+      if (kindHint) {
+        for (var i = 0; i < kindSel.options.length; i++) {
+          if (kindSel.options[i].value === kindHint) { kindSel.value = kindHint; break; }
+        }
+      }
+      // Reset radios to defaults.
+      timeRadios.forEach(function (r) { r.checked = (r.value === 'full'); });
+      perdayRadios.forEach(function (r) { r.checked = (r.value === '0'); });
+      if (recurSel) recurSel.value = 'none';
+      perdayList.innerHTML = '';
+      syncVisibility();
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      setTimeout(function () { kindSel && kindSel.focus(); }, 0);
+    }
+
+    kindSel.addEventListener('change', syncVisibility);
+    startEl.addEventListener('change', function () {
+      if (!endEl.value || endEl.value < startEl.value) endEl.value = startEl.value;
+      syncVisibility();
+    });
+    endEl.addEventListener('change', syncVisibility);
+    timeRadios.forEach(function (r) { r.addEventListener('change', syncVisibility); });
+    perdayRadios.forEach(function (r) { r.addEventListener('change', syncVisibility); });
+    if (recurSel) recurSel.addEventListener('change', syncVisibility);
+    [startTimeEl, endTimeEl].forEach(function (el) {
+      if (el) el.addEventListener('change', function () {
+        // When the user types in the global times, cascade into the per-day
+        // defaults if they switch to per-day mode later.
+      });
+    });
+
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) close();
+      if (e.target.classList && e.target.classList.contains('hr-tc-entry-cancel')) close();
+    });
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.classList.contains('open')) close();
+    });
+
+    // Before submit: if time mode is "full", wipe start/end time so the
+    // controller doesn't accidentally store partial-day times. If per-day
+    // mode is OFF, strip all per_day[] fields.
+    form.addEventListener('submit', function () {
+      var timeMode = modal.querySelector('input[name="hr_absence[time_mode]"]:checked');
+      if (!timeMode || timeMode.value === 'full') {
+        if (startTimeEl) startTimeEl.value = '';
+        if (endTimeEl)   endTimeEl.value   = '';
+      }
+      var perMode = modal.querySelector('input[name="hr_absence[per_day_mode]"]:checked');
+      if (!perMode || perMode.value !== '1') {
+        perdayList.querySelectorAll('input').forEach(function (i) { i.disabled = true; });
+      }
+    });
+
+    window.HrTimeclockOpenEntryModal = openModal;
+  }
+
   // ── Entry-time correction modal (self-service) ─────────────────────────
   function setupCorrectionModal() {
     var modal = document.getElementById('hr-correction-modal');
@@ -1371,6 +1542,7 @@
     setupNavEndToggle();
     setupHolidayPopover();
     setupCorrectionModal();
+    setupEntryModal();
 
     notifiedTarget = loadNotifyFlag('target');
     notifiedBreakReminder = loadNotifyFlag('break_reminder');
