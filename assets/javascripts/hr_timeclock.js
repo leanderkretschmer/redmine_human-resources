@@ -1314,8 +1314,22 @@
     var startTimeEl = modal.querySelector('#hr_entry_start_time');
     var endTimeEl   = modal.querySelector('#hr_entry_end_time');
     var perdaySec = modal.querySelector('[data-bind="entry-perday-section"]');
-    var perdayList= modal.querySelector('[data-bind="entry-perday-list"]');
     var perdayRadios = modal.querySelectorAll('input[name="hr_absence[per_day_mode]"]');
+    var timelineWiz = modal.querySelector('[data-bind="entry-timeline-wizard"]');
+    var timelineTrack = modal.querySelector('[data-bind="entry-timeline-track"]');
+    var timelinePrior = modal.querySelector('[data-bind="entry-timeline-prior"]');
+    var timelineSel   = modal.querySelector('[data-bind="entry-timeline-selection"]');
+    var timelineAxis  = modal.querySelector('[data-bind="entry-timeline-axis"]');
+    var timelineCurrentDate = modal.querySelector('[data-bind="entry-timeline-current-date"]');
+    var timelineStepIdx = modal.querySelector('[data-bind="entry-timeline-step-index"]');
+    var timelineStepTotal = modal.querySelector('[data-bind="entry-timeline-step-total"]');
+    var timelineFromEl = modal.querySelector('[data-bind="entry-timeline-from"]');
+    var timelineToEl   = modal.querySelector('[data-bind="entry-timeline-to"]');
+    var timelinePrevBtn = modal.querySelector('[data-bind="entry-timeline-prev"]');
+    var timelineNextBtn = modal.querySelector('[data-bind="entry-timeline-next"]');
+    var timelineSkipBtn = modal.querySelector('[data-bind="entry-timeline-skip"]');
+    var timelineHiddenBag = null;  // where submit stashes per_day hidden inputs
+    var timelineState = { days: [], index: 0, selections: {} };
     var recurSec  = modal.querySelector('[data-bind="entry-recurrence-section"]');
     var recurSel  = modal.querySelector('#hr_entry_recurrence');
     var recurUntilRow = modal.querySelector('[data-bind="entry-recurrence-until"]');
@@ -1360,10 +1374,11 @@
       // Recurrence until only when recurrence != none.
       recurUntilRow.hidden = !(recurSel && recurSel.value && recurSel.value !== 'none');
 
-      // Per-day list only when "pro Tag" chosen.
+      // Timeline wizard only when multi-day + "pro Tag" chosen + partial time.
       var perMode = modal.querySelector('input[name="hr_absence[per_day_mode]"]:checked');
-      perdayList.hidden = !(multi && perMode && perMode.value === '1');
-      if (!perdayList.hidden) buildPerDayList();
+      var showTimeline = multi && perMode && perMode.value === '1' && showPartial;
+      timelineWiz.hidden = !showTimeline;
+      if (showTimeline) ensureTimelineInitialized();
     }
 
     function fmtDE(iso) {
@@ -1371,41 +1386,178 @@
       return p[2] + '.' + p[1] + '.';
     }
 
-    function buildPerDayList() {
+    // ── Timeline wizard (eine Zeitachse, Schritt für Schritt pro Tag) ────
+    function timelineHours() {
+      var sh = parseInt(timelineTrack.getAttribute('data-start-hour') || '6', 10);
+      var eh = parseInt(timelineTrack.getAttribute('data-end-hour')   || '22', 10);
+      return { startHour: sh, endHour: eh, span: eh - sh };
+    }
+    function minToHHMM(min) {
+      var hh = Math.floor(min / 60);
+      var mm = min % 60;
+      return (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm;
+    }
+    function hhmmToMin(hhmm) {
+      if (!hhmm || hhmm.indexOf(':') < 0) return null;
+      var p = hhmm.split(':');
+      return parseInt(p[0], 10) * 60 + parseInt(p[1], 10);
+    }
+    function minToPct(min) {
+      var h = timelineHours();
+      var base = h.startHour * 60;
+      var window = h.span * 60;
+      return Math.max(0, Math.min(100, (min - base) / window * 100));
+    }
+    function pxToMin(x) {
+      var h = timelineHours();
+      var r = timelineTrack.getBoundingClientRect();
+      var pct = Math.max(0, Math.min(1, (x - r.left) / r.width));
+      var min = h.startHour * 60 + pct * h.span * 60;
+      // Snap to 15 min grid.
+      return Math.round(min / 15) * 15;
+    }
+
+    function ensureTimelineInitialized() {
       var days = daysBetween(startEl.value, endEl.value);
-      // Only rebuild if the day set changed.
-      var existing = Array.prototype.map.call(
-        perdayList.querySelectorAll('[data-day]'),
-        function (n) { return n.getAttribute('data-day'); }
-      ).join(',');
-      if (existing === days.join(',')) return;
-      // Preserve any already-entered times for days that persist.
-      var prior = {};
-      perdayList.querySelectorAll('[data-day]').forEach(function (row) {
-        var d = row.getAttribute('data-day');
-        prior[d] = {
-          start: (row.querySelector('.hr-tc-perday-start') || {}).value || '',
-          end:   (row.querySelector('.hr-tc-perday-end')   || {}).value || ''
-        };
+      if (JSON.stringify(days) !== JSON.stringify(timelineState.days)) {
+        timelineState.days = days;
+        timelineState.index = 0;
+        timelineState.selections = {};
+        // Seed first day from the global partial-time fields if filled.
+        if (days[0] && startTimeEl && startTimeEl.value && endTimeEl && endTimeEl.value) {
+          timelineState.selections[days[0]] = {
+            start: startTimeEl.value, end: endTimeEl.value
+          };
+        }
+      }
+      renderTimelineAxis();
+      renderTimelineStep();
+    }
+
+    function renderTimelineAxis() {
+      if (!timelineAxis) return;
+      var h = timelineHours();
+      var html = '';
+      for (var hr = h.startHour; hr <= h.endHour; hr += 2) {
+        var pct = (hr - h.startHour) / h.span * 100;
+        html += '<span class="hr-tc-entry-timeline-tick" style="left:' + pct.toFixed(2) + '%">' +
+                (hr < 10 ? '0' : '') + hr + ':00</span>';
+      }
+      timelineAxis.innerHTML = html;
+    }
+
+    function renderTimelineStep() {
+      var day = timelineState.days[timelineState.index];
+      if (!day) return;
+      if (timelineCurrentDate) timelineCurrentDate.textContent = fmtDEFull(day);
+      if (timelineStepIdx)   timelineStepIdx.textContent   = String(timelineState.index + 1);
+      if (timelineStepTotal) timelineStepTotal.textContent = String(timelineState.days.length);
+
+      // Prior-selections render: every day the user already visited that
+      // isn't the current one, in a desaturated colour.
+      timelinePrior.innerHTML = '';
+      timelineState.days.forEach(function (d, i) {
+        if (i === timelineState.index) return;
+        var sel = timelineState.selections[d];
+        if (!sel) return;
+        var sMin = hhmmToMin(sel.start);
+        var eMin = hhmmToMin(sel.end);
+        if (sMin == null || eMin == null || eMin <= sMin) return;
+        var band = document.createElement('div');
+        band.className = 'hr-tc-entry-timeline-prior-band';
+        band.setAttribute('data-prior-index', String(i));
+        band.style.left  = minToPct(sMin).toFixed(2) + '%';
+        band.style.width = (minToPct(eMin) - minToPct(sMin)).toFixed(2) + '%';
+        band.title = fmtDEFull(d) + ' · ' + sel.start + ' – ' + sel.end;
+        timelinePrior.appendChild(band);
       });
-      perdayList.innerHTML = '';
-      // Seed per-day defaults from the global partial-time fields if filled.
-      var globalStart = startTimeEl && startTimeEl.value || '';
-      var globalEnd   = endTimeEl   && endTimeEl.value   || '';
-      days.forEach(function (d) {
-        var row = document.createElement('div');
-        row.className = 'hr-tc-perday-row';
-        row.setAttribute('data-day', d);
-        var preStart = (prior[d] && prior[d].start) || globalStart;
-        var preEnd   = (prior[d] && prior[d].end)   || globalEnd;
-        row.innerHTML =
-          '<span class="hr-tc-perday-day">' + escapeHtml(fmtDE(d)) + '</span>' +
-          '<input type="time" step="60" lang="de-DE" class="hr-tc-perday-start" name="per_day[' + d + '][start_time]" value="' + escapeHtml(preStart) + '">' +
-          '<span class="hr-tc-perday-sep">–</span>' +
-          '<input type="time" step="60" lang="de-DE" class="hr-tc-perday-end"   name="per_day[' + d + '][end_time]"   value="' + escapeHtml(preEnd)   + '">';
-        perdayList.appendChild(row);
+
+      // Current-day selection
+      var current = timelineState.selections[day];
+      if (current) {
+        timelineSel.hidden = false;
+        var sMin = hhmmToMin(current.start);
+        var eMin = hhmmToMin(current.end);
+        timelineSel.style.left  = minToPct(sMin).toFixed(2) + '%';
+        timelineSel.style.width = (minToPct(eMin) - minToPct(sMin)).toFixed(2) + '%';
+        timelineFromEl.textContent = current.start;
+        timelineToEl.textContent   = current.end;
+      } else {
+        timelineSel.hidden = true;
+        timelineFromEl.textContent = '--:--';
+        timelineToEl.textContent   = '--:--';
+      }
+
+      timelinePrevBtn.disabled = timelineState.index === 0;
+      var isLast = timelineState.index === timelineState.days.length - 1;
+      timelineNextBtn.textContent = isLast ? '✓' : '→';
+      timelineNextBtn.classList.toggle('hr-tc-entry-timeline-finish', isLast);
+    }
+
+    function fmtDEFull(iso) {
+      // "Mi 15.10.2026" — short weekday + full date for the wizard header.
+      var parts = iso.split('-');
+      var d = new Date(iso + 'T00:00:00');
+      var wd = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'][d.getDay()];
+      return wd + ' ' + parts[2] + '.' + parts[1] + '.' + parts[0];
+    }
+
+    // Timeline drag interaction.
+    var tlDragStartMin = null;
+    var tlDragging = false;
+    if (timelineTrack) {
+      timelineTrack.addEventListener('mousedown', function (e) {
+        if (e.button !== 0) return;
+        var day = timelineState.days[timelineState.index];
+        if (!day) return;
+        tlDragging = true;
+        tlDragStartMin = pxToMin(e.clientX);
+        timelineSel.hidden = false;
+        timelineSel.style.left  = minToPct(tlDragStartMin).toFixed(2) + '%';
+        timelineSel.style.width = '0%';
+        e.preventDefault();
+      });
+      document.addEventListener('mousemove', function (e) {
+        if (!tlDragging) return;
+        var curMin = pxToMin(e.clientX);
+        var lo = Math.min(tlDragStartMin, curMin);
+        var hi = Math.max(tlDragStartMin, curMin);
+        timelineSel.style.left  = minToPct(lo).toFixed(2) + '%';
+        timelineSel.style.width = (minToPct(hi) - minToPct(lo)).toFixed(2) + '%';
+        timelineFromEl.textContent = minToHHMM(lo);
+        timelineToEl.textContent   = minToHHMM(hi);
+      });
+      document.addEventListener('mouseup', function () {
+        if (!tlDragging) return;
+        tlDragging = false;
+        var sMin = parseFloat(timelineSel.style.left) / 100;
+        var h = timelineHours();
+        var startMin = Math.round((h.startHour * 60) + sMin * h.span * 60);
+        var endMin   = startMin + Math.round(parseFloat(timelineSel.style.width) / 100 * h.span * 60);
+        if (endMin - startMin < 15) return;
+        var day = timelineState.days[timelineState.index];
+        timelineState.selections[day] = { start: minToHHMM(startMin), end: minToHHMM(endMin) };
+        timelineFromEl.textContent = minToHHMM(startMin);
+        timelineToEl.textContent   = minToHHMM(endMin);
       });
     }
+
+    if (timelinePrevBtn) timelinePrevBtn.addEventListener('click', function () {
+      if (timelineState.index > 0) { timelineState.index--; renderTimelineStep(); }
+    });
+    if (timelineNextBtn) timelineNextBtn.addEventListener('click', function () {
+      if (timelineState.index < timelineState.days.length - 1) {
+        timelineState.index++;
+        renderTimelineStep();
+      }
+      // On the last step the button acts as "done" — nothing to do here;
+      // the <form> submit button saves everything via the submit hook.
+    });
+    if (timelineSkipBtn) timelineSkipBtn.addEventListener('click', function () {
+      var day = timelineState.days[timelineState.index];
+      delete timelineState.selections[day];
+      renderTimelineStep();
+    });
 
     function openModal(startIso, endIso, kindHint) {
       startEl.value = startIso || '';
@@ -1422,7 +1574,9 @@
       timeRadios.forEach(function (r) { r.checked = (r.value === 'full'); });
       perdayRadios.forEach(function (r) { r.checked = (r.value === '0'); });
       if (recurSel) recurSel.value = 'none';
-      perdayList.innerHTML = '';
+      timelineState = { days: [], index: 0, selections: {} };
+      if (timelinePrior) timelinePrior.innerHTML = '';
+      if (timelineSel)   timelineSel.hidden = true;
       syncVisibility();
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
@@ -1469,18 +1623,39 @@
       if (e.key === 'Escape' && modal.classList.contains('open')) close();
     });
 
-    // Before submit: if time mode is "full", wipe start/end time so the
-    // controller doesn't accidentally store partial-day times. If per-day
-    // mode is OFF, strip all per_day[] fields.
+    // Before submit: build the per_day[] hidden inputs out of the timeline
+    // wizard's state, and clear partial-time fields in "ganztägig" mode.
     form.addEventListener('submit', function () {
+      // Remove any previous hidden bag so re-submits don't accumulate.
+      if (timelineHiddenBag && timelineHiddenBag.parentNode) {
+        timelineHiddenBag.parentNode.removeChild(timelineHiddenBag);
+      }
+      timelineHiddenBag = null;
+
       var timeMode = modal.querySelector('input[name="hr_absence[time_mode]"]:checked');
       if (!timeMode || timeMode.value === 'full') {
         if (startTimeEl) startTimeEl.value = '';
         if (endTimeEl)   endTimeEl.value   = '';
       }
+
       var perMode = modal.querySelector('input[name="hr_absence[per_day_mode]"]:checked');
-      if (!perMode || perMode.value !== '1') {
-        perdayList.querySelectorAll('input').forEach(function (i) { i.disabled = true; });
+      if (perMode && perMode.value === '1' && timeMode && timeMode.value === 'partial') {
+        timelineHiddenBag = document.createElement('div');
+        timelineHiddenBag.style.display = 'none';
+        Object.keys(timelineState.selections).forEach(function (d) {
+          var sel = timelineState.selections[d];
+          var s = document.createElement('input');
+          s.type = 'hidden';
+          s.name = 'per_day[' + d + '][start_time]';
+          s.value = sel.start;
+          timelineHiddenBag.appendChild(s);
+          var e = document.createElement('input');
+          e.type = 'hidden';
+          e.name = 'per_day[' + d + '][end_time]';
+          e.value = sel.end;
+          timelineHiddenBag.appendChild(e);
+        });
+        form.appendChild(timelineHiddenBag);
       }
     });
 

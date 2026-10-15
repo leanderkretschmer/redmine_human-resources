@@ -83,7 +83,7 @@
         </div>
       </div>
 
-      <%# ─── Multi-Tag: gleich für alle vs. pro Tag ─── %>
+      <%# ─── Multi-Tag: gleich für alle vs. pro Tag (Timeline-Wizard) ─── %>
       <div class="hr-tc-entry-section" data-bind="entry-perday-section" hidden>
         <div class="hr-tc-entry-row">
           <label><%= l(:label_hr_entry_perday_mode) %></label>
@@ -96,7 +96,42 @@
             <%= l(:label_hr_entry_perday_each) %>
           </label>
         </div>
-        <div class="hr-tc-entry-perday-list" data-bind="entry-perday-list" hidden></div>
+        <%# Timeline-Wizard: ein einzelner Track, Schritt für Schritt pro Tag.
+            Statt N horizontaler Bars (würde nicht skalieren) zeigt der
+            Wizard oben das Datum, lässt eine Zeitspanne per Drag ziehen,
+            und blendet mit "Weiter" den nächsten Tag ein — vorherige
+            Auswahlen bleiben in einer dezenten Farbe als Referenz sichtbar. %>
+        <div class="hr-tc-entry-timeline-wizard" data-bind="entry-timeline-wizard" hidden>
+          <div class="hr-tc-entry-timeline-head">
+            <strong><%= l(:label_hr_entry_timeline_for) %></strong>
+            <span class="hr-tc-entry-timeline-current" data-bind="entry-timeline-current-date">—</span>
+            <span class="hr-tc-entry-timeline-step">
+              (<span data-bind="entry-timeline-step-index">1</span>/<span data-bind="entry-timeline-step-total">—</span>)
+            </span>
+          </div>
+          <div class="hr-tc-entry-timeline-track" data-bind="entry-timeline-track"
+               data-start-hour="6" data-end-hour="22">
+            <div class="hr-tc-entry-timeline-grid"></div>
+            <div class="hr-tc-entry-timeline-prior" data-bind="entry-timeline-prior"></div>
+            <div class="hr-tc-entry-timeline-selection" data-bind="entry-timeline-selection" hidden></div>
+          </div>
+          <div class="hr-tc-entry-timeline-axis" data-bind="entry-timeline-axis"></div>
+          <div class="hr-tc-entry-timeline-controls">
+            <span class="hr-tc-entry-timeline-time">
+              <span data-bind="entry-timeline-from">--:--</span> – <span data-bind="entry-timeline-to">--:--</span>
+            </span>
+            <button type="button" data-bind="entry-timeline-skip" class="hr-tc-entry-timeline-skip-btn">
+              <%= l(:button_hr_entry_timeline_skip) %>
+            </button>
+            <button type="button" data-bind="entry-timeline-prev" class="hr-tc-entry-timeline-nav-btn">
+              ← <%= l(:button_hr_entry_timeline_prev) %>
+            </button>
+            <button type="button" data-bind="entry-timeline-next" class="hr-tc-entry-timeline-nav-btn hr-tc-entry-timeline-next-btn">
+              <%= l(:button_hr_entry_timeline_next) %> →
+            </button>
+          </div>
+          <p class="hr-tc-entry-timeline-hint"><%= l(:label_hr_entry_timeline_hint) %></p>
+        </div>
       </div>
 
       <%# ─── Recurrence (nur bei recurrence-fähigen Kinds) ─── %>
