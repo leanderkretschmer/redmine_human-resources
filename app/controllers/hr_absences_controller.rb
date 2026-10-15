@@ -184,13 +184,36 @@ class HrAbsencesController < ApplicationController
   end
 
   def destroy
-    if can_delete?
+    unless can_delete?
+      flash[:error] = l(:notice_hr_absence_forbidden)
+      return respond_destroy
+    end
+
+    # Optional "chop" semantics for multi-day absences: when the request
+    # carries on_date_from/on_date_to, we only remove that day range out of
+    # the booking (splitting into two records if the chop sits in the middle).
+    # Without those params the whole record goes.
+    chop_from = parse_date(params[:on_date_from])
+    chop_to   = parse_date(params[:on_date_to]) || chop_from
+    if chop_from && chop_to
+      chop_from, chop_to = chop_to, chop_from if chop_to < chop_from
+      chop_from = @absence.starts_on if chop_from < @absence.starts_on
+      chop_to   = @absence.ends_on   if chop_to   > @absence.ends_on
+      if chop_from > @absence.ends_on || chop_to < @absence.starts_on
+        return respond_destroy  # no overlap, nothing to do
+      end
+      if chop_from <= @absence.starts_on && chop_to >= @absence.ends_on
+        @absence.destroy
+        flash[:notice] = l(:notice_hr_absence_deleted)
+      else
+        chop_absence_day_range!(@absence, chop_from, chop_to)
+        flash[:notice] = l(:notice_hr_absence_deleted)
+      end
+    else
       @absence.destroy
       flash[:notice] = l(:notice_hr_absence_deleted)
-    else
-      flash[:error] = l(:notice_hr_absence_forbidden)
     end
-    redirect_back(fallback_location: redirect_target)
+    respond_destroy
   end
 
   def approve
@@ -259,6 +282,63 @@ class HrAbsencesController < ApplicationController
     end
   end
 
+  # Remove a day range (chop_from..chop_to) from an absence that extends
+  # strictly outside that range on at least one side. Three cases:
+  #   • chop at the start → bump starts_on
+  #   • chop at the end   → bump ends_on
+  #   • chop in the middle → shrink original to the left half, create a new
+  #     record for the right half (same kind, status, time windows cleared
+  #     because partial-time absences are single-day by validation).
+  def chop_absence_day_range!(absence, chop_from, chop_to)
+    HrAbsence.transaction do
+      left_end    = chop_from - 1
+      right_start = chop_to   + 1
+      has_left  = left_end    >= absence.starts_on
+      has_right = right_start <= absence.ends_on
+
+      prior_range = "#{absence.starts_on}..#{absence.ends_on}"
+      if has_left && has_right
+        # Split: keep the left part, clone the right part into a new record.
+        right = absence.dup
+        right.starts_on       = right_start
+        right.ends_on         = absence.ends_on
+        right.first_day_half  = false
+        right.start_time      = nil
+        right.end_time        = nil
+        right.approved_by_id  = absence.approved_by_id
+        right.approved_at     = absence.approved_at
+        right.save!
+        right.log_audit!(User.current, HrAbsenceAudit::ACTION_CREATED, to_status: right.status,
+                         notes: "split-from ##{absence.id} (#{prior_range}, chop #{chop_from}..#{chop_to})")
+
+        absence.ends_on       = left_end
+        absence.last_day_half = false
+        absence.save!
+        absence.log_audit!(User.current, HrAbsenceAudit::ACTION_UPDATED, to_status: absence.status,
+                           notes: "chop #{chop_from}..#{chop_to} (was #{prior_range})")
+      elsif has_left
+        absence.ends_on       = left_end
+        absence.last_day_half = false
+        absence.save!
+        absence.log_audit!(User.current, HrAbsenceAudit::ACTION_UPDATED, to_status: absence.status,
+                           notes: "chop tail #{chop_from}..#{chop_to} (was #{prior_range})")
+      elsif has_right
+        absence.starts_on      = right_start
+        absence.first_day_half = false
+        absence.save!
+        absence.log_audit!(User.current, HrAbsenceAudit::ACTION_UPDATED, to_status: absence.status,
+                           notes: "chop head #{chop_from}..#{chop_to} (was #{prior_range})")
+      end
+    end
+  end
+
+  def respond_destroy
+    respond_to do |format|
+      format.html { redirect_back(fallback_location: redirect_target) }
+      format.json { render json: { ok: true } }
+    end
+  end
+
   def find_absence
     @absence = HrAbsence.find(params[:id])
   rescue ActiveRecord::RecordNotFound
@@ -280,7 +360,16 @@ class HrAbsencesController < ApplicationController
     @absence.vacation? ? @absence.requested? : true
   end
 
+  # Owner may always delete:
+  #   • anything in the future (ends_on >= today) — mistakes get fixed,
+  #   • every self-service kind regardless of status (workday/homeoffice/care
+  #     and the kinds can_edit? already covers).
+  # Approved past vacation stays admin-only (HR-tracked).
   def can_delete?
+    return true if User.current.admin?
+    return false unless owner?
+    return true if @absence.ends_on && @absence.ends_on >= Date.current
+    return true if @absence.workday? || @absence.homeoffice? || @absence.care?
     can_edit?
   end
 

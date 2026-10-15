@@ -1675,6 +1675,17 @@
     function deleteExistingAbsence(url) {
       if (!url) return;
       if (!confirm(confirmDeleteMsg)) return;
+      // Scope the delete to the currently selected day range: a single-day
+      // selection chops just that day out of a multi-day booking, a drag
+      // selection chops exactly the dragged range. The server treats missing
+      // params as "delete the whole record".
+      var from = startEl.value || '';
+      var to   = endEl.value   || from;
+      if (from) {
+        var sep = url.indexOf('?') >= 0 ? '&' : '?';
+        url += sep + 'on_date_from=' + encodeURIComponent(from) +
+               '&on_date_to='   + encodeURIComponent(to);
+      }
       fetch(url, {
         method: 'DELETE',
         credentials: 'same-origin',

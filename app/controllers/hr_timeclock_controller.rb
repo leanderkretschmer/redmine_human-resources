@@ -421,7 +421,15 @@ class HrTimeclockController < ApplicationController
       }
     end
     absence_events = absences.map do |a|
-      can_manage = User.current.admin? || (a.user_id == User.current.id && (a.requested? || a.sickness? || a.offsite? || a.school? || a.blocked?))
+      # Owner may always remove an entry that lies in the future, plus every
+      # self-service kind regardless of status. Approved past vacation stays
+      # admin-only (that's HR-tracked). Admin may touch anything.
+      can_manage = User.current.admin? ||
+                   (a.user_id == User.current.id &&
+                    (a.starts_on >= Date.current ||
+                     a.workday? || a.homeoffice? || a.care? ||
+                     a.sickness? || a.offsite? || a.school? || a.blocked? ||
+                     a.requested?))
       {
         type: 'absence',
         id: a.id,
