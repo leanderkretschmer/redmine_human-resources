@@ -67,12 +67,19 @@
         <div class="hr-tc-entry-row hr-tc-entry-time-fields" data-bind="entry-time-partial" hidden>
           <div>
             <label for="hr_entry_start_time"><%= l(:label_hr_entry_from_time) %></label>
-            <%= f.time_field :start_time, step: 60, id: 'hr_entry_start_time' %>
+            <%= f.time_field :start_time, step: 60, id: 'hr_entry_start_time', lang: 'de-DE' %>
           </div>
           <div>
             <label for="hr_entry_end_time"><%= l(:label_hr_entry_to_time) %></label>
-            <%= f.time_field :end_time, step: 60, id: 'hr_entry_end_time' %>
+            <%= f.time_field :end_time, step: 60, id: 'hr_entry_end_time', lang: 'de-DE' %>
           </div>
+        </div>
+        <div class="hr-tc-entry-row hr-tc-entry-quick-row" data-bind="entry-time-quick" hidden>
+          <span class="hr-tc-entry-quick-label"><%= l(:label_hr_entry_quick_duration) %>:</span>
+          <button type="button" class="hr-tc-entry-quick-btn" data-hours="4">4 h</button>
+          <button type="button" class="hr-tc-entry-quick-btn" data-hours="6">6 h</button>
+          <button type="button" class="hr-tc-entry-quick-btn" data-hours="8">8 h</button>
+          <em class="info"><%= l(:label_hr_entry_quick_hint) %></em>
         </div>
       </div>
 

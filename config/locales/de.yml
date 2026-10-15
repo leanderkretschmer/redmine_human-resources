@@ -65,6 +65,8 @@ de:
   label_hr_entry_perday_same: "Gleiche Zeiten für alle Tage"
   label_hr_entry_perday_each: "Pro Tag anpassen"
   button_hr_entry_save: "Eintrag speichern"
+  label_hr_entry_quick_duration: "Schnell-Dauer"
+  label_hr_entry_quick_hint: "setzt die Endzeit relativ zur Startzeit (fallback 09:00)."
   label_hr_sickness_hours_suffix_full: "Krankheits­stunden auf Basis des Tagessolls dieses Nutzers."
   label_hr_correction_pending: "Korrektur angefragt"
   label_hr_correction_proposed: "Vorgeschlagener Wert"

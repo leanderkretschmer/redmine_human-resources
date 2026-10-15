@@ -65,6 +65,8 @@ en:
   label_hr_entry_perday_same: "Same hours for every day"
   label_hr_entry_perday_each: "Adjust per day"
   button_hr_entry_save: "Save entry"
+  label_hr_entry_quick_duration: "Quick duration"
+  label_hr_entry_quick_hint: "sets the end time relative to the start (fallback 09:00)."
   label_hr_sickness_hours_suffix_full: "Sickness hours based on this user's daily target."
   label_hr_correction_pending: "Correction requested"
   label_hr_correction_proposed: "Proposed value"

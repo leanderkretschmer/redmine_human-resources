@@ -1352,7 +1352,10 @@
 
       // Partial-time sub-row only when "mit Uhrzeit" selected.
       var timeMode = modal.querySelector('input[name="hr_absence[time_mode]"]:checked');
-      timePart.hidden = !(canTime && timeMode && timeMode.value === 'partial');
+      var showPartial = canTime && timeMode && timeMode.value === 'partial';
+      timePart.hidden = !showPartial;
+      var quickRow = modal.querySelector('[data-bind="entry-time-quick"]');
+      if (quickRow) quickRow.hidden = !showPartial;
 
       // Recurrence until only when recurrence != none.
       recurUntilRow.hidden = !(recurSel && recurSel.value && recurSel.value !== 'none');
@@ -1397,9 +1400,9 @@
         var preEnd   = (prior[d] && prior[d].end)   || globalEnd;
         row.innerHTML =
           '<span class="hr-tc-perday-day">' + escapeHtml(fmtDE(d)) + '</span>' +
-          '<input type="time" step="60" class="hr-tc-perday-start" name="per_day[' + d + '][start_time]" value="' + escapeHtml(preStart) + '">' +
+          '<input type="time" step="60" lang="de-DE" class="hr-tc-perday-start" name="per_day[' + d + '][start_time]" value="' + escapeHtml(preStart) + '">' +
           '<span class="hr-tc-perday-sep">–</span>' +
-          '<input type="time" step="60" class="hr-tc-perday-end"   name="per_day[' + d + '][end_time]"   value="' + escapeHtml(preEnd)   + '">';
+          '<input type="time" step="60" lang="de-DE" class="hr-tc-perday-end"   name="per_day[' + d + '][end_time]"   value="' + escapeHtml(preEnd)   + '">';
         perdayList.appendChild(row);
       });
     }
@@ -1425,6 +1428,22 @@
       modal.setAttribute('aria-hidden', 'false');
       setTimeout(function () { kindSel && kindSel.focus(); }, 0);
     }
+
+    // Quick-duration buttons: "Startzeit + N h" ohne Rechnerei. Wenn noch
+    // keine Startzeit eingetragen ist, nehmen wir 09:00 als Default.
+    modal.querySelectorAll('.hr-tc-entry-quick-btn').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var hours = parseInt(btn.getAttribute('data-hours'), 10);
+        if (!(hours > 0)) return;
+        if (!startTimeEl.value) startTimeEl.value = '09:00';
+        var parts = startTimeEl.value.split(':');
+        var startMin = parseInt(parts[0], 10) * 60 + parseInt(parts[1], 10);
+        var endMin = (startMin + hours * 60) % (24 * 60);
+        var hh = String(Math.floor(endMin / 60)).padStart(2, '0');
+        var mm = String(endMin % 60).padStart(2, '0');
+        endTimeEl.value = hh + ':' + mm;
+      });
+    });
 
     kindSel.addEventListener('change', syncVisibility);
     startEl.addEventListener('change', function () {

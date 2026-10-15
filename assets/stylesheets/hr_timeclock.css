@@ -1364,6 +1364,26 @@ button.hr-tc-day-detail-close {
 }
 .hr-tc-entry-cancel:hover { background: #bdc3c7; }
 
+.hr-tc-entry-quick-row {
+  flex-direction: row !important;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4em !important;
+}
+.hr-tc-entry-quick-label { font-size: 0.85em; color: #44505f; font-weight: 600; margin-right: 0.3em; }
+.hr-tc-entry-quick-btn {
+  padding: 0.25em 0.9em;
+  border: 1px solid #2980b9;
+  border-radius: 14px;
+  background: #fff;
+  color: #2980b9;
+  cursor: pointer;
+  font-size: 0.85em;
+  font-weight: 600;
+}
+.hr-tc-entry-quick-btn:hover { background: #2980b9; color: #fff; }
+.hr-tc-entry-quick-row .info { font-size: 0.8em; color: #6c7a89; margin-left: 0.3em; }
+
 .hr-tc-barchart { margin: 0.5em 0 1.5em; }
 .hr-tc-bar-row {
   display: flex;
