@@ -1351,13 +1351,23 @@
 
     function daysBetween(a, b) {
       // Both ISO date strings; inclusive range → array of ISO strings.
+      // IMPORTANT: iterate in LOCAL time and format with the local date
+      // components. `toISOString()` would shift the date by one for browsers
+      // east of UTC (CET/CEST users), which would cause the modal to fetch
+      // day_detail for the wrong calendar day — the "looping shift" symptom.
       if (!a || !b) return [a].filter(Boolean);
       var out = [];
       var d = new Date(a + 'T00:00:00');
       var end = new Date(b + 'T00:00:00');
       if (d > end) { var tmp = d; d = end; end = tmp; }
+      function fmtLocalISO(x) {
+        var y  = x.getFullYear();
+        var m  = String(x.getMonth() + 1).padStart(2, '0');
+        var dd = String(x.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + dd;
+      }
       while (d <= end) {
-        out.push(d.toISOString().slice(0, 10));
+        out.push(fmtLocalISO(d));
         d.setDate(d.getDate() + 1);
       }
       return out;
@@ -1695,7 +1705,10 @@
         }
       }).then(function (r) {
         if (r.ok || r.status === 302 || r.status === 404) {
-          fetchExistingForRange(startEl.value, endEl.value);
+          // Reload so the calendar reflects the DB state too — otherwise
+          // the modal shows "gone" but the calendar still highlights the
+          // old day stripes, which looks like the delete didn't take.
+          window.location.reload();
         } else {
           alert('Löschen fehlgeschlagen (' + r.status + ')');
         }
