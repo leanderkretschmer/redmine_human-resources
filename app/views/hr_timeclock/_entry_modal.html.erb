@@ -1,4 +1,11 @@
 <%
+  # Admin-mode booking on behalf of another user: Entry-Modal rendered on
+  # /admin/hr_timeclock/users/:id passes `admin_user_id` so every save is
+  # scoped to that user instead of User.current.
+  admin_user_id     = local_assigns[:admin_user_id]
+  admin_lecture_url = local_assigns[:admin_lecture_url]
+  admin_mode        = admin_user_id.present? && User.current.admin?
+
   # Dynamic kind list based on the user's employment type. Everyone gets the
   # three standard entries; Werkstudent/Praktikant adds Workday + Blocktag,
   # Azubi adds Berufsschule, care-eligible staff add Betreuung.
@@ -18,7 +25,20 @@
   if @user_setting.care_visible?
     entry_kinds << [HrAbsence::KIND_CARE, l(:label_hr_care)]
   end
-  entry_kinds.uniq!
+  # Admins can always reach all absence kinds for the user they're editing,
+  # independent of that user's employment-type gates.
+  if admin_mode
+    entry_kinds << [HrAbsence::KIND_WORKDAY, l(:label_hr_workday)]
+    entry_kinds << [HrAbsence::KIND_BLOCK,   l(:label_hr_block)]
+    entry_kinds << [HrAbsence::KIND_SCHOOL,  l(:label_hr_school)]
+    entry_kinds << [HrAbsence::KIND_CARE,    l(:label_hr_care)]
+  end
+  # Lecture periods — Admin-only, routed to a different endpoint on submit.
+  if admin_mode && admin_lecture_url.present?
+    entry_kinds << ["lecture:#{HrLecturePeriod::KIND_LECTURE}", l(:label_hr_lecture_kind_lecture)]
+    entry_kinds << ["lecture:#{HrLecturePeriod::KIND_BREAK}",   l(:label_hr_lecture_kind_break)]
+  end
+  entry_kinds = entry_kinds.uniq { |v, _| v }
   # Kinds that accept a start/end time window (anything that can be partial-day).
   time_capable_kinds = HrAbsence::RECURRENCE_CAPABLE_KINDS + [HrAbsence::KIND_SICKNESS, HrAbsence::KIND_CARE]
 %>
@@ -26,12 +46,17 @@
      data-time-capable-kinds="<%= time_capable_kinds.uniq.join(',') %>"
      data-day-url-base="<%= day_hr_timeclock_path(date: '1970-01-01') %>"
      data-day-url-placeholder="1970-01-01"
-     data-confirm-delete="<%= l(:text_are_you_sure) %>">
+     data-confirm-delete="<%= l(:text_are_you_sure) %>"
+     <% if admin_mode %>data-admin-user-id="<%= admin_user_id %>"<% end %>
+     <% if admin_lecture_url.present? %>data-lecture-url="<%= admin_lecture_url %>"<% end %>>
   <div class="hr-tc-popup-inner hr-tc-entry-modal-inner">
     <h3 class="hr-tc-entry-modal-title"><%= l(:label_hr_entry_modal_title) %></h3>
     <%= form_with url: hr_absences_path, method: :post, scope: :hr_absence, local: true,
                   html: { id: 'hr-entry-modal-form' } do |f| %>
       <%= hidden_field_tag :return_to, request.fullpath %>
+      <% if admin_mode %>
+        <%= hidden_field_tag 'hr_absence[user_id]', admin_user_id, id: 'hr_entry_admin_user_id' %>
+      <% end %>
 
       <div class="hr-tc-entry-row">
         <%= f.label :kind, l(:label_hr_absence_kind) %>
@@ -68,6 +93,7 @@
 
       <%# ─── Zeitfenster (ganztägig / mit Uhrzeit, einheitlich für alle Tage) ─── %>
       <div class="hr-tc-entry-section" data-bind="entry-time-section">
+        <h4><%= l(:label_hr_entry_time_mode) %></h4>
         <div class="hr-tc-entry-row hr-tc-entry-time-row">
           <label><%= l(:label_hr_entry_time_mode) %></label>
           <label class="hr-tc-entry-mode-opt">
@@ -100,6 +126,7 @@
 
       <%# ─── Multi-Tag: gleich für alle vs. pro Tag (Timeline-Wizard) ─── %>
       <div class="hr-tc-entry-section" data-bind="entry-perday-section" hidden>
+        <h4><%= l(:label_hr_entry_perday_mode) %></h4>
         <div class="hr-tc-entry-row">
           <label><%= l(:label_hr_entry_perday_mode) %></label>
           <label class="hr-tc-entry-mode-opt">
@@ -149,8 +176,33 @@
         </div>
       </div>
 
+      <%# ─── Lecture-Period-Felder (Admin-only, aktiv bei Kind "lecture:*") ─── %>
+      <% if admin_mode && admin_lecture_url.present? %>
+        <div class="hr-tc-entry-section hr-tc-entry-lecture" data-bind="entry-lecture-section" hidden>
+          <h4><%= l(:label_hr_cal_legend_lecture) %></h4>
+          <div class="hr-tc-entry-row">
+            <label for="hr_entry_lecture_weekly"><%= l(:label_hr_lecture_period_weekly_target) %></label>
+            <%= number_field_tag 'hr_lecture_period[weekly_target_hours]', nil,
+                                 min: 0, step: 0.5, id: 'hr_entry_lecture_weekly',
+                                 placeholder: '0' %>
+          </div>
+          <div class="hr-tc-entry-row">
+            <label for="hr_entry_lecture_daily"><%= l(:label_hr_lecture_period_daily_target) %></label>
+            <%= number_field_tag 'hr_lecture_period[daily_target_hours]', nil,
+                                 min: 0, step: 0.5, id: 'hr_entry_lecture_daily',
+                                 placeholder: '0' %>
+          </div>
+          <div class="hr-tc-entry-row">
+            <label for="hr_entry_lecture_label"><%= l(:label_hr_lecture_period_label) %></label>
+            <%= text_field_tag 'hr_lecture_period[label]', nil,
+                               id: 'hr_entry_lecture_label', maxlength: 60 %>
+          </div>
+        </div>
+      <% end %>
+
       <%# ─── Recurrence (nur bei recurrence-fähigen Kinds) ─── %>
       <div class="hr-tc-entry-section" data-bind="entry-recurrence-section" hidden>
+        <h4><%= l(:label_hr_recurrence) %></h4>
         <div class="hr-tc-entry-row">
           <%= f.label :recurrence, l(:label_hr_recurrence) %>
           <%= f.select :recurrence,

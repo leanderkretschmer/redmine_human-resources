@@ -74,6 +74,8 @@ de:
   button_hr_entry_timeline_skip: "Überspringen"
   label_hr_entry_existing_title: "Bestehende Einträge im gewählten Zeitraum"
   label_hr_entry_existing_empty: "Keine Einträge in diesem Zeitraum."
+  label_hr_impersonate: "Als Nutzer anzeigen"
+  label_hr_impersonate_pick: "— Nutzer auswählen —"
   label_hr_sickness_hours_suffix_full: "Krankheits­stunden auf Basis des Tagessolls dieses Nutzers."
   label_hr_correction_pending: "Korrektur angefragt"
   label_hr_correction_proposed: "Vorgeschlagener Wert"

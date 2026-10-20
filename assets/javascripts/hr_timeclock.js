@@ -1333,8 +1333,13 @@
     var recurSec  = modal.querySelector('[data-bind="entry-recurrence-section"]');
     var recurSel  = modal.querySelector('#hr_entry_recurrence');
     var recurUntilRow = modal.querySelector('[data-bind="entry-recurrence-until"]');
+    var lectureSec = modal.querySelector('[data-bind="entry-lecture-section"]');
+    var reasonRow  = reasonEl ? reasonEl.closest('.hr-tc-entry-row') : null;
+    var defaultAction = form ? (form.getAttribute('action') || form.action) : null;
+    var lectureUrl    = modal.getAttribute('data-lecture-url') || '';
     var timeCapableKinds = (modal.getAttribute('data-time-capable-kinds') || '').split(',');
     var recurrenceCapableKinds = ['offsite', 'school', 'blocked', 'homeoffice', 'workday'];
+    function isLectureKind(k) { return typeof k === 'string' && k.indexOf('lecture:') === 0; }
     var dayUrlBase        = modal.getAttribute('data-day-url-base') || '';
     var dayUrlPlaceholder = modal.getAttribute('data-day-url-placeholder') || '1970-01-01';
     var confirmDeleteMsg  = modal.getAttribute('data-confirm-delete') || 'Wirklich löschen?';
@@ -1376,11 +1381,18 @@
     function syncVisibility() {
       var kind = kindSel.value;
       var multi = startEl.value && endEl.value && startEl.value !== endEl.value;
-      var canTime = timeCapableKinds.indexOf(kind) !== -1;
+      var isLecture = isLectureKind(kind);
+      var canTime = !isLecture && timeCapableKinds.indexOf(kind) !== -1;
 
-      timeSec.hidden = !canTime;
-      perdaySec.hidden = !(multi && canTime);
-      recurSec.hidden = !canTime || multi || recurrenceCapableKinds.indexOf(kind) === -1;
+      // Lecture-Modus blendet alles aus, was eine HrAbsence beschreibt
+      // (Zeitfenster, Pro-Tag, Recurrence, Begründung) und zeigt stattdessen
+      // die weekly/daily/label-Felder einer HrLecturePeriod.
+      if (lectureSec) lectureSec.hidden = !isLecture;
+      if (reasonRow) reasonRow.hidden = isLecture;
+
+      timeSec.hidden = isLecture || !canTime;
+      perdaySec.hidden = isLecture || !(multi && canTime);
+      recurSec.hidden = isLecture || !canTime || multi || recurrenceCapableKinds.indexOf(kind) === -1;
 
       // Partial-time sub-row only when "mit Uhrzeit" selected.
       var timeMode = modal.querySelector('input[name="hr_absence[time_mode]"]:checked');
@@ -1796,12 +1808,40 @@
 
     // Before submit: build the per_day[] hidden inputs out of the timeline
     // wizard's state, and clear partial-time fields in "ganztägig" mode.
+    var lectureHiddenBag = null;
     form.addEventListener('submit', function () {
       // Remove any previous hidden bag so re-submits don't accumulate.
       if (timelineHiddenBag && timelineHiddenBag.parentNode) {
         timelineHiddenBag.parentNode.removeChild(timelineHiddenBag);
       }
       timelineHiddenBag = null;
+      if (lectureHiddenBag && lectureHiddenBag.parentNode) {
+        lectureHiddenBag.parentNode.removeChild(lectureHiddenBag);
+      }
+      lectureHiddenBag = null;
+
+      // Lecture-Modus: Form zum lecture-period-Endpoint umbiegen und
+      // hr_lecture_period[kind/starts_on/ends_on] als hidden inputs anlegen.
+      // Die vorhandenen hr_absence[*]-Felder werden vom Lecture-Controller
+      // ignoriert, der Lecture-Controller redirectet selbst zurück.
+      var kindValue = kindSel.value;
+      if (isLectureKind(kindValue) && lectureUrl) {
+        form.setAttribute('action', lectureUrl);
+        lectureHiddenBag = document.createElement('div');
+        lectureHiddenBag.style.display = 'none';
+        var kindActual = kindValue.substring('lecture:'.length);
+        [['hr_lecture_period[kind]',      kindActual],
+         ['hr_lecture_period[starts_on]', startEl.value],
+         ['hr_lecture_period[ends_on]',   endEl.value]].forEach(function (pair) {
+          var i = document.createElement('input');
+          i.type = 'hidden'; i.name = pair[0]; i.value = pair[1];
+          lectureHiddenBag.appendChild(i);
+        });
+        form.appendChild(lectureHiddenBag);
+        return;  // keep the submit, skip the absence-only post-processing
+      } else if (defaultAction) {
+        form.setAttribute('action', defaultAction);
+      }
 
       var timeMode = modal.querySelector('input[name="hr_absence[time_mode]"]:checked');
       if (!timeMode || timeMode.value === 'full') {
@@ -1831,6 +1871,21 @@
     });
 
     window.HrTimeclockOpenEntryModal = openModal;
+  }
+
+  // ── Impersonate-Dropdown (/hr_timeclock, Admin-only) ──────────────────
+  // Springt zur Admin-User-Seite des gewählten Users; dort hat der Admin
+  // dieselben Einträge-und-Kalender-Werkzeuge und sieht die HR-Daten.
+  function setupImpersonateJump() {
+    var sel = document.getElementById('hr-tc-impersonate-select');
+    if (!sel) return;
+    sel.addEventListener('change', function () {
+      var uid = sel.value;
+      if (!uid) return;
+      var tpl = sel.getAttribute('data-url-template') || '';
+      if (!tpl) return;
+      window.location.href = tpl.replace('__UID__', encodeURIComponent(uid));
+    });
   }
 
   // ── Entry-time correction modal (self-service) ─────────────────────────
@@ -1908,6 +1963,7 @@
     setupHolidayPopover();
     setupCorrectionModal();
     setupEntryModal();
+    setupImpersonateJump();
 
     notifiedTarget = loadNotifyFlag('target');
     notifiedBreakReminder = loadNotifyFlag('break_reminder');

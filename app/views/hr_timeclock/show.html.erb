@@ -3,6 +3,26 @@
 <% end %>
 
 <div class="contextual">
+  <% if User.current.admin? %>
+    <%
+      impersonate_users = User.active.where.not(type: 'AnonymousUser')
+                              .where.not(id: User.current.id)
+                              .sorted
+                              .pluck(:firstname, :lastname, :login, :id)
+    %>
+    <span class="hr-tc-impersonate">
+      <label for="hr-tc-impersonate-select" class="icon icon-user">
+        <%= l(:label_hr_impersonate) %>
+      </label>
+      <select id="hr-tc-impersonate-select"
+              data-url-template="<%= hr_admin_user_path(user_id: '__UID__') %>">
+        <option value=""><%= l(:label_hr_impersonate_pick) %></option>
+        <% impersonate_users.each do |fn, ln, lg, id| %>
+          <option value="<%= id %>"><%= "#{fn} #{ln} (#{lg})" %></option>
+        <% end %>
+      </select>
+    </span>
+  <% end %>
   <%= link_to l(:label_hr_admin_export_csv),
               export_hr_timeclock_path(month: @month.strftime('%Y-%m')),
               class: 'icon icon-download' %>

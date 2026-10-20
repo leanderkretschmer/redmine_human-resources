@@ -1259,11 +1259,26 @@ button.hr-tc-day-detail-close {
 /* ======= Unified calendar entry modal ======= */
 .hr-tc-entry-modal-inner {
   min-width: 420px;
-  max-width: 580px;
+  max-width: 680px;
+  width: 92vw;
   text-align: left;
   border-top: 4px solid #2980b9;
 }
-.hr-tc-entry-modal-title { margin: 0 0 0.9em; color: #2c3e50; }
+.hr-tc-entry-modal-title {
+  margin: 0 0 0.9em;
+  color: #2c3e50;
+  padding-bottom: 0.5em;
+  border-bottom: 1px solid #e3e7eb;
+}
+.hr-tc-entry-section > h4,
+.hr-tc-entry-existing-title {
+  margin: 0 0 0.4em;
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #5a6776;
+  font-weight: 700;
+}
 .hr-tc-entry-row {
   display: flex;
   flex-direction: column;
@@ -1739,3 +1754,64 @@ button.hr-tc-day-detail-close {
 .hr-tc-lecture-list .hr-tc-edit-row-head {
   grid-template-columns: 9em 9em 9em 7em 7em minmax(8em, 1fr) auto;
 }
+
+/* ======= Admin-User-Seite: breiter Config-Grid ======= */
+.hr-admin-settings-form { margin: 0.6em 0 1.4em; }
+.hr-admin-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18em, 1fr));
+  gap: 0.8em 1.2em;
+  background: #f4f7fa;
+  border: 1px solid #dde4ec;
+  border-radius: 8px;
+  padding: 1em 1.1em;
+}
+.hr-admin-settings-field { display: flex; flex-direction: column; gap: 0.25em; }
+.hr-admin-settings-field > label {
+  font-weight: 600;
+  color: #2c3e50;
+  font-size: 0.9em;
+}
+.hr-admin-settings-field > input[type="text"],
+.hr-admin-settings-field > input[type="date"],
+.hr-admin-settings-field > input[type="number"],
+.hr-admin-settings-field > select {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.3em 0.5em;
+  border: 1px solid #c7d1dc;
+  border-radius: 4px;
+  background: #fff;
+}
+.hr-admin-settings-field > em.info {
+  color: #6c7a89;
+  font-size: 0.8em;
+  font-style: normal;
+}
+.hr-admin-settings-field-wide { grid-column: 1 / -1; }
+.hr-admin-settings-actions { margin-top: 0.8em; text-align: right; }
+
+/* ======= Entry-Modal: Lecture-Section ======= */
+.hr-tc-entry-lecture {
+  background: #eef4fb;
+  border-left: 3px solid #2874a6;
+  padding: 0.55em 0.8em;
+  border-radius: 4px;
+}
+
+/* ======= Impersonate-Picker (/hr_timeclock Contextual) ======= */
+.hr-tc-impersonate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  margin-right: 0.6em;
+}
+.hr-tc-impersonate > label { cursor: pointer; }
+.hr-tc-impersonate > select {
+  padding: 0.15em 0.3em;
+  border: 1px solid #c7d1dc;
+  border-radius: 4px;
+  background: #fff;
+  max-width: 18em;
+}
+
