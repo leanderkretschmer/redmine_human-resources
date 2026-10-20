@@ -3,40 +3,48 @@
 <% end %>
 
 <div class="contextual">
-  <% if User.current.admin? %>
-    <%
-      impersonate_users = User.active.where.not(type: 'AnonymousUser')
-                              .where.not(id: User.current.id)
-                              .sorted
-                              .pluck(:firstname, :lastname, :login, :id)
-    %>
+  <% if User.current.admin? && @impersonate_candidates&.any? %>
     <span class="hr-tc-impersonate">
       <label for="hr-tc-impersonate-select" class="icon icon-user">
         <%= l(:label_hr_impersonate) %>
       </label>
       <select id="hr-tc-impersonate-select"
-              data-url-template="<%= hr_admin_user_path(user_id: '__UID__') %>">
+              data-url-template="<%= hr_timeclock_path(impersonate_user_id: '__UID__') %>"
+              data-self-url="<%= hr_timeclock_path %>">
         <option value=""><%= l(:label_hr_impersonate_pick) %></option>
-        <% impersonate_users.each do |fn, ln, lg, id| %>
-          <option value="<%= id %>"><%= "#{fn} #{ln} (#{lg})" %></option>
+        <% if @impersonating %>
+          <option value="__self__"><%= l(:label_hr_impersonate_back) %></option>
+        <% end %>
+        <% @impersonate_candidates.each do |fn, ln, lg, id| %>
+          <option value="<%= id %>" <%= 'selected' if @impersonating && @target_user.id == id %>><%= "#{fn} #{ln} (#{lg})" %></option>
         <% end %>
       </select>
     </span>
   <% end %>
-  <%= link_to l(:label_hr_admin_export_csv),
-              export_hr_timeclock_path(month: @month.strftime('%Y-%m')),
-              class: 'icon icon-download' %>
-  <%= link_to l(:label_hr_timeclock_settings),
-              edit_hr_timeclock_settings_path,
-              class: 'icon icon-settings' %>
+  <% unless @impersonating %>
+    <%= link_to l(:label_hr_admin_export_csv),
+                export_hr_timeclock_path(month: @month.strftime('%Y-%m')),
+                class: 'icon icon-download' %>
+    <%= link_to l(:label_hr_timeclock_settings),
+                edit_hr_timeclock_settings_path,
+                class: 'icon icon-settings' %>
+  <% end %>
 </div>
 
-<h2><%= l(:label_hr_timeclock_title) %></h2>
+<% if @impersonating %>
+  <div class="hr-tc-impersonate-banner">
+    <strong><%= l(:label_hr_impersonate_banner, name: @target_user.name) %></strong>
+    <%= link_to l(:label_hr_impersonate_leave), hr_timeclock_path, class: 'hr-tc-impersonate-leave' %>
+  </div>
+<% end %>
 
-<% if @snapshot[:pending_correction] %>
+<h2><%= l(:label_hr_timeclock_title) %><% if @impersonating %> — <%= h @target_user.name %><% end %></h2>
+
+<% if @snapshot && @snapshot[:pending_correction] %>
   <%= render partial: 'correction_banner', locals: { pc: @snapshot[:pending_correction] } %>
 <% end %>
 
+<% if @snapshot %>
 <div id="hr-timeclock-card"
      data-status-url="<%= hr_timeclock_status_path(format: :json) %>"
      data-snapshot="<%= h @snapshot.to_json %>">
@@ -145,6 +153,7 @@
                   class: 'hr-tc-btn hr-tc-btn-stop' %>
   </div>
 </div>
+<% end %>
 
 <% if @chart_metrics %>
   <h3><%= l(:label_hr_personal_chart_title) %></h3>
@@ -173,7 +182,7 @@
   %>
   <div class="hr-tc-barchart">
     <div class="hr-tc-bar-row">
-      <span class="hr-tc-bar-name"><%= h User.current.name %></span>
+      <span class="hr-tc-bar-name"><%= h @target_user.name %></span>
       <span class="hr-tc-bar-track hr-tc-bar-track-stacked">
         <span class="hr-tc-bar-seg hr-tc-bar-seg-work"
               style="width: <%= [work_pct, 0.5].max %>%"
@@ -199,12 +208,13 @@
 
 <h3><%= l(:label_hr_timeclock_calendar) %></h3>
 <%= render partial: 'calendar', locals: {
-      month: @month, entries: @entries_month, user: User.current,
-      base_path: ->(m) { hr_timeclock_path(month: m.strftime('%Y-%m')) },
-      week_path: ->(d) { hr_timeclock_path(view: 'week', focus: d.iso8601) },
+      month: @month, entries: @entries_month, user: @target_user,
+      base_path: ->(m) { hr_timeclock_path(month: m.strftime('%Y-%m'), impersonate_user_id: (@impersonating ? @target_user.id : nil)) },
+      week_path: ->(d) { hr_timeclock_path(view: 'week', focus: d.iso8601, impersonate_user_id: (@impersonating ? @target_user.id : nil)) },
       year_path: ->(d, kinds = nil) {
         p = { view: 'year', focus: d.iso8601 }
         p[:kinds] = kinds.join(',') if kinds.is_a?(Array) && kinds.any?
+        p[:impersonate_user_id] = @target_user.id if @impersonating
         hr_timeclock_path(p)
       },
       view_mode: @cal_view, focus_date: @focus_date,
@@ -217,7 +227,13 @@
       clickable_for_absence: true
     } %>
 
-<%= render partial: 'entry_modal' %>
+<% if @impersonating %>
+  <%= render partial: 'entry_modal', locals: { admin_user_id: @target_user.id } %>
+<% else %>
+  <%= render partial: 'entry_modal' %>
+<% end %>
 <%= render partial: 'absence_modal' %>
 <%= render partial: 'day_detail_modal' %>
-<%= render partial: 'correction_modal' %>
+<% unless @impersonating %>
+  <%= render partial: 'correction_modal' %>
+<% end %>

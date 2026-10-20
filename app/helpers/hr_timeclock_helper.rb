@@ -65,4 +65,34 @@ module HrTimeclockHelper
     entries.group_by { |e| e.started_at.in_time_zone(tz).to_date }
            .transform_values { |list| list.sum { |e| e.net_seconds } }
   end
+
+  # Fasst aufeinanderfolgende Absences gleicher Art/Status/Reason/Partial-Fenster
+  # desselben Users zu einer Gruppe zusammen (ends_on + 1 == next.starts_on).
+  # Rückgabe: Array von Gruppen, jede Gruppe ist ein Hash mit :first, :last,
+  # :absences, :days_total, :starts_on, :ends_on. Jede Gruppe hat mindestens
+  # eine Absence; Einzel-Absences sind Gruppen der Länge 1. Reihenfolge: nach
+  # starts_on absteigend (die neueste Gruppe zuerst), passend zur Standard-
+  # Ordnung der Admin-Show-Liste.
+  def hr_group_consecutive_absences(absences)
+    sorted = absences.sort_by { |a| [a.user_id || 0, a.starts_on] }
+    groups = []
+    sorted.each do |abs|
+      last = groups.last
+      can_merge = last &&
+                  last[:absences].last.user_id == abs.user_id &&
+                  last[:absences].last.kind    == abs.kind &&
+                  last[:absences].last.status  == abs.status &&
+                  last[:absences].last.reason.to_s == abs.reason.to_s &&
+                  last[:absences].last.start_time.to_s == abs.start_time.to_s &&
+                  last[:absences].last.end_time.to_s   == abs.end_time.to_s &&
+                  last[:ends_on] + 1 == abs.starts_on
+      if can_merge
+        last[:absences] << abs
+        last[:ends_on]   = abs.ends_on
+      else
+        groups << { absences: [abs], starts_on: abs.starts_on, ends_on: abs.ends_on }
+      end
+    end
+    groups.sort_by { |g| g[:starts_on] }.reverse
+  end
 end

@@ -9,7 +9,8 @@ class HrAdminUserSettingsController < ApplicationController
 
     raw = params.require(:hr_user_setting).permit(
       :hr_employment_type_id, :region_code,
-      :daily_target_hours, :weekly_target_hours, :max_break_hours,
+      :daily_target_hours, :weekly_target_hours,
+      :max_break_hours, :max_break_minutes,
       :yearly_vacation_days_override, :weekly_school_days_override,
       :full_school_weekday_override,
       :allows_monthly_plan_override, :notify_target_reached, :notify_break_over,
@@ -25,6 +26,11 @@ class HrAdminUserSettingsController < ApplicationController
       v = raw.delete(hour_key.to_s)
       next if v.nil?
       raw[min_key.to_s] = v.to_s.strip.empty? ? nil : (v.to_f * 60).round
+    end
+    # Direct minute input (new admin form): empty → nil, otherwise integer.
+    if raw.key?('max_break_minutes')
+      v = raw['max_break_minutes']
+      raw['max_break_minutes'] = v.to_s.strip.empty? ? nil : v.to_i
     end
 
     raw['hr_employment_type_id'] = nil if raw['hr_employment_type_id'].to_s.empty?

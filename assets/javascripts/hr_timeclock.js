@@ -1876,15 +1876,40 @@
   // ── Impersonate-Dropdown (/hr_timeclock, Admin-only) ──────────────────
   // Springt zur Admin-User-Seite des gewählten Users; dort hat der Admin
   // dieselben Einträge-und-Kalender-Werkzeuge und sieht die HR-Daten.
+  // ── Absence-Liste: Kind-Tabs (clientseitig filtern) ──────────────────
+  function setupAbsenceTabs() {
+    document.querySelectorAll('.hr-tc-abs-tabs').forEach(function (bar) {
+      var table = bar.nextElementSibling;
+      if (!table) return;
+      var buttons = bar.querySelectorAll('.hr-tc-abs-tab');
+      buttons.forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var filter = btn.getAttribute('data-filter') || 'all';
+          buttons.forEach(function (b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          table.querySelectorAll('tr.hr-tc-abs-row').forEach(function (tr) {
+            var k = tr.getAttribute('data-kind') || '';
+            tr.classList.toggle('hr-tc-abs-hidden', filter !== 'all' && k !== filter);
+          });
+        });
+      });
+    });
+  }
+
   function setupImpersonateJump() {
     var sel = document.getElementById('hr-tc-impersonate-select');
     if (!sel) return;
     sel.addEventListener('change', function () {
-      var uid = sel.value;
-      if (!uid) return;
+      var val = sel.value;
+      if (!val) return;
+      if (val === '__self__') {
+        var selfUrl = sel.getAttribute('data-self-url') || '';
+        if (selfUrl) window.location.href = selfUrl;
+        return;
+      }
       var tpl = sel.getAttribute('data-url-template') || '';
       if (!tpl) return;
-      window.location.href = tpl.replace('__UID__', encodeURIComponent(uid));
+      window.location.href = tpl.replace('__UID__', encodeURIComponent(val));
     });
   }
 
@@ -1964,6 +1989,7 @@
     setupCorrectionModal();
     setupEntryModal();
     setupImpersonateJump();
+    setupAbsenceTabs();
 
     notifiedTarget = loadNotifyFlag('target');
     notifiedBreakReminder = loadNotifyFlag('break_reminder');

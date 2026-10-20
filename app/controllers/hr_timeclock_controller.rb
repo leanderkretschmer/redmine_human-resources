@@ -1,11 +1,13 @@
 class HrTimeclockController < ApplicationController
   before_action :require_login
+  before_action :load_target_user, only: [:show]
   before_action :load_user_setting
 
   helper :hr_timeclock
 
   def show
-    tz = RedmineHumanResources::Settings.user_time_zone(User.current)
+    user = @target_user
+    tz = RedmineHumanResources::Settings.user_time_zone(user)
     today = Time.use_zone(tz) { Time.zone.today }
     @today = today
     @cal_view = %w[month week year].include?(params[:view]) ? params[:view] : 'month'
@@ -24,29 +26,36 @@ class HrTimeclockController < ApplicationController
       cal_from = @month
       cal_to   = @month.end_of_month
     end
-    @entries_today = HrWorkEntry.for_user(User.current).on_day(tz, today).order(:started_at).to_a
-    @entries_month = HrWorkEntry.for_user(User.current)
+    @entries_today = HrWorkEntry.for_user(user).on_day(tz, today).order(:started_at).to_a
+    @entries_month = HrWorkEntry.for_user(user)
                                 .in_range(cal_from.in_time_zone(tz).beginning_of_day,
                                           cal_to.in_time_zone(tz).end_of_day)
                                 .order(:started_at).to_a
-    overlay = HrAbsence.for_user(User.current).active.overlapping(cal_from, cal_to).to_a
+    overlay = HrAbsence.for_user(user).active.overlapping(cal_from, cal_to).to_a
     @absences_by_day = HrAbsence.build_by_day(overlay, cal_from, cal_to)
-    @lecture_periods = HrLecturePeriod.for_user(User.current)
+    @lecture_periods = HrLecturePeriod.for_user(user)
                                       .where('starts_on <= ? AND ends_on >= ?', cal_to, cal_from)
                                       .to_a
-    @monthly_plan    = HrMonthlyPlan.for_user(User.current).for_period(@month.year, @month.month).first
-    @holidays_by_day = compute_personal_holidays_range(User.current, cal_from, cal_to)
-    @snapshot = build_snapshot
+    @monthly_plan    = HrMonthlyPlan.for_user(user).for_period(@month.year, @month.month).first
+    @holidays_by_day = compute_personal_holidays_range(user, cal_from, cal_to)
+    # Snapshot (laufende Session, Start/Stop-Buttons) nur fuer den echten
+    # eigenen Account — ein Admin, der eine fremde Session impersonaten
+    # wuerde, saehe nur Fremddaten und koennte dort fremde Shifts starten/
+    # stoppen. Beim Impersonate darum ohne Snapshot rendern.
+    @snapshot = @impersonating ? nil : build_snapshot
+
+    # Full-set der Impersonate-Liste (nur HR-Nutzer, nicht User.current).
+    @impersonate_candidates = admin_impersonate_candidates if User.current.admin?
 
     # Year-to-date sickness aggregation for the personal KPI tile.
-    @sickness_summary  = HrAbsence.sickness_summary(User.current, today.year)
-    @vacation_summary  = HrAbsence.vacation_remaining(User.current, today.year)
+    @sickness_summary  = HrAbsence.sickness_summary(user, today.year)
+    @vacation_summary  = HrAbsence.vacation_remaining(user, today.year)
 
     # "Arbeit diese Woche" — net seconds across the current ISO week, honours
     # the configured first-day-of-week.
     week_start = today.beginning_of_week(@week_start_day)
     week_end   = today.end_of_week(@week_start_day)
-    week_entries = HrWorkEntry.for_user(User.current)
+    week_entries = HrWorkEntry.for_user(user)
                               .in_range(week_start.in_time_zone(tz).beginning_of_day,
                                         week_end.in_time_zone(tz).end_of_day).to_a
     @worked_this_week = week_entries.sum { |e| e.net_seconds }.to_i
@@ -58,7 +67,7 @@ class HrTimeclockController < ApplicationController
     if @user_setting.allows_monthly_plan?
       month_start = today.beginning_of_month
       month_end   = today.end_of_month
-      planned_workdays = HrAbsence.for_user(User.current).active
+      planned_workdays = HrAbsence.for_user(user).active
                                   .where(kind: HrAbsence::KIND_WORKDAY)
                                   .where('starts_on <= ? AND ends_on >= ?', month_end, month_start)
                                   .to_a
@@ -87,7 +96,7 @@ class HrTimeclockController < ApplicationController
                             when 'month' then [today.beginning_of_month, today.end_of_month]
                             else              [today, today]
                             end
-    @chart_metrics = compute_personal_chart_metrics(User.current, chart_from, chart_to, tz)
+    @chart_metrics = compute_personal_chart_metrics(user, chart_from, chart_to, tz)
   end
 
   def status
@@ -292,8 +301,35 @@ class HrTimeclockController < ApplicationController
 
   private
 
+  # Admin-only "als anderer Nutzer anzeigen" via ?impersonate_user_id=X.
+  # Faellt auf User.current zurueck, wenn kein Admin oder kein gueltiger
+  # Parameter (so dass Start/Stop und Snapshot-Logik unveraendert laufen).
+  def load_target_user
+    @target_user = User.current
+    @impersonating = false
+    uid = params[:impersonate_user_id].to_s
+    return if uid.blank?
+    return unless User.current.admin?
+    candidate = User.active.where.not(type: 'AnonymousUser').find_by(id: uid)
+    return unless candidate
+    @target_user = candidate
+    @impersonating = (candidate.id != User.current.id)
+  end
+
+  def admin_impersonate_candidates
+    hr_user_ids = (HrWorkEntry.distinct.pluck(:user_id) +
+                   HrAbsence.distinct.pluck(:user_id)).uniq
+    return [] if hr_user_ids.empty?
+    User.active.where(id: hr_user_ids)
+        .where.not(type: 'AnonymousUser')
+        .where.not(id: User.current.id)
+        .sorted
+        .pluck(:firstname, :lastname, :login, :id)
+  end
+
   def load_user_setting
-    @user_setting = HrUserSetting.for(User.current)
+    target = @target_user || User.current
+    @user_setting = HrUserSetting.for(target)
     @user_setting.save!(validate: false) if @user_setting.new_record?
   end
 

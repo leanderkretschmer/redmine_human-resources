@@ -1367,15 +1367,22 @@ button.hr-tc-day-detail-close {
   justify-content: flex-end;
   gap: 0.6em;
   margin-top: 1em;
+  white-space: normal;
+}
+.hr-tc-entry-actions input[type="submit"],
+.hr-tc-entry-actions .hr-tc-entry-cancel {
+  padding: 0.55em 1.4em;
+  min-width: 9em;
+  line-height: 1.2;
+  font-weight: 600;
+  border-radius: 4px;
+  box-sizing: border-box;
+  cursor: pointer;
 }
 .hr-tc-entry-cancel {
-  padding: 0.5em 1.2em;
   background: #ecf0f1;
   color: #2c3e50;
   border: 1px solid #bdc3c7;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
 }
 .hr-tc-entry-cancel:hover { background: #bdc3c7; }
 
@@ -1799,6 +1806,50 @@ button.hr-tc-day-detail-close {
   border-radius: 4px;
 }
 
+/* ======= Absence-Liste: Tabs ======= */
+.hr-tc-abs-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3em;
+  margin: 0.5em 0 0.6em;
+  border-bottom: 2px solid #dde4ec;
+}
+.hr-tc-abs-tab {
+  background: transparent;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  padding: 0.4em 0.9em;
+  font-weight: 600;
+  color: #5a6776;
+  cursor: pointer;
+  border-radius: 4px 4px 0 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+}
+.hr-tc-abs-tab:hover { background: #f4f7fa; color: #1c5d99; }
+.hr-tc-abs-tab.active {
+  color: #1c5d99;
+  border-bottom-color: #1c5d99;
+  background: #f4f7fa;
+}
+.hr-tc-abs-tab-count {
+  background: #dde4ec;
+  color: #44505f;
+  font-size: 0.78em;
+  padding: 0.1em 0.5em;
+  border-radius: 10px;
+  font-weight: 700;
+}
+.hr-tc-abs-tab.active .hr-tc-abs-tab-count { background: #1c5d99; color: #fff; }
+.hr-tc-abs-row.hr-tc-abs-hidden { display: none; }
+.hr-tc-abs-group-count {
+  color: #6c7a89;
+  font-size: 0.85em;
+  font-style: italic;
+}
+
 /* ======= Impersonate-Picker (/hr_timeclock Contextual) ======= */
 .hr-tc-impersonate {
   display: inline-flex;
@@ -1813,5 +1864,23 @@ button.hr-tc-day-detail-close {
   border-radius: 4px;
   background: #fff;
   max-width: 18em;
+}
+.hr-tc-impersonate-banner {
+  display: flex;
+  align-items: center;
+  gap: 1em;
+  background: #fff5e6;
+  border: 1px solid #f0c27a;
+  border-left: 4px solid #c87f0a;
+  color: #7a4a06;
+  padding: 0.55em 0.9em;
+  border-radius: 4px;
+  margin: 0.5em 0 0.6em;
+}
+.hr-tc-impersonate-banner > strong { font-weight: 700; }
+.hr-tc-impersonate-leave {
+  margin-left: auto;
+  font-weight: 600;
+  color: #1c5d99;
 }
 
