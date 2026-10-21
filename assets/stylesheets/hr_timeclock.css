@@ -195,6 +195,8 @@
 .hr-tc-btn-pause  { background: #f39c12; color: #fff; border: 1px solid #e67e22; }
 .hr-tc-btn-resume { background: #3498db; color: #fff; border: 1px solid #2980b9; }
 .hr-tc-btn-stop   { background: #e74c3c; color: #fff; border: 1px solid #c0392b; }
+.hr-tc-btn-cancel { background: #ecf0f1; color: #2c3e50; border: 1px solid #bdc3c7; }
+.hr-tc-btn-cancel:hover { background: #bdc3c7; }
 
 /* ======= Calendar ======= */
 .hr-tc-calendar { margin: 1em 0 2em; }
@@ -2102,16 +2104,5 @@ button.hr-tc-day-detail-close {
   padding-top: 0.9em;
   border-top: 1px solid #ecf0f1;
 }
-.hr-tc-stop-cancel {
-  padding: 0.55em 1.2em;
-  background: #ecf0f1;
-  color: #2c3e50;
-  border: 1px solid #bdc3c7;
-  border-radius: 4px;
-  cursor: pointer;
-  font-weight: 600;
-  min-width: 9em;
-}
-.hr-tc-stop-cancel:hover { background: #bdc3c7; }
 .hr-tc-stop-form-inline { display: inline; margin: 0; }
-.hr-tc-stop-confirm { min-width: 11em; }
+.hr-tc-stop-footer .hr-tc-btn { min-width: 10em; }

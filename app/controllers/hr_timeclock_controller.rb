@@ -649,8 +649,9 @@ class HrTimeclockController < ApplicationController
     worked_seconds   = entries.sum { |e| e.net_seconds(as_of: now) }
     break_seconds    = entries.sum { |e| e.total_break_seconds(as_of: now) }
 
-    time_entries = TimeEntry.where(user_id: user.id, spent_on: today)
-                            .includes(:issue, :project, :activity).to_a
+    time_entries = TimeEntry.where(user_id: user.id, spent_on: today..today)
+                            .includes(:issue, :project, :activity)
+                            .order(:id).to_a
     ticket_payload = time_entries.map { |te| time_entry_payload(te) }
     ticket_seconds = ticket_payload.sum { |t| t[:seconds].to_i }
 

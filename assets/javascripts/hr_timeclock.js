@@ -1983,20 +1983,51 @@
     }
     function fmtSec(s) { return fmtHM(Math.max(0, Math.round(s || 0))); }
 
-    function renderBar(data) {
-      var worked = Math.max(1, data.worked_seconds || 0);
-      var ticketPct = Math.min(100, (data.ticket_seconds || 0) / worked * 100);
-      var freePct   = Math.min(100 - ticketPct, (data.free_seconds || 0) / worked * 100);
+    // Cache of the last preview — the live ticker reuses ticket/free seconds
+    // from here (they only change on edit/add/delete) and overlays the live
+    // worked/break seconds from the global snapshot.
+    var lastPreview = null;
+
+    function paintBar(ticketSec, freeSec, workedSec, breakSec, coveragePct) {
+      var worked = Math.max(1, workedSec || 0);
+      var ticketPct = Math.min(100, (ticketSec || 0) / worked * 100);
+      var freePct   = Math.min(100 - ticketPct, (freeSec || 0) / worked * 100);
       var gapPct    = Math.max(0, 100 - ticketPct - freePct);
       modal.querySelector('[data-bind="bar-ticket"]').style.width = ticketPct.toFixed(2) + '%';
       modal.querySelector('[data-bind="bar-free"]').style.width   = freePct.toFixed(2)   + '%';
       modal.querySelector('[data-bind="bar-gap"]').style.width    = gapPct.toFixed(2)    + '%';
-      modal.querySelector('[data-bind="ticket-seconds"]').textContent = fmtSec(data.ticket_seconds);
-      modal.querySelector('[data-bind="free-seconds"]').textContent   = fmtSec(data.free_seconds);
-      modal.querySelector('[data-bind="worked-seconds"]').textContent = fmtSec(data.worked_seconds);
-      modal.querySelector('[data-bind="break-seconds"]').textContent  = fmtSec(data.break_seconds);
+      modal.querySelector('[data-bind="ticket-seconds"]').textContent = fmtSec(ticketSec);
+      modal.querySelector('[data-bind="free-seconds"]').textContent   = fmtSec(freeSec);
+      modal.querySelector('[data-bind="worked-seconds"]').textContent = fmtSec(workedSec);
+      modal.querySelector('[data-bind="break-seconds"]').textContent  = fmtSec(breakSec);
       modal.querySelector('[data-bind="coverage-percent"]').textContent =
-        (data.coverage_percent == null ? 0 : data.coverage_percent) + '%';
+        (coveragePct == null ? 0 : coveragePct) + '%';
+    }
+
+    function renderBar(data) {
+      var pct = (data.worked_seconds > 0)
+        ? Math.round(((data.ticket_seconds + data.free_seconds) / data.worked_seconds) * 1000) / 10
+        : 0;
+      paintBar(data.ticket_seconds, data.free_seconds, data.worked_seconds, data.break_seconds, pct);
+    }
+
+    function liveTick() {
+      if (!modal.classList.contains('open') || !lastPreview) return;
+      // Prefer the global snapshot so worked seconds keep ticking while the
+      // modal is open; fall back to the preview's own values when there is no
+      // live snapshot (e.g. right after an idle→working transition).
+      var worked = lastPreview.worked_seconds;
+      var brk    = lastPreview.break_seconds;
+      if (snapshot && (snapshot.state === 'working' || snapshot.state === 'on_break')) {
+        var live = liveValues();
+        if (live) {
+          worked = live.worked;
+          brk    = live.totalBreak;
+        }
+      }
+      var covered = (lastPreview.ticket_seconds || 0) + (lastPreview.free_seconds || 0);
+      var pct = worked > 0 ? Math.round((covered / worked) * 1000) / 10 : 0;
+      paintBar(lastPreview.ticket_seconds, lastPreview.free_seconds, worked, brk, pct);
     }
 
     function minutesInput(sec) {
@@ -2050,6 +2081,7 @@
     }
 
     function renderPreview(data) {
+      lastPreview = data;
       renderBar(data);
       renderTicketRows(data.ticket_entries || []);
       renderFreeRows(data.free_entries || []);
@@ -2079,6 +2111,10 @@
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
       fetchPreview();
+      // Also force a fresh status pull so liveValues() reflects reality for
+      // the modal's ticker (the user may have been staring at a stale snapshot
+      // for a while before clicking Stop).
+      fetchStatus().then(tick).catch(function () {});
     }
     function close() {
       modal.classList.remove('open');
@@ -2170,6 +2206,10 @@
     document.addEventListener('keydown', function (e) {
       if (e.key === 'Escape' && modal.classList.contains('open')) close();
     });
+
+    // 1-second ticker so Arbeitszeit / Pause / Abdeckung keep moving while the
+    // modal stays open — the user is deciding, the clock is still running.
+    setInterval(liveTick, 1000);
 
     // Issue autocomplete
     var searchInput = modal.querySelector('[data-bind="add-ticket-search"]');
