@@ -2183,7 +2183,9 @@
     modal.addEventListener('click', function (e) {
       if (e.target === modal) close();
       if (e.target.classList.contains('hr-tc-modal-close') ||
-          e.target.classList.contains('hr-tc-stop-cancel')) {
+          e.target.classList.contains('hr-tc-stop-cancel') ||
+          e.target.classList.contains('hr-tc-stop-cancel-link')) {
+        e.preventDefault();
         close();
         return;
       }

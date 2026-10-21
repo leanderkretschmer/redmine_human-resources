@@ -140,10 +140,10 @@
     </section>
 
     <div class="hr-tc-stop-footer">
-      <button type="button" class="hr-tc-btn hr-tc-btn-cancel hr-tc-modal-close"><%= l(:label_hr_stop_cancel) %></button>
+      <a href="#" class="hr-tc-stop-cancel-link hr-tc-modal-close"><%= l(:label_hr_cancel) %></a>
       <form action="<%= stop_hr_timeclock_path %>" method="post" data-bind="stop-form" class="hr-tc-stop-form-inline">
         <%= token_tag(nil, form_options: {}) %>
-        <button type="submit" class="hr-tc-btn hr-tc-btn-stop"><%= l(:label_hr_stop_confirm) %></button>
+        <button type="submit" class="hr-tc-btn hr-tc-btn-stop"><%= l(:button_hr_timeclock_stop) %></button>
       </form>
     </div>
   </div>
