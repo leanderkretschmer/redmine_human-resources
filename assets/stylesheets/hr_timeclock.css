@@ -186,11 +186,15 @@
   margin: 0 0.4em 0.4em 0;
 }
 .hr-tc-btn {
-  padding: 0.5em 1.3em;
+  padding: 0.6em 1.4em;
+  font-size: 1em;
   font-weight: 600;
+  line-height: 1.2;
   border-radius: 4px;
   cursor: pointer;
+  box-sizing: border-box;
 }
+.hr-tc-btn:hover { filter: brightness(1.06); }
 .hr-tc-btn-start  { background: #2ecc71; color: #fff; border: 1px solid #27ae60; }
 .hr-tc-btn-pause  { background: #f39c12; color: #fff; border: 1px solid #e67e22; }
 .hr-tc-btn-resume { background: #3498db; color: #fff; border: 1px solid #2980b9; }
@@ -2099,10 +2103,16 @@ button.hr-tc-day-detail-close {
 .hr-tc-stop-footer {
   display: flex;
   justify-content: flex-end;
+  align-items: center;
   gap: 0.6em;
   margin-top: 1.2em;
   padding-top: 0.9em;
   border-top: 1px solid #ecf0f1;
 }
-.hr-tc-stop-form-inline { display: inline; margin: 0; }
-.hr-tc-stop-footer .hr-tc-btn { min-width: 10em; }
+.hr-tc-stop-form-inline { display: inline-block; margin: 0; padding: 0; }
+.hr-tc-stop-footer .hr-tc-btn {
+  min-width: 11em;
+  min-height: 2.6em;
+  font-size: 1em;
+  padding: 0.65em 1.4em;
+}

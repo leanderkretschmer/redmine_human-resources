@@ -1985,8 +1985,23 @@
 
     // Cache of the last preview — the live ticker reuses ticket/free seconds
     // from here (they only change on edit/add/delete) and overlays the live
-    // worked/break seconds from the global snapshot.
+    // worked/break seconds from the global snapshot. We seed it from the
+    // global snapshot so the modal shows real worked time instantly, even
+    // before stop_preview resolves (or when it fails).
     var lastPreview = null;
+    function snapshotSeed() {
+      if (!snapshot) return { worked_seconds: 0, break_seconds: 0, ticket_seconds: 0, free_seconds: 0, coverage_percent: 0, ticket_entries: null, free_entries: null };
+      var live = liveValues() || {};
+      return {
+        worked_seconds: live.worked || snapshot.worked_seconds_today || 0,
+        break_seconds:  live.totalBreak || snapshot.total_break_seconds_today || 0,
+        ticket_seconds: 0,
+        free_seconds:   0,
+        coverage_percent: 0,
+        ticket_entries: null,
+        free_entries:   null
+      };
+    }
 
     function paintBar(ticketSec, freeSec, workedSec, breakSec, coveragePct) {
       var worked = Math.max(1, workedSec || 0);
@@ -2039,6 +2054,7 @@
       var tbody = modal.querySelector('[data-bind="ticket-rows"]');
       var empty = modal.querySelector('[data-bind="ticket-empty"]');
       tbody.innerHTML = '';
+      entries = entries || [];
       if (!entries.length) { empty.hidden = false; return; }
       empty.hidden = true;
       entries.forEach(function (e) {
@@ -2063,6 +2079,7 @@
       var tbody = modal.querySelector('[data-bind="free-rows"]');
       var empty = modal.querySelector('[data-bind="free-empty"]');
       tbody.innerHTML = '';
+      entries = entries || [];
       if (!entries.length) { empty.hidden = false; return; }
       empty.hidden = true;
       entries.forEach(function (e) {
@@ -2101,15 +2118,42 @@
         credentials: 'same-origin',
         headers: { 'Accept': 'application/json' },
         cache: 'no-store'
-      }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+      }).then(function (r) {
+        if (!r.ok) {
+          console.error('[hr-tc] stop_preview failed:', r.status, cfg.previewUrl,
+            r.status === 404 ? '— backend/route not deployed yet, falling back to snapshot' : '');
+          return null;
+        }
+        return r.json();
+      }).then(function (d) {
         if (d) renderPreview(d);
+        else {
+          // Backend didn't return data — paint whatever we can from the live
+          // snapshot so the modal is not stuck at 00:00. Rows stay in their
+          // placeholder state (empty / "no data" message).
+          renderPreview(snapshotSeed());
+          var noteBar = modal.querySelector('[data-bind="eod"]');
+          var noteText = modal.querySelector('[data-bind="eod-text"]');
+          if (noteBar && noteText) {
+            noteBar.hidden = false;
+            noteText.textContent = 'Hinweis: Backend-Daten (gebuchte Ticketzeit, Freitext) konnten nicht geladen werden. ' +
+                                   'Angezeigt wird nur die laufende Arbeitszeit. (Wurde der Server mit der neuesten Plugin-Version rebuilded?)';
+          }
+        }
         return d;
+      }).catch(function (err) {
+        console.error('[hr-tc] stop_preview exception:', err);
+        renderPreview(snapshotSeed());
       });
     }
 
     function open() {
       modal.classList.add('open');
       modal.setAttribute('aria-hidden', 'false');
+      // Paint the live snapshot immediately so the modal shows real worked
+      // time the instant it opens, instead of 00:00 while fetchPreview is
+      // still in flight (or if it 404s because the backend isn't deployed).
+      renderPreview(snapshotSeed());
       fetchPreview();
       // Also force a fresh status pull so liveValues() reflects reality for
       // the modal's ticker (the user may have been staring at a stale snapshot
