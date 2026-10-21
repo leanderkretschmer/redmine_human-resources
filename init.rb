@@ -72,7 +72,8 @@ Redmine::Plugin.register :redmine_human_resources do
       'default_care_hours_couple'        => 0,
       'default_care_hours_single'        => 0,
       'default_time_zone'                => 'Europe/Berlin',
-      'first_day_of_week'                => 'monday'
+      'first_day_of_week'                => 'monday',
+      'end_of_day_message'               => ''
     },
     partial: 'settings/human_resources'
   )

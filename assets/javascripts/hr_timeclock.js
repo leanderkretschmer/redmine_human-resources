@@ -1950,6 +1950,338 @@
     });
   }
 
+  // ── Pre-stop popup ─────────────────────────────────────────────────────
+  // The stop button on the personal timeclock card does not post straight to
+  // /hr_timeclock/stop any more — it opens a modal that lets the user double
+  // check today's coverage (TimeEntries + plugin free-text entries) against
+  // the actual net work and add missing bookings before confirming the clock-
+  // out. Only this card's stop button is intercepted; admin stop flows and
+  // impersonate mode do not render the modal partial so they fall through to
+  // the regular form submit.
+  function setupStopModal() {
+    var modal = document.getElementById('hr-tc-stop-modal');
+    if (!modal) return;
+
+    var cfg = {
+      previewUrl:     modal.getAttribute('data-preview-url'),
+      issueSearchUrl: modal.getAttribute('data-issue-search-url'),
+      createUrl:      modal.getAttribute('data-create-url'),
+      updateTpl:      modal.getAttribute('data-update-url-template') || '',
+      deleteTpl:      modal.getAttribute('data-delete-url-template') || '',
+      labelDelete:    modal.getAttribute('data-label-delete') || 'Löschen',
+      labelConfirmDelete: modal.getAttribute('data-label-confirm-delete') || 'Wirklich löschen?'
+    };
+
+    function csrf() {
+      var meta = document.querySelector('meta[name="csrf-token"]');
+      return meta ? meta.getAttribute('content') : '';
+    }
+    function esc(s) {
+      return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+    function fmtSec(s) { return fmtHM(Math.max(0, Math.round(s || 0))); }
+
+    function renderBar(data) {
+      var worked = Math.max(1, data.worked_seconds || 0);
+      var ticketPct = Math.min(100, (data.ticket_seconds || 0) / worked * 100);
+      var freePct   = Math.min(100 - ticketPct, (data.free_seconds || 0) / worked * 100);
+      var gapPct    = Math.max(0, 100 - ticketPct - freePct);
+      modal.querySelector('[data-bind="bar-ticket"]').style.width = ticketPct.toFixed(2) + '%';
+      modal.querySelector('[data-bind="bar-free"]').style.width   = freePct.toFixed(2)   + '%';
+      modal.querySelector('[data-bind="bar-gap"]').style.width    = gapPct.toFixed(2)    + '%';
+      modal.querySelector('[data-bind="ticket-seconds"]').textContent = fmtSec(data.ticket_seconds);
+      modal.querySelector('[data-bind="free-seconds"]').textContent   = fmtSec(data.free_seconds);
+      modal.querySelector('[data-bind="worked-seconds"]').textContent = fmtSec(data.worked_seconds);
+      modal.querySelector('[data-bind="break-seconds"]').textContent  = fmtSec(data.break_seconds);
+      modal.querySelector('[data-bind="coverage-percent"]').textContent =
+        (data.coverage_percent == null ? 0 : data.coverage_percent) + '%';
+    }
+
+    function minutesInput(sec) {
+      var m = Math.max(1, Math.round((sec || 0) / 60));
+      return '<input type="number" min="1" step="1" value="' + m + '">';
+    }
+
+    function renderTicketRows(entries) {
+      var tbody = modal.querySelector('[data-bind="ticket-rows"]');
+      var empty = modal.querySelector('[data-bind="ticket-empty"]');
+      tbody.innerHTML = '';
+      if (!entries.length) { empty.hidden = false; return; }
+      empty.hidden = true;
+      entries.forEach(function (e) {
+        var tr = document.createElement('tr');
+        tr.dataset.kind = 'ticket';
+        tr.dataset.id = e.id;
+        tr.innerHTML =
+          '<td>' + esc(e.issue_label || '—') +
+            (e.project_name ? '<div class="hr-tc-stop-sub">' + esc(e.project_name) + '</div>' : '') +
+          '</td>' +
+          '<td><input type="text" value="' + esc(e.comments) + '" data-field="comments"></td>' +
+          '<td>' + minutesInput(e.seconds).replace('<input ', '<input data-field="minutes" ') + '</td>' +
+          '<td>' +
+            '<button type="button" class="hr-tc-stop-row-save">✓</button>' +
+            '<button type="button" class="hr-tc-stop-row-delete">×</button>' +
+          '</td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderFreeRows(entries) {
+      var tbody = modal.querySelector('[data-bind="free-rows"]');
+      var empty = modal.querySelector('[data-bind="free-empty"]');
+      tbody.innerHTML = '';
+      if (!entries.length) { empty.hidden = false; return; }
+      empty.hidden = true;
+      entries.forEach(function (e) {
+        var tr = document.createElement('tr');
+        tr.dataset.kind = 'freetext';
+        tr.dataset.id = e.id;
+        tr.innerHTML =
+          '<td><input type="text" value="' + esc(e.note) + '" data-field="note" maxlength="500"></td>' +
+          '<td>' + minutesInput(e.seconds).replace('<input ', '<input data-field="minutes" ') + '</td>' +
+          '<td>' +
+            '<button type="button" class="hr-tc-stop-row-save">✓</button>' +
+            '<button type="button" class="hr-tc-stop-row-delete">×</button>' +
+          '</td>';
+        tbody.appendChild(tr);
+      });
+    }
+
+    function renderPreview(data) {
+      renderBar(data);
+      renderTicketRows(data.ticket_entries || []);
+      renderFreeRows(data.free_entries || []);
+      var eod = modal.querySelector('[data-bind="eod"]');
+      var eodText = modal.querySelector('[data-bind="eod-text"]');
+      if (data.end_of_day_message) {
+        eod.hidden = false;
+        eodText.textContent = data.end_of_day_message;
+      } else {
+        eod.hidden = true;
+        eodText.textContent = '';
+      }
+    }
+
+    function fetchPreview() {
+      return fetch(cfg.previewUrl, {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store'
+      }).then(function (r) { return r.ok ? r.json() : null; }).then(function (d) {
+        if (d) renderPreview(d);
+        return d;
+      });
+    }
+
+    function open() {
+      modal.classList.add('open');
+      modal.setAttribute('aria-hidden', 'false');
+      fetchPreview();
+    }
+    function close() {
+      modal.classList.remove('open');
+      modal.setAttribute('aria-hidden', 'true');
+    }
+
+    // Intercept stop button clicks on the clockcard. Must sit on the form so
+    // the native submit is prevented before the browser POSTs.
+    document.body.addEventListener('submit', function (e) {
+      var form = e.target;
+      if (!form || form.tagName !== 'FORM') return;
+      // The modal has its own stop form inside; let that one through.
+      if (form.closest('#hr-tc-stop-modal')) return;
+      var btn = form.querySelector('.hr-tc-btn-stop');
+      if (!btn) return;
+      // Only intercept when the stop modal partial is on the page.
+      if (!document.getElementById('hr-tc-stop-modal')) return;
+      e.preventDefault();
+      open();
+    }, true);
+
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) close();
+      if (e.target.classList.contains('hr-tc-modal-close') ||
+          e.target.classList.contains('hr-tc-stop-cancel')) {
+        close();
+        return;
+      }
+      // Row save/delete
+      var row = e.target.closest('tr[data-id]');
+      if (row && e.target.classList.contains('hr-tc-stop-row-delete')) {
+        if (!confirm(cfg.labelConfirmDelete)) return;
+        var id = row.dataset.id, kind = row.dataset.kind;
+        fetch(cfg.deleteTpl.replace('__ID__', encodeURIComponent(id)) + '?kind=' + encodeURIComponent(kind), {
+          method: 'DELETE',
+          credentials: 'same-origin',
+          headers: { 'X-CSRF-Token': csrf(), 'Accept': 'application/json' }
+        }).then(function (r) {
+          if (r.ok) fetchPreview();
+          else alert('HTTP ' + r.status);
+        });
+        return;
+      }
+      if (row && e.target.classList.contains('hr-tc-stop-row-save')) {
+        var id2 = row.dataset.id, kind2 = row.dataset.kind;
+        var minutesEl = row.querySelector('[data-field="minutes"]');
+        var mins = parseInt(minutesEl.value, 10);
+        if (isNaN(mins) || mins <= 0) return;
+        var body = new URLSearchParams();
+        body.append('seconds', mins * 60);
+        body.append('kind', kind2);
+        if (kind2 === 'ticket') {
+          var commentsEl = row.querySelector('[data-field="comments"]');
+          if (commentsEl) body.append('comments', commentsEl.value || '');
+        } else {
+          var noteEl = row.querySelector('[data-field="note"]');
+          if (noteEl) body.append('note', noteEl.value || '');
+        }
+        fetch(cfg.updateTpl.replace('__ID__', encodeURIComponent(id2)), {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-CSRF-Token': csrf(),
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-HTTP-Method-Override': 'PATCH'
+          },
+          body: body.toString() + '&_method=patch'
+        }).then(function (r) {
+          if (r.ok) fetchPreview();
+          else r.json().then(function (j) { alert((j && j.error) || ('HTTP ' + r.status)); }, function () { alert('HTTP ' + r.status); });
+        });
+        return;
+      }
+      // Add tabs
+      var tab = e.target.closest('.hr-tc-stop-add-tab');
+      if (tab) {
+        var name = tab.getAttribute('data-add-tab');
+        modal.querySelectorAll('.hr-tc-stop-add-tab').forEach(function (t) {
+          t.classList.toggle('active', t === tab);
+        });
+        modal.querySelectorAll('.hr-tc-stop-add-panel').forEach(function (p) {
+          p.hidden = p.getAttribute('data-add-panel') !== name;
+        });
+        return;
+      }
+    });
+
+    document.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape' && modal.classList.contains('open')) close();
+    });
+
+    // Issue autocomplete
+    var searchInput = modal.querySelector('[data-bind="add-ticket-search"]');
+    var resultsList = modal.querySelector('[data-bind="add-ticket-results"]');
+    var hiddenId    = modal.querySelector('[data-bind="add-ticket-id"]');
+    var chosenBox   = modal.querySelector('[data-bind="add-ticket-chosen"]');
+    var searchTimer = null;
+
+    function runSearch() {
+      var q = searchInput.value.trim();
+      if (!q) {
+        resultsList.hidden = true;
+        resultsList.innerHTML = '';
+        return;
+      }
+      fetch(cfg.issueSearchUrl + '?q=' + encodeURIComponent(q), {
+        credentials: 'same-origin',
+        headers: { 'Accept': 'application/json' }
+      }).then(function (r) { return r.ok ? r.json() : { results: [] }; })
+        .then(function (data) {
+          resultsList.innerHTML = '';
+          (data.results || []).forEach(function (iss) {
+            var li = document.createElement('li');
+            li.dataset.issueId = iss.id;
+            li.textContent = iss.label;
+            resultsList.appendChild(li);
+          });
+          resultsList.hidden = !(data.results && data.results.length);
+        });
+    }
+    if (searchInput) {
+      searchInput.addEventListener('input', function () {
+        if (searchTimer) clearTimeout(searchTimer);
+        searchTimer = setTimeout(runSearch, 180);
+      });
+    }
+    if (resultsList) {
+      resultsList.addEventListener('click', function (e) {
+        var li = e.target.closest('li[data-issue-id]');
+        if (!li) return;
+        hiddenId.value = li.dataset.issueId;
+        chosenBox.hidden = false;
+        chosenBox.textContent = li.textContent;
+        resultsList.hidden = true;
+        searchInput.value = '';
+      });
+    }
+
+    // Add ticket
+    var addTicketBtn = modal.querySelector('[data-bind="add-ticket-save"]');
+    if (addTicketBtn) {
+      addTicketBtn.addEventListener('click', function () {
+        var issueId = hiddenId.value;
+        if (!issueId) { alert('Bitte ein Ticket auswählen'); return; }
+        var minutes = parseInt(modal.querySelector('[data-bind="add-ticket-minutes"]').value, 10);
+        if (isNaN(minutes) || minutes <= 0) { alert('Bitte Minuten > 0 eingeben'); return; }
+        var comments = modal.querySelector('[data-bind="add-ticket-comment"]').value || '';
+        var body = new URLSearchParams();
+        body.append('kind', 'ticket');
+        body.append('issue_id', issueId);
+        body.append('seconds', minutes * 60);
+        body.append('comments', comments);
+        fetch(cfg.createUrl, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-CSRF-Token': csrf(),
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: body.toString()
+        }).then(function (r) {
+          if (!r.ok) { r.json().then(function (j) { alert((j && j.error) || ('HTTP ' + r.status)); }, function () { alert('HTTP ' + r.status); }); return; }
+          hiddenId.value = ''; chosenBox.hidden = true; chosenBox.textContent = '';
+          modal.querySelector('[data-bind="add-ticket-comment"]').value = '';
+          modal.querySelector('[data-bind="add-ticket-minutes"]').value = '';
+          fetchPreview();
+        });
+      });
+    }
+
+    // Add free text
+    var addFreeBtn = modal.querySelector('[data-bind="add-free-save"]');
+    if (addFreeBtn) {
+      addFreeBtn.addEventListener('click', function () {
+        var note = modal.querySelector('[data-bind="add-free-note"]').value.trim();
+        if (!note) { alert('Bitte einen Freitext eingeben'); return; }
+        var minutes = parseInt(modal.querySelector('[data-bind="add-free-minutes"]').value, 10);
+        if (isNaN(minutes) || minutes <= 0) { alert('Bitte Minuten > 0 eingeben'); return; }
+        var body = new URLSearchParams();
+        body.append('kind', 'freetext');
+        body.append('note', note);
+        body.append('seconds', minutes * 60);
+        fetch(cfg.createUrl, {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: {
+            'X-CSRF-Token': csrf(),
+            'Accept': 'application/json',
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: body.toString()
+        }).then(function (r) {
+          if (!r.ok) { r.json().then(function (j) { alert((j && j.error) || ('HTTP ' + r.status)); }, function () { alert('HTTP ' + r.status); }); return; }
+          modal.querySelector('[data-bind="add-free-note"]').value = '';
+          modal.querySelector('[data-bind="add-free-minutes"]').value = '';
+          fetchPreview();
+        });
+      });
+    }
+  }
+
   function askPermissionOnce() {
     if (permissionAsked) return;
     permissionAsked = true;
@@ -1990,6 +2322,7 @@
     setupEntryModal();
     setupImpersonateJump();
     setupAbsenceTabs();
+    setupStopModal();
 
     notifiedTarget = loadNotifyFlag('target');
     notifiedBreakReminder = loadNotifyFlag('break_reminder');

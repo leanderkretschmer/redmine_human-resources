@@ -205,6 +205,143 @@ class HrTimeclockController < ApplicationController
               type: 'text/csv; charset=utf-8'
   end
 
+  # Pre-stop preview: everything the stop popup needs — today's net work,
+  # breaks, booked TimeEntries grouped per issue, free-text entries, resulting
+  # coverage share, and the end-of-day message when this user is the last one
+  # still clocked in. Pure JSON.
+  def stop_preview
+    render json: build_stop_preview_payload
+  end
+
+  # Autocomplete source for the ticket picker inside the stop popup.
+  # Honours Redmine's visibility rules — queries go through Issue.visible so a
+  # user never sees issues from projects they cannot access.
+  def issue_search
+    q = params[:q].to_s.strip
+    results = []
+    if q.length >= 1
+      scope = Issue.visible.includes(:project).order(updated_on: :desc)
+      scope = if q.match?(/\A\d+\z/)
+                scope.where('issues.id = ? OR issues.subject LIKE ?', q.to_i, "%#{q}%")
+              else
+                scope.where('issues.subject LIKE ?', "%#{q}%")
+              end
+      results = scope.limit(15).map do |iss|
+        {
+          id:      iss.id,
+          subject: iss.subject,
+          project: iss.project&.name,
+          label:   "##{iss.id} #{iss.subject}" + (iss.project ? " · #{iss.project.name}" : '')
+        }
+      end
+    end
+    render json: { results: results }
+  end
+
+  # Create a new coverage entry attached to today. kind=ticket writes a real
+  # Redmine TimeEntry so it shows up in the issue's time log; kind=freetext
+  # stays inside the plugin as an HrFreeEntry (counts toward "other coverage"
+  # for the bar, not toward ticket coverage).
+  def create_coverage_entry
+    kind = params[:kind].to_s
+    seconds = params[:seconds].to_i
+    return render json: { error: 'invalid_seconds' }, status: :bad_request if seconds <= 0
+
+    tz = RedmineHumanResources::Settings.user_time_zone(User.current)
+    today = Time.use_zone(tz) { Time.zone.today }
+
+    case kind
+    when 'ticket'
+      issue = Issue.visible.find_by(id: params[:issue_id])
+      return render json: { error: 'issue_not_found' }, status: :not_found unless issue
+      activity = TimeEntryActivity.default || TimeEntryActivity.active.first
+      return render json: { error: 'no_activity' }, status: :unprocessable_entity unless activity
+      hours = (seconds / 3600.0).round(4)
+      te = TimeEntry.new(
+        user:     User.current,
+        author:   User.current,
+        project:  issue.project,
+        issue:    issue,
+        spent_on: today,
+        hours:    hours,
+        comments: params[:comments].to_s[0, 255],
+        activity: activity
+      )
+      if te.save
+        render json: time_entry_payload(te)
+      else
+        render json: { error: te.errors.full_messages.join(', ') }, status: :unprocessable_entity
+      end
+    when 'freetext'
+      note = params[:note].to_s.strip
+      return render json: { error: 'note_required' }, status: :bad_request if note.empty?
+      fe = HrFreeEntry.new(user: User.current, spent_on: today,
+                           seconds: seconds, note: note[0, 500])
+      if fe.save
+        render json: free_entry_payload(fe)
+      else
+        render json: { error: fe.errors.full_messages.join(', ') }, status: :unprocessable_entity
+      end
+    else
+      render json: { error: 'invalid_kind' }, status: :bad_request
+    end
+  end
+
+  # Edit an existing coverage entry's duration (and comment / note). Only the
+  # entry's owner can touch it, admins may edit anyone's.
+  def update_coverage_entry
+    kind = params[:kind].to_s
+    seconds = params[:seconds].to_i
+    return render json: { error: 'invalid_seconds' }, status: :bad_request if seconds <= 0
+
+    case kind
+    when 'ticket'
+      te = TimeEntry.find_by(id: params[:id])
+      return render json: { error: 'not_found' }, status: :not_found unless te
+      return render json: { error: 'forbidden' }, status: :forbidden unless te.user_id == User.current.id || User.current.admin?
+      te.hours    = (seconds / 3600.0).round(4)
+      te.comments = params[:comments].to_s[0, 255] if params.key?(:comments)
+      if te.save
+        render json: time_entry_payload(te)
+      else
+        render json: { error: te.errors.full_messages.join(', ') }, status: :unprocessable_entity
+      end
+    when 'freetext'
+      fe = HrFreeEntry.find_by(id: params[:id])
+      return render json: { error: 'not_found' }, status: :not_found unless fe
+      return render json: { error: 'forbidden' }, status: :forbidden unless fe.user_id == User.current.id || User.current.admin?
+      fe.seconds = seconds
+      fe.note    = params[:note].to_s[0, 500] if params.key?(:note)
+      if fe.save
+        render json: free_entry_payload(fe)
+      else
+        render json: { error: fe.errors.full_messages.join(', ') }, status: :unprocessable_entity
+      end
+    else
+      render json: { error: 'invalid_kind' }, status: :bad_request
+    end
+  end
+
+  def delete_coverage_entry
+    kind = params[:kind].to_s
+    case kind
+    when 'ticket'
+      te = TimeEntry.find_by(id: params[:id])
+      return render json: { error: 'not_found' }, status: :not_found unless te
+      return render json: { error: 'forbidden' }, status: :forbidden unless te.user_id == User.current.id || User.current.admin?
+      te.destroy
+      render json: { ok: true }
+    when 'freetext'
+      fe = HrFreeEntry.find_by(id: params[:id])
+      return render json: { error: 'not_found' }, status: :not_found unless fe
+      return render json: { error: 'forbidden' }, status: :forbidden unless fe.user_id == User.current.id || User.current.admin?
+      fe.destroy
+      render json: { ok: true }
+    else
+      render json: { error: 'invalid_kind' }, status: :bad_request
+    end
+  end
+
   def day_detail
     tz = User.current.time_zone || Time.zone
     date = Date.parse(params[:date])
@@ -500,6 +637,80 @@ class HrTimeclockController < ApplicationController
     Time.use_zone(tz) { Time.zone.parse(str) }
   rescue ArgumentError
     fallback
+  end
+
+  def build_stop_preview_payload
+    user = User.current
+    tz = RedmineHumanResources::Settings.user_time_zone(user)
+    today = Time.use_zone(tz) { Time.zone.today }
+    now = Time.current
+
+    entries = HrWorkEntry.for_user(user).on_day(tz, today).to_a
+    worked_seconds   = entries.sum { |e| e.net_seconds(as_of: now) }
+    break_seconds    = entries.sum { |e| e.total_break_seconds(as_of: now) }
+
+    time_entries = TimeEntry.where(user_id: user.id, spent_on: today)
+                            .includes(:issue, :project, :activity).to_a
+    ticket_payload = time_entries.map { |te| time_entry_payload(te) }
+    ticket_seconds = ticket_payload.sum { |t| t[:seconds].to_i }
+
+    free_entries = HrFreeEntry.for_user(user).on_day(today).order(:id).to_a
+    free_payload = free_entries.map { |fe| free_entry_payload(fe) }
+    free_seconds = free_payload.sum { |f| f[:seconds].to_i }
+
+    covered = ticket_seconds + free_seconds
+    coverage_pct = worked_seconds.positive? ? ((covered.to_f / worked_seconds) * 100).round(1) : 0.0
+
+    is_last_user = other_open_users?(tz, today) == false
+    eod_msg = Setting.plugin_redmine_human_resources['end_of_day_message'].to_s.strip
+
+    {
+      state:               current_open_entry ? (current_open_entry.paused? ? 'on_break' : 'working') : 'idle',
+      worked_seconds:      worked_seconds,
+      break_seconds:       break_seconds,
+      ticket_seconds:      ticket_seconds,
+      free_seconds:        free_seconds,
+      coverage_percent:    coverage_pct,
+      coverage_target_sec: worked_seconds,
+      ticket_entries:      ticket_payload,
+      free_entries:        free_payload,
+      is_last_user:        is_last_user,
+      end_of_day_message:  (is_last_user && eod_msg.present? ? eod_msg : nil),
+      today:               today.iso8601
+    }
+  end
+
+  def time_entry_payload(te)
+    seconds = (te.hours.to_f * 3600).round
+    {
+      kind:          'ticket',
+      id:            te.id,
+      issue_id:      te.issue_id,
+      issue_label:   te.issue ? "##{te.issue.id} #{te.issue.subject}" : nil,
+      project_name:  te.project&.name,
+      activity_name: te.activity&.name,
+      comments:      te.comments.to_s,
+      seconds:       seconds
+    }
+  end
+
+  def free_entry_payload(fe)
+    {
+      kind:    'freetext',
+      id:      fe.id,
+      note:    fe.note.to_s,
+      seconds: fe.seconds.to_i
+    }
+  end
+
+  # Checks whether any other user still has an open (running or paused) shift
+  # today. True → someone else is still clocked in, so the current user is NOT
+  # the last one leaving.
+  def other_open_users?(tz, today)
+    HrWorkEntry.open
+               .where.not(user_id: User.current.id)
+               .where(started_at: today.in_time_zone(tz).beginning_of_day..today.in_time_zone(tz).end_of_day)
+               .exists?
   end
 
   def parse_correction_time(entry, str, tz)

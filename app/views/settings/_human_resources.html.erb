@@ -73,6 +73,14 @@
                                            [l(:hr_settings_first_day_sunday), 'sunday']],
                                           @settings['first_day_of_week'].presence || 'monday') %>
       </p>
+      <p>
+        <label for="settings_end_of_day_message"><%= l(:hr_settings_end_of_day_message) %></label>
+        <%= text_area_tag 'settings[end_of_day_message]',
+                          @settings['end_of_day_message'],
+                          rows: 4, cols: 50,
+                          placeholder: l(:hr_settings_end_of_day_message_placeholder) %>
+        <em class="info"><%= l(:hr_settings_end_of_day_message_hint) %></em>
+      </p>
     </div>
   </div>
 

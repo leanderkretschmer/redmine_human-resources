@@ -1,0 +1,150 @@
+<%#
+  Pre-stop popup: shown when the user clicks "Ausstempeln". The modal fetches
+  stop_preview, lets the user tweak ticket/free entries so coverage reaches
+  100%, then POSTs stop_hr_timeclock_path on confirm.
+
+  All interaction lives in hr_timeclock.js; this partial only provides the
+  skeleton. Labels and URLs come from data-* so the JS stays self-contained.
+%>
+<div id="hr-tc-stop-modal"
+     class="hr-tc-modal"
+     aria-hidden="true"
+     data-preview-url="<%= url_for(controller: 'hr_timeclock', action: 'stop_preview', format: :json) %>"
+     data-issue-search-url="<%= url_for(controller: 'hr_timeclock', action: 'issue_search', format: :json) %>"
+     data-create-url="<%= url_for(controller: 'hr_timeclock', action: 'create_coverage_entry', format: :json) %>"
+     data-update-url-template="<%= url_for(controller: 'hr_timeclock', action: 'update_coverage_entry', id: '__ID__', format: :json) %>"
+     data-delete-url-template="<%= url_for(controller: 'hr_timeclock', action: 'delete_coverage_entry', id: '__ID__', format: :json) %>"
+     data-stop-url="<%= stop_hr_timeclock_path %>"
+     data-label-save="<%= l(:button_hr_timeclock_save_settings) %>"
+     data-label-cancel="<%= l(:label_hr_cancel) %>"
+     data-label-delete="<%= l(:label_hr_delete) %>"
+     data-label-confirm-delete="<%= l(:label_hr_confirm_delete) %>">
+  <div class="hr-tc-modal-inner hr-tc-stop-inner" role="dialog" aria-labelledby="hr-tc-stop-title">
+    <div class="hr-tc-modal-header">
+      <h3 id="hr-tc-stop-title"><%= l(:label_hr_stop_popup_title) %></h3>
+      <button type="button" class="hr-tc-modal-close" aria-label="<%= l(:label_hr_cancel) %>">×</button>
+    </div>
+
+    <div class="hr-tc-stop-eod" data-bind="eod" hidden>
+      <strong><%= l(:label_hr_stop_eod_title) %></strong>
+      <div class="hr-tc-stop-eod-text" data-bind="eod-text"></div>
+    </div>
+
+    <div class="hr-tc-stop-summary">
+      <div class="hr-tc-stop-bar-wrap">
+        <div class="hr-tc-stop-bar" data-bind="bar">
+          <span class="hr-tc-stop-bar-seg hr-tc-stop-bar-ticket" data-bind="bar-ticket"></span>
+          <span class="hr-tc-stop-bar-seg hr-tc-stop-bar-free"   data-bind="bar-free"></span>
+          <span class="hr-tc-stop-bar-seg hr-tc-stop-bar-gap"    data-bind="bar-gap"></span>
+        </div>
+        <div class="hr-tc-stop-bar-caption">
+          <span class="hr-tc-stop-bar-key hr-tc-stop-bar-key-ticket">
+            <%= l(:label_hr_stop_bar_ticket) %>:
+            <strong data-bind="ticket-seconds">00:00</strong>
+          </span>
+          <span class="hr-tc-stop-bar-key hr-tc-stop-bar-key-free">
+            <%= l(:label_hr_stop_bar_free) %>:
+            <strong data-bind="free-seconds">00:00</strong>
+          </span>
+          <span class="hr-tc-stop-bar-key hr-tc-stop-bar-key-worked">
+            <%= l(:label_hr_stop_bar_worked) %>:
+            <strong data-bind="worked-seconds">00:00</strong>
+          </span>
+          <span class="hr-tc-stop-bar-key hr-tc-stop-bar-key-break">
+            <%= l(:label_hr_stop_bar_break) %>:
+            <strong data-bind="break-seconds">00:00</strong>
+          </span>
+          <span class="hr-tc-stop-bar-key hr-tc-stop-bar-key-coverage">
+            <%= l(:label_hr_stop_bar_coverage) %>:
+            <strong data-bind="coverage-percent">0%</strong>
+          </span>
+        </div>
+      </div>
+      <p class="hr-tc-stop-hint"><%= l(:label_hr_stop_hint) %></p>
+    </div>
+
+    <section class="hr-tc-stop-section">
+      <h4><%= l(:label_hr_stop_entries_ticket) %></h4>
+      <table class="hr-tc-stop-table" data-bind="ticket-table">
+        <thead>
+          <tr>
+            <th><%= l(:label_hr_stop_col_issue) %></th>
+            <th><%= l(:label_hr_stop_col_comment) %></th>
+            <th class="hr-tc-stop-col-time"><%= l(:label_hr_stop_col_time) %></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody data-bind="ticket-rows"></tbody>
+      </table>
+      <p data-bind="ticket-empty" class="hr-tc-stop-empty" hidden><%= l(:label_hr_stop_ticket_empty) %></p>
+    </section>
+
+    <section class="hr-tc-stop-section">
+      <h4><%= l(:label_hr_stop_entries_free) %></h4>
+      <table class="hr-tc-stop-table" data-bind="free-table">
+        <thead>
+          <tr>
+            <th><%= l(:label_hr_stop_col_note) %></th>
+            <th class="hr-tc-stop-col-time"><%= l(:label_hr_stop_col_time) %></th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody data-bind="free-rows"></tbody>
+      </table>
+      <p data-bind="free-empty" class="hr-tc-stop-empty" hidden><%= l(:label_hr_stop_free_empty) %></p>
+    </section>
+
+    <section class="hr-tc-stop-section hr-tc-stop-add">
+      <h4><%= l(:label_hr_stop_add_title) %></h4>
+      <div class="hr-tc-stop-add-tabs">
+        <button type="button" class="hr-tc-stop-add-tab active" data-add-tab="ticket"><%= l(:label_hr_stop_add_ticket) %></button>
+        <button type="button" class="hr-tc-stop-add-tab" data-add-tab="freetext"><%= l(:label_hr_stop_add_freetext) %></button>
+      </div>
+
+      <div class="hr-tc-stop-add-panel" data-add-panel="ticket">
+        <div class="hr-tc-stop-add-row">
+          <label><%= l(:label_hr_stop_col_issue) %></label>
+          <div class="hr-tc-stop-issue-picker">
+            <input type="text" data-bind="add-ticket-search" placeholder="<%= l(:label_hr_stop_issue_search_placeholder) %>" autocomplete="off">
+            <ul class="hr-tc-stop-issue-results" data-bind="add-ticket-results" hidden></ul>
+            <input type="hidden" data-bind="add-ticket-id">
+            <div class="hr-tc-stop-issue-chosen" data-bind="add-ticket-chosen" hidden></div>
+          </div>
+        </div>
+        <div class="hr-tc-stop-add-row">
+          <label><%= l(:label_hr_stop_col_comment) %></label>
+          <input type="text" data-bind="add-ticket-comment" maxlength="255">
+        </div>
+        <div class="hr-tc-stop-add-row">
+          <label><%= l(:label_hr_stop_col_minutes) %></label>
+          <input type="number" min="1" step="1" data-bind="add-ticket-minutes" placeholder="30">
+        </div>
+        <div class="hr-tc-stop-add-actions">
+          <button type="button" class="button-positive" data-bind="add-ticket-save"><%= l(:label_hr_stop_add_save) %></button>
+        </div>
+      </div>
+
+      <div class="hr-tc-stop-add-panel" data-add-panel="freetext" hidden>
+        <div class="hr-tc-stop-add-row">
+          <label><%= l(:label_hr_stop_col_note) %></label>
+          <textarea rows="2" maxlength="500" data-bind="add-free-note" placeholder="<%= l(:label_hr_stop_free_placeholder) %>"></textarea>
+        </div>
+        <div class="hr-tc-stop-add-row">
+          <label><%= l(:label_hr_stop_col_minutes) %></label>
+          <input type="number" min="1" step="1" data-bind="add-free-minutes" placeholder="30">
+        </div>
+        <div class="hr-tc-stop-add-actions">
+          <button type="button" class="button-positive" data-bind="add-free-save"><%= l(:label_hr_stop_add_save) %></button>
+        </div>
+      </div>
+    </section>
+
+    <div class="hr-tc-stop-footer">
+      <button type="button" class="hr-tc-modal-close hr-tc-stop-cancel"><%= l(:label_hr_stop_cancel) %></button>
+      <form action="<%= stop_hr_timeclock_path %>" method="post" data-bind="stop-form" class="hr-tc-stop-form-inline">
+        <%= token_tag(nil, form_options: {}) %>
+        <button type="submit" class="hr-tc-btn hr-tc-btn-stop hr-tc-stop-confirm"><%= l(:label_hr_stop_confirm) %></button>
+      </form>
+    </div>
+  </div>
+</div>
